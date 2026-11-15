@@ -63,6 +63,16 @@ TAIL = GOOD + "## 收尾\n不是有選舉就叫民主，是我們一起守住規
 check("落點後面多一段收尾擋", pc.story_problems(secs(TAIL)) != [])
 check("轉折沒有連詞擋", pc.story_problems(secs(GOOD.replace("但問題是，", "這件事，"))) != [])
 check("落點總結詞擋", any("總結詞" in x for x in pc.story_problems(secs(GOOD.replace("## 落點\n", "## 落點\n總之，這件事很重要。\n")))))
+ONE_CONTRAST = GOOD.replace("但問題是，", "但問題不是你，而是")
+check("「不是…而是」一次留給轉折仍過", pc.story_problems(secs(ONE_CONTRAST)) == [])
+TWO_CONTRAST = ONE_CONTRAST.replace("被重複算了很多次。", "不是他特別紅，而是被重複算了很多次。")
+check("「不是…而是」兩次擋", any("對舉" in x for x in pc.story_problems(secs(TWO_CONTRAST))))
+check("跨句的「不是」「而是」不算", pc.story_problems(secs(ONE_CONTRAST.replace(
+    "被重複算了很多次。", "這不是巧合。\n而是名單重疊。"))) == [])
+check("一個分號仍過", pc.story_problems(secs(GOOD.replace("被重複算了很多次。", "被重複算了；很多次。"))) == [])
+check("破折號加分號兩個擋", any("破折號" in x for x in pc.story_problems(secs(GOOD.replace(
+    "被重複算了很多次。", "被重複算了——很多次；真的。")))))
+check("對談格式不比對舉", pc.story_problems(secs(TWO_CONTRAST), dialogue=True) == [])
 check("轉折用「再看」開頭擋", pc.story_problems(secs(GOOD.replace("但問題是，", "再看，"))) != [])
 check("整篇沒有「你」也沒有問句擋", pc.story_problems(secs(GOOD.replace("你", "大家").replace("？", "。"))) != [])
 check("缺落點擋", pc.story_problems(secs(GOOD.replace("## 落點", "## 其他"))) != [])

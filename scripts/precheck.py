@@ -35,7 +35,13 @@ STORY_SECTIONS = ["鉤子", "轉折", "落點"]
 LINE_MAX_CHARS = 35       # 旁白每行上限（docs/寫稿原則.md 第 1 條，使用者 2026-11-01 定）
 CAPTION_LIMITS = {"reels": 2200, "threads": 500}   # 同 publish/meta_publish.py PLAT[*]["limit"]
 ENDING_BAN = ("總之", "所以說", "以上就是", "謝謝收看", "總結來說", "綜上")  # 落點不總結（WRITING.md §8.6，使用者 11-06 退 dunning-kruger「後面沒有爆點」）
-HOOK_MAX_CHARS = 25       # 鉤子第一句的字數上限；旁白約 4–5 字／秒，25 字約 5 秒講完
+# AI 稿句型（docs/寫稿原則.md 第 6 條子項，lieflat-less-ai-tone 人機對照實測，2026-11-08 加）。
+# 「不是…而是」留一次給轉折（下方 TRANSITION 註解的爆款例句就是這個句型）；破折號＋分號整篇最多一個
+CONTRAST_RE = re.compile(r"不是[^。？！?!]{0,24}?而是")
+CONTRAST_MAX = 1
+DASH_SEMI_RE = re.compile(r"——|—|；|;")
+DASH_SEMI_MAX = 1
+HOOK_MAX_CHARS = 25      # 鉤子第一句的字數上限；旁白約 4–5 字／秒，25 字約 5 秒講完
 LEAD_SILENCE_MAX = 0.5    # 第一個字最晚幾秒出現；開場不留空白
 ASR_SIM_MIN = 0.85        # 成片聽寫與旁白稿的字元相似度；低於此＝沒混進去或吃字
 # 轉折要推翻前一句，不是接一句總結（2026-11-01 使用者核准）。爆款是「不是他不香，而是旁邊太香」；
@@ -431,6 +437,13 @@ def story_problems(sections, dialogue=False):
                     problems.append(f"「{ln[:12]}…」{len(norm(ln))} 字，每行上限 {LINE_MAX_CHARS}")
                 if len(re.findall(r"[。？！?!]", ln.rstrip("。？！?!」』）)"))):
                     problems.append(f"「{ln[:12]}…」一行有兩個句末標點，拆行或改逗號")
+        lines = [x.strip() for _, b in sections for x in b.splitlines() if x.strip()]
+        contrast = sum(len(CONTRAST_RE.findall(ln)) for ln in lines)
+        if contrast > CONTRAST_MAX:
+            problems.append(f"「不是…而是」對舉 {contrast} 次，整篇最多 {CONTRAST_MAX} 次（留給轉折），其餘直接講後半句（寫稿原則第 6 條）")
+        dash = sum(len(DASH_SEMI_RE.findall(ln)) for ln in lines)
+        if dash > DASH_SEMI_MAX:
+            problems.append(f"破折號＋分號 {dash} 個，整篇最多 {DASH_SEMI_MAX} 個，改句號拆句或逗號（寫稿原則第 6 條）")
     return problems
 
 
