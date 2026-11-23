@@ -1,0 +1,24 @@
+{
+  "tiebreak": "同分照 codex 評審分，再照名字",
+  "writers": [
+    "deepseek"
+  ],
+  "judges": [
+    "deepseek"
+  ],
+  "missing": 0,
+  "pairs": 0,
+  "top2": [
+    "deepseek"
+  ],
+  "rank": [
+    {
+      "name": "deepseek",
+      "total": 0.0,
+      "codex": 0.0,
+      "per_judge": {
+        "deepseek": 0.0
+      }
+    }
+  ]
+}

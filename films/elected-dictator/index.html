@@ -1,0 +1,842 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>選出來的獨裁者：希特勒當年也是走正門進來的</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}#mascot{display:none}#mascot svg{width:340px;height:340px}</style>
+<script src="engine.js"></script>
+<script src="timeline.js"></script>
+</head>
+<body>
+<div id="stage" style="position:relative;width:1080px;height:1920px">
+<canvas id="c" width="1080" height="1920" style="position:absolute;left:0;top:0"></canvas>
+<div id="mascot"></div>
+</div>
+<script type="module">
+// 單人旁白科普：一句一卡（TREATMENT.md 分鏡表），Clawd Bot 當主播站右上。
+// 主視覺三個零件重複使用：door（門，開合度 0–1）、grid（方塊網格，亮起比例 0–1）、rules（規則本，條文被劃掉或改寫）。
+// 禁止清單（TREATMENT.md）：不畫納粹符號、不畫希特勒的臉、不畫舉手禮姿態、不用紅底黑徽配色、不畫現存政黨與台灣政治人物。
+// 所有動作都是 t 的封閉式（seek_check.mjs 會比亂序算出的同一幀）；循環用取餘數，不累積。
+import { poseAt, applyPose } from './mascot/clawd-bot-shot.mjs';
+const G = window.G, E = G.E, TL = window.TL, W = 1080, H = 1920;
+const g = document.getElementById('c').getContext('2d', { alpha: false });
+const { clamp, inv, lerp, mix, rgba } = G;
+
+const BG = '#1d1b19', BG2 = '#262320', CREAM = '#f5efe6', DIM = '#a39a8e', OR = '#d97757', ORL = '#f29172', GOLD = '#f6b966', RED = '#ff8577', GREEN = '#68e399', BLUE = '#7fa7d9';
+const WALL = '#332e29', FRAME = '#8a8177', LIGHT = '#ffd79a';
+const ZH = (w, px) => `${w} ${px}px "PingFang TC"`, MONO = (px, w = 500) => `${w} ${px}px Menlo, "PingFang TC"`;
+
+// 會出現在畫面上的事實數字集中在這裡，不要在別處重寫一次。每一個都要在 meta/facts.md 有一行附來源。
+const FACTS = {
+  FILM_YEAR: 2015,            // 《希特勒回來了》德國上映年
+  FILM_NO1_WEEK: 3,           // 上映第三週登德國票房第一
+  NSDAP_YEAR: 1932,           // 1932-07-31 國會選舉
+  NSDAP_PCT: 37.3,            // 納粹黨得票率
+  NSDAP_SEATS: 230,           // 取得席次
+  REICHSTAG_SEATS: 608,       // 總席次
+  REICHSTAG_MAJORITY: 305,    // 過半門檻
+  CHANCELLOR_YEAR: 1933,      // 1933-01-30 被任命為總理
+  ENABLING_YEAR: 1933,        // 1933-03-23 授權法
+  ENABLING_FOR: 444,          // 贊成票
+  ENABLING_AGAINST: 94,       // 反對票
+  MARCOS_ELECTED_YEAR: 1965,  // 馬可仕當選總統
+  MARTIAL_LAW_YEAR: 1972,     // 1972-09-21 宣布戒嚴
+  MARTIAL_LAW_END: 1986,      // 一人統治結束
+  ONE_MAN_YEARS: 14,          // 一人統治年數
+  MARCOS_JR_YEAR: 2022,       // 小馬可仕當選
+  MARCOS_JR_VOTES_WAN: 3163,  // 31,629,783 票（畫面寫萬）
+  MARCOS_JR_PCT: 58.77,       // 得票率
+  PARTY_BAN_YEAR: 1933,       // 1933-07-14 禁組新黨法
+  MARCOS_JAILED_WAN: 7,       // 戒嚴期間約 70,000 人入獄（畫面寫萬）
+};
+
+// ---------- 字 ----------
+let TXT = [], NOW = 0;
+function say(s, x, y, px, col, p, o = {}) {
+  const font = o.mono ? MONO(px) : ZH(o.w || 600, px);
+  // 原地淡入，不往上滑（使用者 10-30：頻繁滑入眼睛不舒服）
+  g.save(); g.font = font; g.letterSpacing = o.ls || '0px'; g.textAlign = o.align || 'left'; g.textBaseline = 'alphabetic';
+  const w = g.measureText(s).width;
+  g.globalAlpha *= E.io(p); g.fillStyle = col; g.fillText(s, x, y); g.restore();
+  if (o.id) {
+    const x0 = o.align === 'center' ? x - w / 2 : o.align === 'right' ? x - w : x;
+    TXT.push({ id: o.id, text: s, x0, y0: y - px, x1: x0 + w, y1: y + px * 0.25, screen: true });
+  }
+  return w;
+}
+function plain(s, x, y, px, col, o = {}) {
+  g.font = o.mono ? MONO(px, o.w || 500) : ZH(o.w || 600, px); g.textAlign = o.align || 'left'; g.textBaseline = 'alphabetic';
+  g.letterSpacing = o.ls || '0px'; g.fillStyle = col; g.fillText(s, x, y); g.letterSpacing = '0px';
+}
+const pop = (lt, a, d = 0.5) => E.o3(inv(a, a + d, lt));   // 不用回彈（語氣沉穩）
+const loop = (x, n) => ((x % n) + n) % n;
+
+// ---------- 舞台：y 800–1630 的圓角框，框內畫什麼都裁在裡面 ----------
+const ST = { x: 60, y: 800, w: 960, h: 830 };
+const SC = { x: ST.x + ST.w / 2, y: ST.y + ST.h / 2 };   // 舞台中心
+// 顯示位置：舞台縮 0.85 置中到 y 735–1441（x 132–948），出處 1474，字幕框頂 1490（一行到 1598）；再縮亮度差異會跌破 calm 下限 0.20
+const SAFE = { k: 0.85, y: 735, hud: 1474, cap: 1490 };
+function stage(fn) {
+  g.save(); g.beginPath(); g.roundRect(ST.x, ST.y, ST.w, ST.h, 28); g.clip();
+  g.fillStyle = BG2; g.fillRect(ST.x, ST.y, ST.w, ST.h);
+  fn(); g.restore();
+  g.strokeStyle = rgba(CREAM, 0.16); g.lineWidth = 2; g.beginPath(); g.roundRect(ST.x, ST.y, ST.w, ST.h, 28); g.stroke();
+}
+function cam(px, py, k, fn) { g.save(); g.translate(px, py); g.scale(k, k); g.translate(-px, -py); fn(); g.restore(); }
+
+// ---------- 門：整支片的主視覺 ----------
+// o: x, y 門檻中心；w 門寬；h 門高；open 0–1 開合度；glow 0–1 門縫光；lock 0–1 門閂
+// 兩扇門往內開，用梯形近似透視；開 0 時是一道合起來的門，門縫一直有光。
+function door(o) {
+  const x = o.x ?? SC.x, y = o.y ?? ST.y + ST.h - 120, w = o.w ?? 330, h = o.h ?? 470;
+  const open = clamp(o.open ?? 0), glow = clamp(o.glow ?? 0.25), hw = w / 2;
+  // 門洞（深色）＋門縫光
+  g.fillStyle = '#121110'; g.fillRect(x - hw, y - h, w, h);
+  const lg = g.createLinearGradient(x, y - h, x, y);
+  lg.addColorStop(0, rgba(LIGHT, 0.10 + 0.55 * glow)); lg.addColorStop(1, rgba(LIGHT, 0.02 + 0.22 * glow));
+  g.fillStyle = lg; g.fillRect(x - hw, y - h, w, h);
+  if (o.inner) { g.save(); g.beginPath(); g.rect(x - hw, y - h, w, h); g.clip(); o.inner(); g.restore(); }
+  // 兩扇門：外緣貼門框不動，內緣往門內縮
+  for (const s of [-1, 1]) {
+    const x0 = x + s * hw, x1 = x + s * hw * (1 - open * 0.92);
+    const k = 1 - open * 0.3;                       // 內緣往內縮＝近似透視
+    G.poly(g, [[x0, y - h], [x1, y - h + h * (1 - k) / 2], [x1, y - h * (1 + k) / 2 + h], [x0, y]], WALL);
+    g.strokeStyle = rgba(CREAM, 0.22); g.lineWidth = 3;
+    G.poly(g, [[x0, y - h], [x1, y - h + h * (1 - k) / 2], [x1, y - h * (1 + k) / 2 + h], [x0, y]], null, true);
+    // 門板上兩塊壓線
+    g.globalAlpha = 0.5 * (1 - open);
+    for (let r = 0; r < 2; r++) { const yy = y - h * 0.78 + r * h * 0.42; g.strokeStyle = rgba(CREAM, 0.18); g.lineWidth = 2; g.beginPath(); g.rect(Math.min(x0, x1) + 18, yy, Math.abs(x1 - x0) - 36, h * 0.3); g.stroke(); }
+    g.globalAlpha = 1;
+  }
+  // 門框
+  g.strokeStyle = FRAME; g.lineWidth = 10; g.beginPath(); g.moveTo(x - hw - 5, y); g.lineTo(x - hw - 5, y - h - 5); g.lineTo(x + hw + 5, y - h - 5); g.lineTo(x + hw + 5, y); g.stroke();
+  // 門閂（從內側鎖上）
+  if (o.lock) { const p = clamp(o.lock); g.globalAlpha = p; g.fillStyle = FRAME; g.fillRect(x - hw * 0.8, y - h * 0.5 - 9, w * 0.8 * lerp(0.2, 1, p), 18); g.globalAlpha = 1; }
+  // 門檻
+  g.fillStyle = rgba(CREAM, 0.14); g.fillRect(x - hw - 24, y, w + 48, 10);
+}
+
+// ---------- 票 ----------
+function ballot(x, y, s, col = CREAM, a = 1) {   // 一張票：長方紙＋一個打勾的框
+  g.globalAlpha = a;
+  g.fillStyle = col; g.fillRect(x - s * 0.5, y - s * 0.34, s, s * 0.68);
+  g.strokeStyle = rgba(BG, 0.8); g.lineWidth = Math.max(1, s * 0.05);
+  g.beginPath(); g.rect(x - s * 0.34, y - s * 0.17, s * 0.26, s * 0.26); g.stroke();
+  g.beginPath(); g.moveTo(x - s * 0.3, y); g.lineTo(x - s * 0.21, y + s * 0.1); g.lineTo(x - s * 0.06, y - s * 0.12); g.stroke();
+  g.beginPath(); g.moveTo(x + s * 0.02, y - s * 0.06); g.lineTo(x + s * 0.4, y - s * 0.06); g.moveTo(x + s * 0.02, y + s * 0.08); g.lineTo(x + s * 0.3, y + s * 0.08); g.stroke();
+  g.globalAlpha = 1;
+}
+function ballotPile(x, y, n, p, s = 74) {   // 門下堆起來的票：由下往上一張張疊
+  for (let i = 0; i < n; i++) {
+    const a = clamp((p * n - i) * 1.4); if (a <= 0) continue;
+    const row = Math.floor(i / 3), col = i % 3;
+    ballot(x + (col - 1) * s * 0.86 + (row % 2 ? s * 0.2 : 0), y - row * s * 0.3, s, CREAM, 0.55 + 0.45 * a);
+  }
+}
+function ballotBox(x, y, s, p) {   // 票箱：票從上面投進去（p 0–1 循環）
+  g.fillStyle = WALL; g.fillRect(x - s / 2, y - s * 0.6, s, s * 0.6);
+  g.strokeStyle = rgba(CREAM, 0.5); g.lineWidth = 3; g.beginPath(); g.rect(x - s / 2, y - s * 0.6, s, s * 0.6); g.stroke();
+  g.fillStyle = BG; g.fillRect(x - s * 0.22, y - s * 0.63, s * 0.44, 8);
+  const d = E.io(p);
+  if (p > 0 && p < 1) ballot(x, y - s * 0.6 - 90 + d * 80, s * 0.38, CREAM, 1 - 0.3 * d);
+}
+
+// ---------- 方塊網格：席次、人口都用它 ----------
+// o: x, y 左上；cols, rows；cell 邊長；gap；on 亮起格數；col 亮色；dim 暗色
+function grid(o) {
+  const { x, y, cols, rows, cell, gap = 4 } = o, on = o.on ?? 0, col = o.col || OR, dim = o.dim || rgba(CREAM, 0.14);
+  for (let i = 0; i < cols * rows; i++) {
+    const r = Math.floor(i / cols), c = i % cols;
+    const lit = clamp((on - i) * 0.9);
+    g.fillStyle = lit > 0 ? mix(dim.startsWith('rgba') ? '#3a352f' : dim, col, lit) : dim;
+    g.fillRect(x + c * (cell + gap), y + r * (cell + gap), cell, cell);
+  }
+}
+function gridW(o) { return o.cols * (o.cell + (o.gap ?? 4)) - (o.gap ?? 4); }
+function gridLine(o, idx, p, col = GOLD, label) {   // 在第 idx 格的位置橫一條門檻線
+  const gp = o.gap ?? 4, r = Math.floor(idx / o.cols), x1 = o.x + gridW(o);
+  const y = o.y + r * (o.cell + gp) + o.cell / 2;
+  g.globalAlpha = E.io(p); g.strokeStyle = col; g.lineWidth = 4; g.setLineDash([14, 10]);
+  g.beginPath(); g.moveTo(o.x - 16, y); g.lineTo(x1 + 16, y); g.stroke(); g.setLineDash([]);
+  if (label) plain(label, x1 + 26, y + 12, 34, col, { mono: true });
+  g.globalAlpha = 1;
+}
+
+// ---------- 規則本 ----------
+// o: x, y 左上；w, h；lines 條文行數；strike 第幾行被劃掉（-1 不劃）；strikeP 0–1；title 新落下的標題；titleP
+function rules(o) {
+  const { x, y, w, h, lines = 7 } = o;
+  g.fillStyle = '#efe7da'; g.fillRect(x, y, w, h);
+  g.fillStyle = rgba(BG, 0.12); g.fillRect(x, y, 14, h);
+  const y0 = y + (o.title ? 128 : 52), step = (h - (y0 - y) - 36) / lines;
+  if (o.title) {
+    const p = E.io(o.titleP ?? 1);
+    g.globalAlpha = p; plain(o.title, x + w / 2, y + 86 - (1 - p) * 26, 50, '#241f1a', { align: 'center', w: 700 }); g.globalAlpha = 1;
+    g.globalAlpha = p * 0.5; g.strokeStyle = '#241f1a'; g.lineWidth = 3; g.beginPath(); g.moveTo(x + 46, y + 106); g.lineTo(x + w - 46, y + 106); g.stroke(); g.globalAlpha = 1;
+  }
+  for (let i = 0; i < lines; i++) {
+    const yy = y0 + i * step, wid = w - 92 - (i % 3) * 70;
+    g.fillStyle = rgba(BG, 0.42); g.fillRect(x + 46, yy, wid, 12);
+    if (o.strike === i) {
+      const p = E.o3(o.strikeP ?? 0);
+      g.strokeStyle = OR; g.lineWidth = 8; g.beginPath(); g.moveTo(x + 40, yy + 6); g.lineTo(x + 40 + (wid + 12) * p, yy + 6); g.stroke();
+    }
+  }
+}
+function stampMark(x, y, s, text, p, rot = -0.12) {   // 蓋章：縮放落下＋一圈框（不做鏡頭震動，calm 片型）
+  const k = lerp(2.1, 1, E.o3(p)), a = E.io(inv(0, 0.35, p));
+  g.save(); g.translate(x, y); g.rotate(rot); g.scale(k, k); g.globalAlpha = a;
+  g.strokeStyle = OR; g.lineWidth = 5 / k; g.beginPath(); g.roundRect(-s / 2, -s * 0.21, s, s * 0.42, 10); g.stroke();
+  plain(text, 0, s * 0.1, s * 0.2, OR, { align: 'center', w: 700 });
+  g.restore(); g.globalAlpha = 1;
+}
+
+// ---------- 長條比較 ----------
+// items: [{v, label, col}]；p 0–1 長出
+function bars(x, y, w, h, items, p, o = {}) {
+  const max = Math.max(...items.map(i => i.v)), n = items.length, bw = Math.min(o.bw || 150, w / n - 24);
+  items.forEach((it, i) => {
+    const bx = x + i * (w / n) + (w / n - bw) / 2, hh = h * (it.v / max) * E.o3(clamp(p * 1.25 - i * 0.12));
+    g.fillStyle = it.col || OR; g.fillRect(bx, y - hh, bw, hh);
+    if (hh > 26) plain(it.num ?? String(it.v), bx + bw / 2, y - hh - 18, 44, it.col || OR, { align: 'center', w: 700 });
+    if (it.label) plain(it.label, bx + bw / 2, y + 48, 34, DIM, { align: 'center' });
+  });
+  g.strokeStyle = rgba(CREAM, 0.3); g.lineWidth = 3; g.beginPath(); g.moveTo(x, y); g.lineTo(x + w, y); g.stroke();
+}
+function counter(x, y, v, p, px = 96, suffix = '', col = GOLD) {
+  const shown = v * E.o3(clamp(p));
+  const s = (Number.isInteger(v) ? Math.round(shown) : shown.toFixed(2).replace(/0+$/, '').replace(/\.$/, '')) + suffix;
+  plain(s, x, y, px, col, { align: 'center', w: 700, mono: true });
+}
+
+// ---------- 人形 ----------
+function person(x, y, s, col, o = {}) {   // 原點＝腳底，s＝身高
+  const hr = s * 0.13;
+  g.strokeStyle = col; g.lineWidth = Math.max(3, s * 0.055); g.lineCap = 'round';
+  G.disc(g, x, y - s + hr, hr, col);
+  g.beginPath(); g.moveTo(x, y - s + hr * 2); g.lineTo(x, y - s * 0.42); g.stroke();
+  const ph = o.ph ?? 0, sw = Math.sin(ph) * s * 0.1;
+  g.beginPath(); g.moveTo(x, y - s * 0.42); g.lineTo(x - s * 0.11 + sw, y); g.moveTo(x, y - s * 0.42); g.lineTo(x + s * 0.11 + sw * -1, y); g.stroke();
+  if (o.phone) {   // 舉起一支手機拍照（不是舉手禮）
+    const ay = y - s * 0.86;
+    g.beginPath(); g.moveTo(x, y - s * 0.74); g.lineTo(x + s * 0.17, ay); g.stroke();
+    g.fillStyle = o.lit ? LIGHT : rgba(CREAM, 0.35); g.fillRect(x + s * 0.12, ay - s * 0.12, s * 0.12, s * 0.17);
+  } else {
+    g.beginPath(); g.moveTo(x - s * 0.14, y - s * 0.56); g.lineTo(x + s * 0.14, y - s * 0.56); g.stroke();
+  }
+}
+// 一圈舉手機的人形（第 05、28 卡）：由中間往兩邊一個個亮起
+function phoneCrowd(x, y, n, p, s = 150) {
+  for (let i = 0; i < n; i++) {
+    const ord = Math.abs(i - (n - 1) / 2), a = clamp((p * n * 0.6 - ord) * 1.2); if (a <= 0) continue;
+    const u = n === 1 ? 0 : i / (n - 1) - 0.5, dx = u * 720, k = 1 - Math.abs(u) * 0.22;
+    g.globalAlpha = 0.45 + 0.55 * a;
+    person(x + dx, y + Math.abs(u) * 54, s * k, CREAM, { phone: true, lit: a > 0.8, ph: Math.sin(NOW * 1.6 + i) * 0.3 });
+    g.globalAlpha = 1;
+  }
+}
+
+// ---------- 地圖線稿（示意，只當定位用，不填色、不標首都） ----------
+const DE = [[9.0,54.8],[10.8,54.4],[13.0,54.5],[14.4,53.3],[14.6,52.6],[14.7,51.1],[15.0,51.0],[14.3,50.9],[12.5,50.4],[13.0,49.0],[12.5,48.5],[13.8,48.6],[12.9,47.7],[10.2,47.3],[8.6,47.8],[7.6,47.6],[8.2,48.9],[6.4,49.5],[6.1,50.0],[6.0,50.8],[6.8,51.9],[7.0,52.6],[8.3,53.5],[8.6,54.3]];
+const PH = [
+  [[120.6,18.5],[121.6,18.4],[122.2,18.3],[122.3,17.3],[121.6,16.0],[122.5,14.3],[121.8,13.9],[121.1,13.7],[120.6,13.8],[120.9,14.5],[120.6,15.9],[120.3,16.6],[120.4,17.6]],
+  [[122.3,11.2],[123.5,11.5],[124.6,11.9],[125.5,11.2],[124.9,10.2],[123.9,9.5],[122.8,10.0]],
+  [[121.9,8.2],[123.0,9.2],[124.3,9.1],[125.5,9.8],[126.2,9.3],[126.1,7.3],[125.5,6.0],[124.2,6.2],[123.0,7.3],[122.0,7.0]],
+];
+function outline(polys, cx, cy, k, a = 1, col = CREAM) {
+  const ps = Array.isArray(polys[0][0]) ? polys : [polys];
+  const all = ps.flat(), lo = [Math.min(...all.map(p => p[0])), Math.min(...all.map(p => p[1]))], hi = [Math.max(...all.map(p => p[0])), Math.max(...all.map(p => p[1]))];
+  const mx = (lo[0] + hi[0]) / 2, my = (lo[1] + hi[1]) / 2, sc = k / Math.max(hi[0] - lo[0], hi[1] - lo[1]);
+  g.globalAlpha = a; g.strokeStyle = rgba(col, 0.75); g.lineWidth = 3; g.fillStyle = rgba(col, 0.07);
+  for (const poly of ps) {
+    g.beginPath();
+    poly.forEach(([lon, lat], i) => { const X = cx + (lon - mx) * sc, Y = cy - (lat - my) * sc; i ? g.lineTo(X, Y) : g.moveTo(X, Y); });
+    g.closePath(); g.fill(); g.stroke();
+  }
+  g.globalAlpha = 1;
+}
+
+// ---------- 年份軸 ----------
+// marks: [{year, label}]；p 0–1 填滿
+function axis(x, y, w, from, to, marks, p, col = GOLD) {
+  g.strokeStyle = rgba(CREAM, 0.26); g.lineWidth = 4; g.beginPath(); g.moveTo(x, y); g.lineTo(x + w, y); g.stroke();
+  g.strokeStyle = col; g.lineWidth = 6; g.beginPath(); g.moveTo(x, y); g.lineTo(x + w * E.io(clamp(p)), y); g.stroke();
+  const at = yr => x + w * (yr - from) / (to - from);
+  marks.forEach(m => {
+    const mx = at(m.year), on = clamp((p - (m.year - from) / (to - from)) * 6);
+    g.globalAlpha = 0.4 + 0.6 * on; G.disc(g, mx, y, 11, on > 0.4 ? col : rgba(CREAM, 0.4));
+    plain(String(m.year), mx, y - 30, 38, on > 0.4 ? col : DIM, { align: 'center', mono: true });
+    if (m.label) plain(m.label, mx, y + 58, 36, on > 0.4 ? CREAM : DIM, { align: 'center' });
+    g.globalAlpha = 1;
+  });
+}
+function years(x, y, n, p, cell = 48) {   // 一格一年填滿（14 年）
+  for (let i = 0; i < n; i++) {
+    const a = clamp((p * n - i) * 1.5);
+    g.fillStyle = a > 0 ? mix('#3a352f', OR, a) : rgba(CREAM, 0.14);
+    g.fillRect(x + i * (cell + 6), y, cell, cell);
+  }
+}
+
+// ---------- 其他零件 ----------
+function tank(x, y, s, a) {   // 坦克線稿（只在卡 07 滑進滑走，表示「不是靠政變」）
+  g.globalAlpha = a; g.strokeStyle = rgba(CREAM, 0.5); g.lineWidth = 4;
+  g.beginPath(); g.roundRect(x - s, y - s * 0.3, s * 2, s * 0.42, 14); g.stroke();
+  g.beginPath(); g.roundRect(x - s * 0.55, y - s * 0.62, s * 1.1, s * 0.34, 8); g.stroke();
+  g.beginPath(); g.moveTo(x + s * 0.5, y - s * 0.46); g.lineTo(x + s * 1.3, y - s * 0.46); g.stroke();
+  for (let i = -3; i <= 3; i++) { const r = s * 0.13; g.beginPath(); g.arc(x + i * s * 0.3, y + s * 0.12, r, 0, 7); g.stroke(); }
+  g.globalAlpha = 1;
+}
+function tv(x, y, s, p) {   // 老電視：螢幕亮起
+  g.fillStyle = WALL; g.beginPath(); g.roundRect(x - s / 2, y - s * 0.36, s, s * 0.72, 18); g.fill();
+  g.strokeStyle = rgba(CREAM, 0.3); g.lineWidth = 3; g.beginPath(); g.roundRect(x - s / 2, y - s * 0.36, s, s * 0.72, 18); g.stroke();
+  const a = E.io(clamp(p));
+  g.fillStyle = mix('#15130f', LIGHT, a * 0.85); g.beginPath(); g.roundRect(x - s * 0.42, y - s * 0.28, s * 0.66, s * 0.56, 10); g.fill();
+  G.disc(g, x + s * 0.38, y - s * 0.1, s * 0.05, rgba(CREAM, 0.4)); G.disc(g, x + s * 0.38, y + s * 0.06, s * 0.05, rgba(CREAM, 0.4));
+  return { x0: x - s * 0.42, y0: y - s * 0.28, w: s * 0.66, h: s * 0.56, a };
+}
+function curve(x, y, w, h, p, col = OR) {   // 收視率往右上爬
+  g.strokeStyle = col; g.lineWidth = 7; g.lineJoin = 'round'; g.beginPath();
+  const n = 40, pp = E.io(clamp(p));
+  for (let i = 0; i <= n * pp; i++) { const u = i / n, X = x + w * u, Y = y - h * (u * u * 0.8 + u * 0.2 + Math.sin(u * 9) * 0.03); i ? g.lineTo(X, Y) : g.moveTo(X, Y); }
+  g.stroke();
+}
+function calendarPage(x, y, s, from, to, p) {   // 日曆紙：年份翻過去
+  const a = E.io(clamp(p));
+  g.fillStyle = '#efe7da'; g.save(); g.translate(x, y); g.rotate(-0.08); g.beginPath(); g.roundRect(-s / 2, -s * 0.34, s, s * 0.68, 8); g.fill();
+  plain(String(from), 0, -s * 0.02, s * 0.3, mix('#241f1a', '#c8bfb2', a), { align: 'center', w: 700, mono: true });
+  g.globalAlpha = a; plain(String(to), 0, s * 0.26, s * 0.22, OR, { align: 'center', w: 700, mono: true }); g.globalAlpha = 1;
+  g.restore();
+}
+function hand(x, y, s, a) {   // 門外伸進來的一隻手（蓋章用）：手腕＋掌，不畫臉
+  g.globalAlpha = a; g.strokeStyle = rgba(CREAM, 0.5); g.lineWidth = s * 0.16; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(x - s, y - s * 0.5); g.lineTo(x, y); g.stroke();
+  G.disc(g, x, y, s * 0.22, rgba(CREAM, 0.5)); g.globalAlpha = 1;
+}
+
+// ---------- 每張卡的舞台 ----------
+const DOOR = { x: SC.x, y: ST.y + ST.h - 110, w: 330, h: 470 };
+const dz = (o = {}) => door(Object.assign({}, DOOR, o));
+
+function c01(lt) {   // 關著的門，門縫有光；門前地上一張日曆紙 1945 → 2014
+  stage(() => {
+    dz({ glow: 0.2 + 0.1 * Math.sin(lt * 1.1) });
+    calendarPage(SC.x - 300, DOOR.y - 60, 200, 1945, 2014, inv(0.8, 2.4, lt));
+  });
+}
+function c02(lt) {   // 門後長出電視，螢幕亮起，收視率往右上爬
+  stage(() => {
+    dz({ open: E.io(inv(0, 1.1, lt)) * 0.55, glow: 0.5 });
+    const p = inv(0.5, 1.6, lt), s = tv(SC.x, DOOR.y - 250, 300 * E.o3(inv(0.4, 1.3, lt)) || 1, p);
+    g.save(); g.beginPath(); g.rect(s.x0, s.y0, s.w, s.h); g.clip();
+    curve(s.x0 + 12, s.y0 + s.h - 12, s.w - 24, s.h - 24, inv(1.1, 2.4, lt), '#2b2419'); g.restore();
+  });
+}
+function c03(lt) {   // 電視框變電影銀幕，片名打在銀幕上（只有片名，不放海報）
+  stage(() => {
+    const k = E.io(inv(0, 1.0, lt));
+    const w = lerp(300, 820, k), h = w * 0.56, x = SC.x, y = SC.y - 40;
+    g.fillStyle = '#15130f'; g.beginPath(); g.roundRect(x - w / 2, y - h / 2, w, h, 14); g.fill();
+    g.strokeStyle = rgba(CREAM, 0.3); g.lineWidth = 4; g.beginPath(); g.roundRect(x - w / 2, y - h / 2, w, h, 14); g.stroke();
+    const p = inv(0.9, 1.9, lt);
+    g.globalAlpha = E.io(p);
+    plain('ER IST WIEDER DA', x, y - 6, 54, CREAM, { align: 'center', mono: true, ls: '3px' });
+    plain('《希特勒回來了》', x, y + 70, 48, ORL, { align: 'center', w: 700 });
+    g.globalAlpha = 1;
+    plain(`${FACTS.FILM_YEAR}`, x, y + h / 2 + 64, 40, DIM, { align: 'center', mono: true });
+  });
+}
+function c04(lt) {   // 德國輪廓線稿＋票房長條衝到第一格
+  stage(() => {
+    outline(DE, SC.x - 250, SC.y - 20, 430, E.io(inv(0, 1.0, lt)));
+    const p = inv(0.6, 2.0, lt);
+    bars(SC.x + 90, SC.y + 250, 420, 330, [
+      { v: 100, num: 'No.1', label: `${FACTS.FILM_YEAR}`, col: OR },
+      { v: 62, num: '', label: '', col: rgba(CREAM, 0.26) },
+      { v: 44, num: '', label: '', col: rgba(CREAM, 0.26) },
+    ], p, { bw: 110 });
+    plain(`上映第 ${FACTS.FILM_NO1_WEEK} 週 · 德國票房`, SC.x + 300, SC.y - 190, 38, DIM, { align: 'center' });
+  });
+}
+function c05(lt) {   // 銀幕前圍上一圈人形，每個人舉起手機，螢幕一個個亮
+  stage(() => {
+    g.globalAlpha = 0.5; dz({ open: 0.5, glow: 0.6 }); g.globalAlpha = 1;
+    phoneCrowd(SC.x, ST.y + ST.h - 70, 7, inv(0.2, 2.2, lt));
+  });
+}
+function c06(lt) {   // SCRIPTED 被劃掉，換成 300 小時素材
+  stage(() => {
+    g.globalAlpha = 0.35; phoneCrowd(SC.x, ST.y + ST.h - 70, 7, 1); g.globalAlpha = 1;
+    const y = SC.y - 180;
+    plain('SCRIPTED', SC.x, y, 72, DIM, { align: 'center', mono: true, ls: '6px' });
+    const p = E.o3(inv(0.2, 1.0, lt));
+    g.strokeStyle = OR; g.lineWidth = 9; g.beginPath(); g.moveTo(SC.x - 230, y - 22); g.lineTo(SC.x - 230 + 460 * p, y - 22); g.stroke();
+    g.globalAlpha = E.io(inv(1.0, 1.8, lt));
+    plain('約 300 小時街頭素材', SC.x, y + 110, 62, CREAM, { align: 'center', w: 700 }); g.globalAlpha = 1;
+  });
+}
+function c07(lt) {   // 坦克滑進來又滑走，門還是關著
+  stage(() => {
+    dz({ glow: 0.22 });
+    const u = loop(lt, 3.2) / 3.2, x = lerp(-300, ST.x + ST.w + 300, u);
+    tank(x, SC.y + 190, 130, Math.sin(Math.PI * clamp(u * 1.2)) * 0.9);
+    plain('不是政變', SC.x, ST.y + 90, 54, DIM, { align: 'center' });
+  });
+}
+const SEATS = { x: ST.x + 76, y: ST.y + 120, cols: 38, rows: 16, cell: 17, gap: 4 };
+function c08(lt) {   // 608 格席次，230 格亮起，計數器停在 37.3%
+  stage(() => {
+    grid(Object.assign({}, SEATS, { on: FACTS.NSDAP_SEATS * E.io(inv(0.1, 1.9, lt)) }));
+    plain(`${FACTS.REICHSTAG_SEATS} 席`, ST.x + 76, ST.y + 96, 34, DIM, { mono: true });
+    counter(SC.x, ST.y + ST.h - 110, FACTS.NSDAP_PCT, inv(0.3, 1.9, lt), 108, '%');
+    plain(`${FACTS.NSDAP_YEAR} 年 7 月 · ${FACTS.NSDAP_SEATS} 席`, SC.x, ST.y + ST.h - 48, 40, CREAM, { align: 'center' });
+  });
+}
+function c09(lt) {   // 過半線橫過網格，亮起的區塊沒碰到線
+  stage(() => {
+    grid(Object.assign({}, SEATS, { on: FACTS.NSDAP_SEATS }));
+    gridLine(SEATS, FACTS.REICHSTAG_MAJORITY, inv(0.1, 1.0, lt), GOLD, `過半 ${FACTS.REICHSTAG_MAJORITY}`);
+    g.globalAlpha = E.io(inv(0.8, 1.6, lt));
+    plain('沒過半', SC.x, ST.y + ST.h - 90, 96, GOLD, { align: 'center', w: 700 }); g.globalAlpha = 1;
+  });
+}
+function c10(lt) {   // 一隻手從門外蓋下任命章，門被推開一道縫
+  stage(() => {
+    dz({ open: E.io(inv(1.1, 2.1, lt)) * 0.2, glow: 0.35 });
+    hand(SC.x - 330, DOOR.y - 420, 110, E.io(inv(0, 0.6, lt)));
+    stampMark(SC.x - 150, DOOR.y - 360, 300, `任命 ${FACTS.CHANCELLOR_YEAR}.1.30`, inv(0.4, 1.3, lt));
+  });
+}
+function c11(lt) {   // 票堆到門口，門是門外伸進來的那隻手推開的
+  stage(() => {
+    dz({ open: E.io(inv(0.6, 1.8, lt)) * 0.3, glow: 0.3 + 0.35 * E.io(inv(0.6, 1.8, lt)) });
+    ballotPile(SC.x, DOOR.y - 14, 9, 1);
+    hand(SC.x - 300, DOOR.y - 300, 110, E.io(inv(0.2, 0.8, lt)));
+    plain('總統身邊的人', SC.x, ST.y + 90, 54, CREAM, { align: 'center', w: 700 });
+  });
+}
+function c38(lt) {   // 門口一排人形被攔在外面、褪成灰色，門照樣開著
+  stage(() => {
+    dz({ open: 0.35, glow: 0.4 });
+    const p = inv(0.2, 1.6, lt);
+    for (let i = 0; i < 5; i++) {
+      const x = ST.x + 90 + i * 70, k = clamp(p * 5 - i);
+      person(x, DOOR.y, 130, mix(CREAM, '#4a4540', k), { ph: 0 });
+    }
+    g.strokeStyle = rgba(OR, 0.8); g.lineWidth = 8;
+    g.beginPath(); g.moveTo(ST.x + 60, DOOR.y - 160); g.lineTo(ST.x + 420, DOOR.y - 160); g.stroke();
+    g.globalAlpha = E.io(inv(0.8, 1.6, lt));
+    plain('被擋在門外', ST.x + 240, ST.y + 120, 54, OR, { align: 'center', w: 700 }); g.globalAlpha = 1;
+  });
+}
+function c12(lt) {   // 門內出現規則本，條文一行行排好
+  stage(() => {
+    dz({ open: 0.62, glow: 0.45, inner: () => { g.globalAlpha = E.io(inv(0.2, 1.4, lt)); rules({ x: SC.x - 110, y: DOOR.y - 420, w: 220, h: 320, lines: 7 }); g.globalAlpha = 1; } });
+    g.globalAlpha = E.io(inv(1.0, 2.0, lt));
+    rules({ x: ST.x + 640, y: ST.y + 150, w: 300, h: 450, lines: 8 }); g.globalAlpha = 1;
+  });
+}
+function c13(lt) {   // 規則本翻到新頁，標題落下「授權法 1933.3.23」
+  stage(() => {
+    rules({ x: SC.x - 230, y: ST.y + 100, w: 460, h: 620, lines: 7, title: `授權法 ${FACTS.ENABLING_YEAR}.3.23`, titleP: inv(0.3, 1.3, lt) });
+  });
+}
+function c14(lt) {   // 444 比 94 兩根長條
+  stage(() => {
+    bars(ST.x + 180, ST.y + 620, 600, 420, [
+      { v: FACTS.ENABLING_FOR, label: '贊成', col: OR },
+      { v: FACTS.ENABLING_AGAINST, label: '反對', col: rgba(CREAM, 0.45) },
+    ], inv(0.1, 1.6, lt), { bw: 160 });
+    plain(`國會表決 · ${FACTS.ENABLING_YEAR}.3.23`, SC.x, ST.y + 120, 42, DIM, { align: 'center' });
+  });
+}
+function c15(lt) {   // 規則本上「須經國會」被劃掉，席次網格整片熄掉
+  stage(() => {
+    const p = E.o3(inv(0.2, 1.2, lt));
+    rules({ x: ST.x + 60, y: ST.y + 110, w: 420, h: 600, lines: 7, strike: 2, strikeP: p });
+    plain('須經國會', ST.x + 110, ST.y + 110 + 52 + 2 * ((600 - 52 - 36) / 7) - 14, 40, '#241f1a', { w: 700 });
+    g.globalAlpha = 1 - 0.85 * E.io(inv(0.9, 2.0, lt));
+    grid({ x: ST.x + 560, y: ST.y + 230, cols: 16, rows: 14, cell: 17, gap: 4, on: FACTS.NSDAP_SEATS });
+    g.globalAlpha = 1;
+  });
+}
+function c16(lt) {   // 德國輪廓縮小退到左上，菲律賓輪廓升上來
+  stage(() => {
+    const p = E.io(inv(0.1, 1.5, lt));
+    outline(DE, lerp(SC.x, ST.x + 190, p), lerp(SC.y, ST.y + 180, p), lerp(420, 190, p), 1 - 0.4 * p);
+    g.globalAlpha = p; outline(PH, SC.x + 110, SC.y + 90 + (1 - p) * 300, 560, 1, GOLD); g.globalAlpha = 1;
+  });
+}
+function c17(lt) {   // 菲律賓輪廓上落下票格，門開一道縫，軸線標 1965
+  stage(() => {
+    outline(PH, ST.x + 250, SC.y - 30, 460, 1, GOLD);
+    g.globalAlpha = 0.9; dz({ x: ST.x + 740, w: 230, h: 330, open: E.io(inv(0.6, 1.9, lt)) * 0.22, glow: 0.3 }); g.globalAlpha = 1;
+    ballotPile(ST.x + 740, DOOR.y - 12, 6, inv(0.2, 1.6, lt), 54);
+    axis(ST.x + 70, ST.y + ST.h - 110, 760, FACTS.MARCOS_ELECTED_YEAR, FACTS.MARCOS_JR_YEAR, [{ year: FACTS.MARCOS_ELECTED_YEAR, label: '當選' }], 0.02);
+  });
+}
+function c18(lt) {   // 門被從內側鎖上，規則本蓋下「戒嚴 1972.9.21」
+  stage(() => {
+    dz({ x: ST.x + 300, w: 280, h: 420, open: 0.2 * (1 - E.io(inv(0, 0.9, lt))), glow: 0.3 - 0.2 * E.io(inv(0, 0.9, lt)), lock: inv(0.7, 1.5, lt) });
+    stampMark(ST.x + 700, SC.y - 20, 320, `戒嚴 ${FACTS.MARTIAL_LAW_YEAR}.9.21`, inv(0.9, 1.8, lt), 0.1);
+  });
+}
+function c19(lt) {   // 時間軸從 1972 一格一格填到 1986，共 14 格
+  stage(() => {
+    years(ST.x + 90, SC.y - 60, FACTS.ONE_MAN_YEARS, inv(0.2, 2.1, lt), 52);
+    plain(`${FACTS.MARTIAL_LAW_YEAR}`, ST.x + 90, SC.y - 90, 40, DIM, { mono: true });
+    plain(`${FACTS.MARTIAL_LAW_END}`, ST.x + 90 + FACTS.ONE_MAN_YEARS * 58 - 58, SC.y - 90, 40, DIM, { mono: true });
+    counter(SC.x, SC.y + 170, FACTS.ONE_MAN_YEARS, inv(0.4, 1.8, lt), 120, ' 年');
+    plain('一個人說了算', SC.x, SC.y + 250, 46, CREAM, { align: 'center' });
+  });
+}
+function c20(lt) {   // 同一道門重新打開，門下又堆起票，軸線跳到 2022
+  stage(() => {
+    dz({ open: E.io(inv(0.2, 1.8, lt)) * 0.45, glow: 0.2 + 0.4 * E.io(inv(0.2, 1.8, lt)) });
+    ballotPile(SC.x, DOOR.y - 14, 9, inv(0.5, 2.2, lt));
+    axis(ST.x + 70, ST.y + 150, 760, FACTS.MARCOS_ELECTED_YEAR, FACTS.MARCOS_JR_YEAR, [
+      { year: FACTS.MARCOS_ELECTED_YEAR, label: '當選' }, { year: FACTS.MARTIAL_LAW_YEAR, label: '戒嚴' },
+      { year: FACTS.MARTIAL_LAW_END, label: '下台' }, { year: FACTS.MARCOS_JR_YEAR, label: '兒子當選' },
+    ], E.io(inv(0.1, 1.9, lt)));
+  });
+}
+const POPG = { x: ST.x + 180, y: ST.y + 150, cols: 10, rows: 10, cell: 50, gap: 8 };
+function c21(lt) {   // 票格填到 58.77%，過半線被跨過，計數器跑到 3163 萬
+  stage(() => {
+    const p = E.io(inv(0.1, 1.8, lt));
+    grid(Object.assign({}, POPG, { rows: 8, on: 80 * FACTS.MARCOS_JR_PCT / 100 * p, col: OR }));
+    gridLine(Object.assign({}, POPG, { rows: 8 }), 40, inv(0.2, 0.9, lt), GOLD, '過半');
+    counter(SC.x, ST.y + ST.h - 150, FACTS.MARCOS_JR_PCT, p, 104, '%');
+    plain(`${FACTS.MARCOS_JR_VOTES_WAN} 萬票 · ${FACTS.MARCOS_JR_YEAR}`, SC.x, ST.y + ST.h - 80, 44, CREAM, { align: 'center' });
+  });
+}
+function c23(lt) {   // 同一道門前，票箱一張張投進去，標兒子當選那年
+  stage(() => {
+    dz({ open: 0.45, glow: 0.45 });
+    ballotBox(SC.x - 330, DOOR.y - 60, 200, loop(lt, 1.6) / 1.6);
+    plain(`${FACTS.MARCOS_JR_YEAR}`, SC.x - 330, DOOR.y + 40, 44, GOLD, { align: 'center', mono: true });
+    plain('靠選票', SC.x + 300, ST.y + 150, 54, CREAM, { align: 'center', w: 700 });
+  });
+}
+function c26(lt) {   // 網格重分三塊，中間那塊（有選舉的威權）最大並亮起
+  stage(() => {
+    const p = E.io(inv(0.1, 1.6, lt)), y = ST.y + 230, h = 150;
+    const segs = [{ w: 0.26, t: '民主', c: rgba(CREAM, 0.3) }, { w: 0.46, t: '有選舉的威權', c: OR }, { w: 0.28, t: '封閉的威權', c: rgba(CREAM, 0.22) }];
+    let x = ST.x + 70; const tot = ST.w - 140;
+    segs.forEach((s, i) => {
+      const w = tot * s.w, hh = h * (1 + (i === 1 ? 0.55 * p : 0));
+      g.fillStyle = i === 1 ? mix('#3a352f', s.c, p) : s.c; g.fillRect(x, y + h - hh + 120, w, hh);
+      plain(s.t, x + w / 2, y + h + 190, i === 1 ? 44 : 36, i === 1 ? CREAM : DIM, { align: 'center' });
+      x += w + 12;
+    });
+    g.globalAlpha = E.io(inv(1.0, 1.9, lt));
+    plain('最常見的政體', SC.x, ST.y + ST.h - 110, 72, CREAM, { align: 'center', w: 700 }); g.globalAlpha = 1;
+  });
+}
+function c27(lt) {   // 投票動作循環三次，門縫一直只開一點點
+  stage(() => {
+    const n = 3, cyc = 1.5, k = Math.min(n - 1, Math.floor(lt / cyc)), u = loop(lt, cyc) / cyc;
+    dz({ open: lerp(0.4, 0.05, k / (n - 1)), glow: lerp(0.45, 0.12, k / (n - 1)) });
+    ballotBox(SC.x - 330, DOOR.y - 60, 180, u);
+    for (let i = 0; i < n; i++) { G.disc(g, SC.x - 330 + (i - 1) * 46, DOOR.y + 36, 11, i <= k ? OR : rgba(CREAM, 0.25)); }
+    plain('選舉照辦', SC.x - 330, ST.y + 150, 46, DIM, { align: 'center' });
+    plain('不公平', SC.x + 300, ST.y + 150, 46, OR, { align: 'center' });
+  });
+}
+function c28(lt) {   // 回到舉手機的人形，鏡頭慢慢推近門口
+  stage(() => {
+    cam(SC.x, DOOR.y - 180, lerp(1.0, 1.16, E.io(inv(0, 2.2, lt))), () => {
+      dz({ open: 0.5, glow: 0.5 });
+      phoneCrowd(SC.x, ST.y + ST.h - 70, 7, 1);
+    });
+  });
+}
+// 一排普通人形（第 27–30 卡）：s 身高、col 顏色、a(i) 每個人的透明度
+function crowdRow(y, n, s, a = () => 1, col = CREAM) {
+  for (let i = 0; i < n; i++) {
+    const x = SC.x + (i - (n - 1) / 2) * (ST.w - 160) / (n - 1), k = clamp(a(i));
+    if (k <= 0) continue;
+    g.globalAlpha = k; person(x, y, s, col, { ph: Math.sin(NOW * 1.1 + i) * 0.15 }); g.globalAlpha = 1;
+  }
+}
+function c33(lt) {   // 屋頂對話：「那選我的人，都是怪物嗎？」一排普通人形一個個亮起
+  stage(() => {
+    const p = inv(0.1, 1.8, lt);
+    crowdRow(ST.y + ST.h - 90, 7, 170, i => 0.25 + (p * 7 - i));
+    g.globalAlpha = E.io(inv(0.6, 1.5, lt));
+    plain('「選我的人，都是怪物嗎？」', SC.x, ST.y + 170, 56, CREAM, { align: 'center', w: 880 }); g.globalAlpha = 1;
+  });
+}
+function c34(lt) {   // 普通人形手上的票一張張飛向中間那一個人形
+  stage(() => {
+    const n = 6, y = ST.y + ST.h - 90;
+    crowdRow(y, n + 1, 150, i => (i === n / 2 ? 0 : 0.85));
+    const big = lerp(170, 300, E.io(inv(0.4, 2.2, lt)));
+    person(SC.x, y, big, ORL, { ph: 0 });
+    for (let i = 0; i <= n; i++) {
+      if (i === n / 2) continue;
+      const x0 = SC.x + (i - n / 2) * (ST.w - 160) / n, u = E.io(inv(0.2 + Math.abs(i - n / 2) * 0.18, 1.4 + Math.abs(i - n / 2) * 0.18, lt));
+      ballot(lerp(x0, SC.x, u), lerp(y - 200, y - big - 40, u) - Math.sin(u * Math.PI) * 120, 54, CREAM, 1 - u * 0.6);
+    }
+    g.globalAlpha = E.io(inv(1.0, 1.9, lt));
+    plain('普通人', ST.x + 170, ST.y + 150, 46, DIM, { align: 'center' });
+    plain('交給一個人', ST.x + ST.w - 200, ST.y + 150, 46, ORL, { align: 'center' }); g.globalAlpha = 1;
+  });
+}
+function c39(lt) {   // 一排小人形一個個染成跟中間那個人形同一個顏色
+  stage(() => {
+    const p = inv(0.1, 1.8, lt), y = ST.y + ST.h - 90;
+    person(SC.x, y, 300, ORL, { ph: 0 });
+    for (let i = 0; i < 8; i++) {
+      if (Math.abs(i - 3.5) < 1) continue;
+      const x = SC.x + (i - 3.5) * (ST.w - 160) / 7;
+      person(x, y, 150, mix(CREAM, ORL, clamp(p * 4 - Math.abs(i - 3.5) + 1)), { ph: Math.sin(NOW * 1.1 + i) * 0.15 });
+    }
+    g.globalAlpha = E.io(inv(0.6, 1.5, lt));
+    plain('「他們跟我一樣。」', SC.x, ST.y + 160, 60, CREAM, { align: 'center', w: 880 }); g.globalAlpha = 1;
+  });
+}
+function c35(lt) {   // 一個放大的人形張開一片屋簷，把所有小人形罩在底下
+  stage(() => {
+    const p = E.io(inv(0.1, 1.6, lt)), y = ST.y + ST.h - 80;
+    person(SC.x, y, 470, ORL, { ph: 0 });
+    const w = lerp(120, ST.w - 120, p), ry = y - 330;
+    G.poly(g, [[SC.x - w / 2, ry + 70], [SC.x, ry - 30], [SC.x + w / 2, ry + 70]], rgba(OR, 0.55));
+    crowdRow(y, 8, 120, i => (Math.abs(i - 3.5) < 1 ? 0 : 0.9));
+    g.globalAlpha = E.io(inv(0.8, 1.7, lt));
+    plain('交給我就好', SC.x, ST.y + 140, 60, CREAM, { align: 'center', w: 700 }); g.globalAlpha = 1;
+  });
+}
+function c36(lt) {   // 屋簷底下的小人形一個個褪成灰色，標「代價：你」
+  stage(() => {
+    const p = inv(0.2, 2.0, lt), y = ST.y + ST.h - 80;
+    person(SC.x, y, 470, ORL, { ph: 0 });
+    G.poly(g, [[ST.x + 60, y - 260], [SC.x, y - 360], [ST.x + ST.w - 60, y - 260]], rgba(OR, 0.55));
+    for (let i = 0; i < 8; i++) {
+      if (Math.abs(i - 3.5) < 1) continue;
+      const x = SC.x + (i - 3.5) * (ST.w - 160) / 7, k = clamp(p * 8 - Math.abs(i - 3.5) + 1);
+      person(x, y, 120, mix(CREAM, '#4a4540', k), { ph: Math.sin(NOW * 1.1 + i) * 0.15 * (1 - k) });
+    }
+    g.globalAlpha = E.io(inv(1.0, 1.9, lt));
+    plain('只剩一個聲音', SC.x, ST.y + 140, 72, OR, { align: 'center', w: 700 }); g.globalAlpha = 1;
+  });
+}
+function c37(lt) {   // 兩邊對照：左邊每人扛一小箱，右邊一個人形扛一整疊
+  stage(() => {
+    const p = E.io(inv(0.2, 1.6, lt)), y = ST.y + ST.h - 150;
+    for (let i = 0; i < 4; i++) {
+      const x = ST.x + 90 + i * 100;
+      person(x, y, 170, CREAM, { ph: Math.sin(NOW * 1.2 + i) * 0.2 });
+      g.fillStyle = rgba(GOLD, 0.85); g.fillRect(x - 24, y - 170 - 50, 48, 40);
+    }
+    plain('自己扛一點', ST.x + 240, y + 70, 48, CREAM, { align: 'center', w: 700 });
+    const bx = ST.x + 720, hh = lerp(80, 380, p);
+    person(bx, y, 240, ORL, { ph: 0 });
+    g.fillStyle = rgba(OR, 0.85); g.fillRect(bx - 70, y - 240 - hh - 10, 140, hh);
+    plain('一個人全扛', bx, y + 70, 48, ORL, { align: 'center', w: 700 });
+    g.strokeStyle = rgba(CREAM, 0.2); g.lineWidth = 3; g.setLineDash([12, 10]);
+    g.beginPath(); g.moveTo(SC.x, ST.y + 120); g.lineTo(SC.x, y + 20); g.stroke(); g.setLineDash([]);
+  });
+}
+function c31(lt) {   // 票一張一張落進票箱，每落一張門開大一點
+  stage(() => {
+    const cyc = 0.75, k = Math.floor(lt / cyc), u = loop(lt, cyc) / cyc;
+    dz({ open: clamp(0.1 + k * 0.1, 0, 0.62), glow: clamp(0.25 + k * 0.08, 0, 0.7) });
+    ballotBox(SC.x - 340, DOOR.y - 40, 190, u);
+    plain('一票一票', SC.x - 340, ST.y + 160, 50, CREAM, { align: 'center', w: 700 });
+  });
+}
+function c32(lt) {   // 門全開，門口站著一排看著門的人形
+  stage(() => {
+    dz({ open: lerp(0.62, 0.95, E.io(inv(0, 1.4, lt))), glow: 0.65 });
+    const p = inv(0.3, 2.0, lt);
+    for (let i = 0; i < 5; i++) {
+      const a = clamp((p * 5 - i) * 1.4); if (a <= 0) continue;
+      g.globalAlpha = 0.5 + 0.5 * a;
+      person(SC.x + (i - 2) * 190, ST.y + ST.h - 60, 150, CREAM, { ph: Math.sin(NOW * 0.9 + i) * 0.12 });
+      g.globalAlpha = 1;
+    }
+  });
+}
+
+function c40(lt) {   // 規則本換成立委表決紀錄，標題落下
+  stage(() => {
+    rules({ x: SC.x - 230, y: ST.y + 100, w: 460, h: 620, lines: 7, title: '立委表決紀錄', titleP: inv(0.3, 1.3, lt) });
+  });
+}
+function c41(lt) {   // 票一張張投進票箱，標「下次換人」
+  stage(() => {
+    ballotBox(SC.x, DOOR.y - 40, 220, loop(lt, 1.2) / 1.2);
+    g.globalAlpha = E.io(inv(0.6, 1.5, lt));
+    plain('下次換人', SC.x, ST.y + 150, 72, OR, { align: 'center', w: 700 }); g.globalAlpha = 1;
+  });
+}
+
+function c42(lt) {   // 兩群人形面對面，中間的火花越來越大；後方一個放大的人形慢慢浮出來
+  stage(() => {
+    const p = E.io(inv(0.1, 2.0, lt)), y = ST.y + ST.h - 90;
+    g.globalAlpha = 0.25 + 0.5 * p; person(SC.x, y - 120, 420, ORL, { ph: 0 }); g.globalAlpha = 1;
+    for (let i = 0; i < 3; i++) {
+      person(ST.x + 110 + i * 110, y, 150, CREAM, { ph: Math.sin(NOW * 3 + i) * 0.3 });
+      person(ST.x + ST.w - 110 - i * 110, y, 150, GOLD, { ph: Math.sin(NOW * 3 + i + 1) * 0.3 });
+    }
+    g.globalAlpha = E.io(inv(0.8, 1.7, lt));
+    plain('忙著對抗彼此', SC.x, ST.y + 140, 60, CREAM, { align: 'center', w: 800 }); g.globalAlpha = 1;
+  });
+}
+
+// ---------- 卡 ----------
+// 一張卡對一句旁白（timeline.js 第 i 句）；卡的起點＝那句開口前 0.25 秒。hud＝數字的出處。
+const CARDS = [
+  { head: '希特勒回來了', sub: '如果是今天？', hud: 'Wikipedia（劇情）', draw: c01 },
+  { head: '希特勒回來了', sub: 'Er ist wieder da', hud: 'Wikipedia', draw: c03 },
+  { head: '希特勒回來了', sub: '路人笑著合照', hud: 'Wikipedia · The Guardian', draw: c05 },
+  { head: '走正門進來', sub: `${FACTS.FILM_YEAR} 德國票房第一`, hud: 'The Guardian · Wikipedia', draw: c07 },
+  { head: '走正門進來', sub: `${FACTS.NSDAP_YEAR} · 最多 ${FACTS.NSDAP_PCT}% · 第一大黨`, hud: 'Wikipedia（威瑪國會選舉）', draw: c09 },
+  { head: '走正門進來', sub: `${FACTS.CHANCELLOR_YEAR}.1.30 當上總理`, hud: 'Wikipedia（rise to power）', draw: c11 },
+  { head: '改規則', sub: `授權法 → ${FACTS.PARTY_BAN_YEAR}.7.14 禁組新黨`, hud: 'Wikipedia（授權法 · 禁組新黨法）', draw: c15 },
+  { head: '菲律賓', hud: '示意地圖', draw: c16 },
+  { head: '菲律賓', sub: `戒嚴 · 約 ${FACTS.MARCOS_JAILED_WAN} 萬人入獄`, hud: 'Wikipedia（戒嚴時期）', draw: c18 },
+  { head: '菲律賓', sub: `${FACTS.MARCOS_JR_YEAR} 兒子 ${FACTS.MARCOS_JR_PCT}%`, hud: 'Wikipedia（Philippine election）', draw: c21 },
+  { head: '電影結尾', sub: '選我的人呢？', hud: 'Wikiquote（結局台詞）', draw: c33 },
+  { head: '電影結尾', sub: '交給強人省事', hud: 'Wikiquote（結局台詞）', draw: c34 },
+  { head: '照規則來', sub: '連贏的人也一樣', hud: '示意圖', draw: c12 },
+  { head: '魔鬼的耳語', hud: '示意圖', draw: c42 },
+  { head: '魔鬼的耳語', sub: '問題和責任交出去', hud: '示意圖', draw: c35 },
+  { head: '代價', sub: `授權法後四個月`, hud: 'Wikipedia（禁組新黨法）', draw: c36 },
+  { head: '你呢？', sub: '先守住同一套規則？', hud: '示意圖', draw: c32 },
+  { head: '選舉≠民主', sub: '一起守住規則才算數', hud: '示意圖', draw: c31 },
+];
+// 段名 → 畫面上的章名（鉤子不標）
+const CHAP = { 鉤子: '', 機制: '一、從正門進來', 轉折: '二、不只發生在德國', 落點: '三、代價是誰付', 提問: '三、代價是誰付', 收尾: '三、代價是誰付' };
+const N = CARDS.length;
+if (TL.lines.length !== N) throw new Error(`timeline.js 有 ${TL.lines.length} 句，卡片 ${N} 張，對不上`);
+const DUR = TL.dur;
+const T0 = TL.lines.map((l, i) => i === 0 ? 0 : l.t0 - 0.25);
+const cardAt = t => { let i = 0; while (i + 1 < N && t >= T0[i + 1]) i++; return i; };
+
+// ---------- 背景：上方斜紋帶等速慢捲，讓每張卡都有連續動態 ----------
+function band(t) {
+  g.save(); g.beginPath(); g.rect(0, 0, W, 120); g.clip();
+  g.fillStyle = BG2; g.fillRect(0, 0, W, 120);
+  const off = (t * 40) % 80;
+  for (let x = -160; x < W + 160; x += 80) G.poly(g, [[x + off, 0], [x + off + 40, 0], [x + off - 80, 120], [x + off - 120, 120]], rgba(OR, 0.35));
+  g.restore();
+}
+
+// ---------- 字幕 ----------
+function caption(t) {
+  const L = TL.lines.find(l => t >= l.t0 - 0.1 && t < l.t1 + 0.2);
+  if (!L) return;
+  const s = L.text.replace(/[。！]$/, ''), px = 42, maxW = 1000;
+  g.font = ZH(500, px);
+  const fits = r => g.measureText(r).width <= maxW;
+  // 在標點後斷行，貪婪裝滿一行；單段本身太長才逐字斷
+  const segs = s.match(/[^，、；：]+[，、；：]?/g), rows = [];
+  let cur = '';
+  for (const sg of segs) {
+    if (fits(cur + sg)) { cur += sg; continue; }
+    if (cur) rows.push(cur);
+    cur = '';
+    for (const ch of sg) { if (!fits(cur + ch)) { rows.push(cur); cur = ''; } cur += ch; }
+  }
+  if (cur) rows.push(cur);
+  const h = 50 + rows.length * 58;
+  g.fillStyle = '#0f0e0d'; g.fillRect(0, SAFE.cap, W, h);
+  rows.forEach((r, j) => plain(r, W / 2, SAFE.cap + 66 + j * 58, px, CREAM, { align: 'center', w: 500 }));
+}
+
+// ---------- 主持人 ----------
+const svgText = await fetch('./mascot/clawd-bot.svg').then(r => { if (!r.ok) throw new Error('取不到 mascot/clawd-bot.svg'); return r.text(); });
+const host = document.getElementById('mascot'); host.innerHTML = svgText;
+const ROOT = host.querySelector('svg'); if (!ROOT) throw new Error('mascot svg 解析失敗');
+const TRACK = { fps: 30, states: [{ t: 0, state: 'idle' }], looks: CARDS.map((c, i) => ({ t: T0[i], x: -0.5, y: 0.5 })), pokes: [] };
+function poseHost(t) {
+  applyPose(ROOT, poseAt(t, TRACK));
+  // 嘴跟旁白開合；表情維持 idle
+  if (!TL.lines.some(l => t >= l.t0 && t <= l.t1)) return;
+  const a = 0.25 + 0.75 * Math.abs(Math.sin(t * 13.5)) * (0.55 + 0.45 * Math.abs(Math.sin(t * 4.3 + 1)));
+  ROOT.querySelector('#mouth').setAttribute('d', `M-5,8 Q0,${(9 + a * 5).toFixed(2)} 5,8`);
+}
+
+// ---------- 主迴圈 ----------
+// 換卡＝原地交叉淡化 XF 秒：先畫上一張、存起來，再畫這一張，把上一張以漸弱透明度疊回去。
+const XF = 0.6;
+const snap = Object.assign(document.createElement('canvas'), { width: W, height: H });
+function render(t) {
+  t = clamp(t, 0, DUR); TXT = []; NOW = t;
+  const i = cardAt(t), lt = t - T0[i];
+  const k = i && lt < XF ? E.io(lt / XF) : 1;
+  if (k < 1) { drawCard(i - 1, t); snap.getContext('2d').drawImage(g.canvas, 0, 0); TXT = []; }
+  drawCard(i, t);
+  if (k < 1) { g.globalAlpha = 1 - k; g.drawImage(snap, 0, 0); g.globalAlpha = 1; }
+  return finish(t);
+}
+function drawCard(i, t) {
+  const cd = CARDS[i], lt = t - T0[i];
+  g.fillStyle = BG; g.fillRect(0, 0, W, H);
+  band(t);
+  plain('選出來的獨裁者', 60, 186, 30, DIM, { mono: true, ls: '4px' });
+  const ch = CHAP[TL.lines[i].section]; if (ch === undefined) throw new Error(`段名 ${TL.lines[i].section} 沒有章名`);
+  if (ch) plain(ch, 60, 246, 44, CREAM, { w: 600 });
+  // 進度條按章分組，章與章之間空一格
+  let gx = 60;
+  for (let j = 0; j < N; j++) {
+    if (j && CHAP[TL.lines[j].section] !== CHAP[TL.lines[j - 1].section]) gx += 14;
+    g.fillStyle = j <= i ? OR : rgba(CREAM, 0.2); g.fillRect(gx, 276, 14, j === i ? 10 : 5); gx += 20;
+  }
+  // 大標＝這一段的主題，同主題連續幾張卡共用、不重播動畫；副標＝這張卡的關鍵詞。
+  // 第 0 卡第 0 幀就完整顯示（封面）。
+  let gi = i; while (gi > 0 && CARDS[gi - 1].head === cd.head) gi--;
+  const glt = t - T0[gi];
+  const pin = i === 0 ? () => 1 : (a, b) => inv(a, b, lt);
+  const big = cd.head.length > 6 ? 120 : cd.head.length > 4 ? 150 : 180, hy = 330 + big * 0.86 + 60;
+  say(cd.head, 60, hy, big, CREAM, i === 0 ? 1 : inv(0.05, 0.6, glt), { id: 'head' + (gi + 1) });
+  if (cd.sub) say(cd.sub, 64, hy + 110, 68, ORL, pin(0.15, 0.7), { id: 'sub' + (i + 1) });
+  if (cd.tag) say(cd.tag, 64, hy + 190, 46, GOLD, pin(0.3, 0.85), { id: 'tag' + (i + 1) });
+  plain(`來源｜${cd.hud}`, W / 2 - ST.w * SAFE.k / 2, SAFE.hud, 30, DIM, { mono: true });
+  // 舞台照原座標畫，整塊縮放置中：Shorts 底部標題／留言列約從 y 1580 起蓋住、右側按鈕蓋 x>930
+  g.save(); g.translate(W / 2, SAFE.y); g.scale(SAFE.k, SAFE.k); g.translate(-SC.x, -ST.y);
+  cd.draw(lt);
+  g.restore();
+}
+function finish(t) {
+  caption(t);
+  poseHost(t);
+  const fade = t > DUR - 0.6 ? inv(DUR - 0.6, DUR, t) : 0;
+  if (fade) { g.globalAlpha = fade; g.fillStyle = '#000'; g.fillRect(0, 0, W, H); g.globalAlpha = 1; }
+  // 主播畫進 canvas：DOM SVG 疊層的合成結果會受上一幀影響，尋幀一致過不了
+  const tok = ++mascotTok, img = new Image();
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(ROOT));
+  return img.decode().then(() => {
+    if (tok !== mascotTok) return;   // 已經畫下一幀了，舊圖不能蓋上去
+    // IG 主頁格把 9:16 置中裁成 3:4（上下各裁約 240px），框要在 y 240 以下；可見身形約 x 904–1031、y 271–393，
+    // 底緣停在大標頂（約 y 400 起，最寬到 x 960）上面。原本 (730, 60, 340) 在格子縮圖會被裁掉。
+    g.globalAlpha = 1 - fade; g.drawImage(img, 880, 240, 176, 176); g.globalAlpha = 1;
+  });
+}
+let mascotTok = 0;
+
+// ---------- 對外契約 ----------
+window.DUR = DUR;
+window.render = render;
+window.TEXTS = t => { render(t); return TXT.filter(b => b.screen); };
+window.CUES = TL.lines.map(l => ({ t0: l.t0, t1: l.t1, text: l.text }));
+window.SHAKES = [];
+window.EV = (() => {
+  const e = [{ t: 0, type: 'bed', len: DUR }];
+  // 不加任何音效：換卡「登」一聲使用者 10-30 嫌吵拿掉，只留配樂（calm 片型）
+  return e.sort((a, b) => a.t - b.t);
+})();
+window.VOICE = TL.lines.map((l, j) => ({ t: l.t0, file: `out/voice/${String(j + 1).padStart(2, '0')}.wav` }));
+
+// 字型：這段程式碼本身就含畫面上所有字（卡片、標籤、圖表字），整段拿去預載
+const allText = document.querySelector('script[type=module]').textContent + TL.lines.map(l => l.text).join('') + '0123456789';
+await Promise.all([document.fonts.load(ZH(600, 180), allText), document.fonts.load(ZH(500, 42), allText), document.fonts.load(ZH(700, 46), allText), document.fonts.load(MONO(30), allText)]);
+await document.fonts.ready;
+for (let i = 0; i < N; i++) render(T0[i] + 0.6);
+render(0);
+window.READY = true;
+</script>
+</body>
+</html>

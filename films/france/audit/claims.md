@@ -1,0 +1,73 @@
+# france 旁白稿與數據來源（待稽核）
+
+核心結論＝旁白稿逐句陳述的事實。下方「旁白稿」是要對外發布的文字，「數據來源」是作者自述的出處與算法。
+
+## 旁白稿
+### 鉤子
+一天逮捕兩千多人，法國這一個月發生了什麼？
+起點之一，是九月中旬巴黎郊區克雷泰伊一所老師缺額沒補上的高中。
+一個月後的十月十七日，學生、部分工會、黃背心三股力量合流上街。
+### 起因
+第一股是學生：巴黎周邊多所高中跟著封校，訴求包括師資不足、班級過大。
+第二股是黃背心，這是二〇一八年因油價上漲而起、每週上街的抗議運動；九月起，網路上有帳號號召它回歸。
+第三股是部分工會，例如法國總工會，爭的是薪資與公共服務。
+十月一日，總理提出明年預算：公務員薪資指數凍結，稅收淨增加一百八十億歐元。
+### 升溫
+十月五日，一名十五歲高中生的手被震爆彈炸斷，警察監察總局正在調查。
+隔天，主辦方說全國四十五萬人上街，內政部說二十六萬六千人。
+### 轉折
+十月十七日，三股力量以「生活太貴」為口號上街；內政部說五十五萬人，主辦方說八十萬人。
+省長說，利摩日一百四十三年的市政廳被縱火，外牆三分之二已經損毀。
+內政部說，當天兩千三百九十七人被捕，九百九十七名警察與憲兵受傷。
+巴黎警察總局說，示威當天巴黎一人心肺驟停死亡；檢方已立案調查死因，目前沒有證據連到警方行動。
+總理說，暴力嚴重，但沒有人被殺。
+### 落點
+馬克宏說暴力毫無理由，承諾警方應對完全透明。
+十九日晚，巴黎、里昂等地實施局部宵禁；政府沒有宣布緊急狀態。
+總統府說，內政部長請辭，馬克宏拒絕。
+國民議會同晚暫停國家預算審議，先轉審社會安全預算。
+黃背心協調團體號召十月二十四日、三十一日再上街，工會聯盟號召十一月五日全國罷工。
+### 提問
+政府在國會沒有穩定多數，年底前還要讓明年預算過關。
+責任歸屬各說各話：共和黨主席指控不屈法國議員用口號武裝了暴力；社會黨第一書記要求徹底修改警方維持秩序的方式。
+政治學者科特雷對半島電視台說，法國人在問自己，這個國家要往哪裡去？
+
+## 數據來源
+## 數據來源（2026-10-20 抓取，事實正本 research/REPORT.md）
+
+每句旁白的出處。編號同 REPORT 來源表；原文存 `research/pages/` 與 `research/pages/recheck-1020/`。
+
+| 句 | 稿中事實 | 出處 |
+|---|---|---|
+| 01 | 10-17 被捕 2,397 人 | 內政部，經 France24 直播 10-18 https://www.france24.com/en/europe/20261018-live-vance-blames-immigration-for-violence-during-protests-in-france ；BBC 10-18「about 2,400」https://www.bbc.com/news/articles/cw240zl08dm5o |
+| 02 | 9 月中旬起於克雷泰伊聖修伯里高中，該校教職缺額未補（Euronews 與當地紀錄寫 9-17 起動員，世界報寫 9-21，旁白取「九月中旬」）；04 句另述「巴黎周邊多所高中跟著封校」 | Euronews 10-05「The campaign began on 17 September」https://www.euronews.com/2026/10/05/from-school-blockades-to-violence-what-is-driving-student-protests-in-france ；當地紀錄「Depuis jeudi 17 septembre à Créteil」https://unionpopcreteil.fr/rentree-saint-exupery-manque-personnel/ ；Le Monde 09-29 https://www.lemonde.fr/en/france/article/2026/09/29/high-school-protests-spread-across-france-pitting-radical-left-against-government_6758067_7.html ；AFP 經 actu.fr 09-24 https://actu.fr/ile-de-france/creteil_94028/on-demande-juste-un-lycee-qui-fonctionne-plusieurs-lycees-d-ile-de-france-bloque-par-les-eleves_64817015.html ；AFP 經 actu.fr 09-24 標題「plusieurs lycées d'Île-de-France bloqués par les élèves」 ；04 句「到十月初已經復課，訴求還在」：Le Monde 10-05 標題「les cours ont repris, mais les revendications demeurent」https://www.lemonde.fr/campus/article/2026/10/05/au-lycee-saint-exupery-de-creteil-ou-les-blocages-ont-commence-les-cours-ont-repris-mais-les-revendications-demeurent_6788551_4401467.html |
+| 03 | 10-17 學生、工會、黃背心三股合流上街 | 端傳媒 10-19 https://theinitium.com/20261019-whatsnew-france-protest-turns-into-riots/ ；Guardian 10-17 https://www.theguardian.com/world/2026/oct/17/protests-france-high-prices-social-security-gilets-jaunes |
+| 04 | 9 月中旬起於克雷泰伊聖修伯里高中，該校教職缺額未補（Euronews 與當地紀錄寫 9-17 起動員，世界報寫 9-21，旁白取「九月中旬」）；04 句另述「巴黎周邊多所高中跟著封校」 | Euronews 10-05「The campaign began on 17 September」https://www.euronews.com/2026/10/05/from-school-blockades-to-violence-what-is-driving-student-protests-in-france ；當地紀錄「Depuis jeudi 17 septembre à Créteil」https://unionpopcreteil.fr/rentree-saint-exupery-manque-personnel/ ；Le Monde 09-29 https://www.lemonde.fr/en/france/article/2026/09/29/high-school-protests-spread-across-france-pitting-radical-left-against-government_6758067_7.html ；AFP 經 actu.fr 09-24 https://actu.fr/ile-de-france/creteil_94028/on-demande-juste-un-lycee-qui-fonctionne-plusieurs-lycees-d-ile-de-france-bloque-par-les-eleves_64817015.html ；AFP 經 actu.fr 09-24 標題「plusieurs lycées d'Île-de-France bloqués par les élèves」 ；04 句「到十月初已經復課，訴求還在」：Le Monde 10-05 標題「les cours ont repris, mais les revendications demeurent」https://www.lemonde.fr/campus/article/2026/10/05/au-lycee-saint-exupery-de-creteil-ou-les-blocages-ont-commence-les-cours-ont-repris-mais-les-revendications-demeurent_6788551_4401467.html |
+| 04 | 高中生工會（USL）訴求：師資人手、校舍、課表、班級、Parcoursup | Le Monde 09-29（同上） |
+| 05 | 黃背心：2018 年因油價上漲而起、每週上街的抗議運動；9 月起網路帳號號召回歸（9-9 起，世界報查不到組織在背後發起） | DW 10-17「the "Gilets jaunes" movement, which staged mass weekly protests from November 2018 to June 2020, initially against rising fuel prices」https://www.dw.com/en/france-protesters-clash-with-police-in-nationwide-protests-amid-rising-social-polarization/a-79685584 ；Le Monde 09-19「all created or renamed on September 9」「His previous post suggested organizing a "protest for gas."」https://www.lemonde.fr/en/politics/article/2026/09/19/how-a-tiktok-rumor-about-the-yellow-vests-return-spread_6757698_5.html ；同文「no organization, Facebook or Instagram page linked to the Yellow Vests appears to be behind the call.」 |
+| 06 | 部分工會（如 CGT）參與，爭薪資與公共服務；CFDT 不參與 10-17（10-20 反方稽核限縮） | CGT「La CGT apporte son soutien aux mobilisations du 17 octobre」https://www.cgt.fr/actualites/france/mobilisation/il-est-urgent-de-repondre-aux-revendications-de-celles-et-ceux-qui-sont-lavenir-du-pays ；CFDT UFETAM「La CFDT fait le choix de ne pas participer au mouvement du 17 octobre」https://www.cfdt-ufetam.org/appel-a-la-mobilisation-pour-le-5-novembre-et-les-raisons-du-non-appel-pour-le-17-octobre-2026/ ；AA 10-19「over wages, public services, employment, and industry」https://www.aa.com.tr/en/europe/france-s-yellow-vest-organizers-announce-fresh-protests-for-oct-24/4093352 |
+| 07 | 2027 預算：凍結公務員薪資指數，稅收淨增 180 億歐元 | France24（轉路透）10-01 https://www.france24.com/en/france/20261001-french-pm-to-present-belt-tightening-2027-budget-including-frozen-wages-and-new-taxes ；Le Monde 09-18「The public sector pay index will be frozen」https://www.lemonde.fr/en/politics/article/2026/09/18/budget-2027-deficit-widens-as-sebastien-lecornu-delays-fiscal-consolidation-by-one-year_6757649_5.html |
+| 08 | 10-05 朗斯 15 歲高中生手被震爆彈炸斷，IGPN 調查 | Le Monde 直播 10-13 https://www.lemonde.fr/societe/live/2026/10/13/en-direct-mouvement-lyceen-a-paris-la-denonciation-des-violences-policieres-est-au-c-ur-de-la-mobilisation_6793059_3224.html |
+| 09 | 10-06 主辦方 45 萬人，內政部 26.6 萬人 | 巴黎人報（AFP）10-06「266 000 manifestants … recensés par le ministère de l’Intérieur」「Les organisations lycéennes et étudiantes, appuyées de la CGT, ont comptabilisé 450 000 personnes」https://www.leparisien.fr/societe/mobilisation-lyceenne-apres-les-manifestations-de-mardi-vers-un-acte-iv-ce-jeudi-06-10-2026-JIZS6YA2XZBEVE5PI7TWUWNDZQ.php ；CGT 新聞稿 10-06「Plus de 450 000 manifestantes et manifestants」https://www.cgt.fr/comm-de-presse/apres-la-maree-humaine-du-6-octobre-le-gouvernement-doit-repondre-sans-delai-aux-revendications-des （舊稿「政府數字 25 萬」出自 The Conversation，未載發布者，10-20 反方稽核推翻） |
+| 10 | 10-17 學生、工會、黃背心以「生活太貴」為口號合流 | 端傳媒 10-19 https://theinitium.com/20261019-whatsnew-france-protest-turns-into-riots/ ；Guardian 10-17（同上，標題 high prices）； France24 直播 10-18（同上）；DW 10-17 https://www.dw.com/en/france-protesters-clash-with-police-in-nationwide-protests-amid-rising-social-polarization/a-79685584 |
+| 10 | 內政部 55 萬、主辦方 80 萬 | DW 10-17（內政部 55 萬）；France24 直播（80 萬）；Le Monde 直播 10-18（UNEF「我們有 80 萬」） |
+| 11 | 利摩日市政廳縱火；省長：143 年建築屋頂塌落、外牆三分之二已毀 | RFI／AFP 10-17 https://www.rfi.fr/en/international-news/20261017-fire-rages-at-town-hall-in-france-s-limoges-after-protests-authorities |
+| 12 | 10-17 被捕 2,397 人 | 內政部，經 France24 直播 10-18 https://www.france24.com/en/europe/20261018-live-vance-blames-immigration-for-violence-during-protests-in-france ；BBC 10-18「about 2,400」https://www.bbc.com/news/articles/cw240zl08dm5o |
+| 12 | 總理當晚 1,200 人被捕；隔天內政部 2,397 人；巴黎 855 人 | Guardian 10-17（同上）；Guardian 10-18 https://www.theguardian.com/world/2026/oct/18/french-government-crisis-talks-violent-unrest-policing-macron |
+| 12 | 997 名警察與憲兵受傷，7 人重傷 | 內政部，經 France24 直播 10-18 |
+| 13 | 巴黎警察總局：1 人心肺驟停死亡；巴黎檢方：可能身體不適，立案查死因；目前沒有證據連到警方行動 | Le Monde 直播 10-18 https://www.lemonde.fr/societe/live/2026/10/18/en-direct-mobilisation-du-17-octobre-emmanuel-macron-s-adressera-aux-francais-a-20-heures-annonce-l-elysee_6795855_3224.html ；RTL 10-18「Pour l'heure, aucun élément ne permet de faire un lien avec une manœuvre policière」https://www.rtl.fr/actu/justice-faits-divers/mobilisation-du-17-octobre-un-manifestant-est-mort-a-paris-apres-un-arret-cardiorespiratoire-7900686461 |
+| 14 | 總理：「暴力嚴重……沒有人被殺」 | NBC 10-19（同上） |
+| 15 | 馬克宏：暴力毫無理由；警方應對完全透明 | BBC 10-18（同上）；AFP 10-18 https://www.afp.com/en/macron-denounces-unbridled-violence-france-hit-new-clashes |
+| 16 | 10-19 晚巴黎、里昂等地局部宵禁，里爾、尼斯只限未成年人；未宣布緊急狀態 | TV5Monde／AFP 10-19「Concernant Lille et Nice, ces interdictions de circuler ne concernent que les mineurs.」https://information.tv5monde.com/france/violences-les-premiers-couvre-feux-en-vigueur-lexecutif-montre-les-muscles-sur-la-reponse-penale-2842265 ； Ouest-France 直播 10-19 https://www.ouest-france.fr/societe/manifestation/direct-violences-du-17-octobre-2-513-gardes-a-vue-67-personnes-incarcerees-annonce-le-ministre-de-la-justice-025d6c92-e57f-4014-b92a-7627ffeb6608 ；巴黎市政府 10-19 https://pressev2.paris.fr/communiques/annonce-d-un-couvre-feu-dans-certains-secteurs-de-paris-declaration-du-maire-de-paris ；NBC 10-19（未宣布緊急狀態） |
+| 17 | 總統府：內政部長請辭，馬克宏拒絕 | Guardian 10-18（Élysée 聲明）；BBC 10-19 https://www.bbc.com/news/articles/crwyd02yz22vo |
+| 18 | 國民議會 10-19 晚暫停國家預算審議，轉審社會安全預算，各黨無共識 | Ouest-France 10-19「Les députés ont interrompu lundi 19 octobre au soir l’examen du Budget 2027 pour se consacrer à celui de la sécurité sociale」「sans compromis à l’horizon」；LCP 10-19「en raison des délais constitutionnels prévus pour l'examen du PLF et du PLFSS」https://lcp.fr/actualites/budget-2027-le-marathon-de-la-partie-recettes-loin-d-etre-termine-le-vote-prevu-demain-a ； https://www.ouest-france.fr/economie/budget-collectivites-etat/budget-2027-faute-de-compromis-les-deputes-mettent-en-pause-lexamen-du-projet-de-loi-de-finance-4b5a8f6a-cc0f-11f1-b8bc-a46147b584ed |
+| 19 | 黃背心協調團體宣布 10-24、10-31 再上街；工會聯盟（CFDT、CGT、FO、Unsa、FSU）號召 11-05 全國罷工與示威 | AA 10-19「fresh demonstrations would be held on Oct. 24 and 31, ahead of a nationwide union mobilization in November」「The CFDT, CGT, FO, Unsa, and FSU unions have called for the November action」https://www.aa.com.tr/en/europe/france-s-yellow-vest-organizers-announce-fresh-protests-for-oct-24/4093352 ；The Local 10-19「'Act II' to take place on Saturday, October 24th」「events listed for Saturday, October 31st」https://www.thelocal.fr/20261019/breaking-frances-yellow-vests-announce-more-protests-for-saturday |
+| 20 | 政府在國會沒有穩定多數，年底前要通過預算 | 端傳媒 10-19（同上）；Le Monde 10-18 標題「un exécutif à bout de souffle」https://www.lemonde.fr/politique/article/2026/10/18/mobilisation-du-17-octobre-apres-une-journee-de-violences-et-de-saccages-le-gouvernement-sous-pression-cible-lfi_6796957_823448.html |
+| 21 | 責任歸屬各說各話（共和黨歸責不屈法國、社會黨批評維持秩序方式；10-20 反方稽核指出共和黨此句對象非政府）；共和黨主席勒塔約：不屈法國議員「用口號武裝了暴力」；社會黨第一書記富爾譴責暴力，維持秩序方式「必須徹底修改」 |franceinfo 10-18 標題原話「Les élus LFI ont armé la violence avec leurs mots d'ordre」https://www.franceinfo.fr/societe/mobilisation-du-17-octobre/les-elus-lfi-ont-arme-la-violence-avec-leurs-mots-d-ordre-accuse-le-president-de-lr-bruno-retailleau_8242834.html ；Le Parisien 10-17 專訪「la doctrine de maintien de l'ordre doit être profondément modifiée」https://www.leparisien.fr/elections/presidentielle/olivier-faure-les-casseurs-pourrissent-un-mouvement-aussi-puissant-que-joyeux-17-10-2026-MZGYLBUXDNBWRO64UVNIPQVULM.php |
+| 22 | 科特雷：法國人在問這個國家要往哪裡去、怎麼走出預算危機 | Al Jazeera 10-17「The French are asking themselves where are we going as a country? How are we going to get out of this budget crisis?」https://www.aljazeera.com/news/2026/10/17/france-wave-of-nationwide-protests |
+
+### 不採用
+
+- 10-20 使用者要求減少政客意見：刪去內政部長「逮捕與學生關係不大」、利摩日市長、政府／梅朗雄／勒龐互相指責、川普／范斯、法國官員未歸咎移民、司法部長 2,513／67、商業團體與總理的店家數（原句 15、19–23、25），出處仍留 REPORT。
+- 南特警察 10-17 凌晨殉職：TF1 報導是一般執法中被無關車輛撞死，沒連到示威 https://www.tf1info.fr/justice-faits-divers/nantes-un-policier-de-22-ans-meurt-percute-par-une-voiture-sur-le-peripherique-lors-d-une-intervention-2470477.html
+- KOMO「起於塞納-聖但尼省」、700 所學校、5,000 人被捕：只在 Getty 圖說出現。

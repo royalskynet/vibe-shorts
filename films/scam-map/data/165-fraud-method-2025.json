@@ -1,0 +1,1014 @@
+{
+ "新竹市": {
+  "2025-01": {
+   "Date": "2024-12-31T16:00:00Z",
+   "TotalCases": 287,
+   "TotalLosses": 24140.7,
+   "TopFive": [
+    {
+     "Name": "假投資詐騙",
+     "Cases": 91,
+     "Losses": 17764.6
+    },
+    {
+     "Name": "假買家騙賣家詐騙",
+     "Cases": 40,
+     "Losses": 723.3
+    },
+    {
+     "Name": "假網拍詐騙",
+     "Cases": 37,
+     "Losses": 105.5
+    },
+    {
+     "Name": "假交友(投資詐財)詐騙",
+     "Cases": 19,
+     "Losses": 1821.4
+    },
+    {
+     "Name": "假交友(徵婚詐財)詐騙",
+     "Cases": 16,
+     "Losses": 120.1
+    }
+   ],
+   "Other": {
+    "Name": "Other",
+    "Cases": 84,
+    "Losses": 3605.8
+   }
+  },
+  "2025-02": {
+   "Date": "2025-01-31T16:00:00Z",
+   "TotalCases": 227,
+   "TotalLosses": 20809.0,
+   "TopFive": [
+    {
+     "Name": "假網拍詐騙",
+     "Cases": 50,
+     "Losses": 101.6
+    },
+    {
+     "Name": "假投資詐騙",
+     "Cases": 41,
+     "Losses": 14291.1
+    },
+    {
+     "Name": "假交友(投資詐財)詐騙",
+     "Cases": 23,
+     "Losses": 4383.5
+    },
+    {
+     "Name": "假買家騙賣家詐騙",
+     "Cases": 20,
+     "Losses": 439.8
+    },
+    {
+     "Name": "假中獎通知詐騙",
+     "Cases": 16,
+     "Losses": 187.7
+    }
+   ],
+   "Other": {
+    "Name": "Other",
+    "Cases": 77,
+    "Losses": 1405.3
+   }
+  },
+  "2025-03": {
+   "Date": "2025-02-28T16:00:00Z",
+   "TotalCases": 390,
+   "TotalLosses": 11744.7,
+   "TopFive": [
+    {
+     "Name": "假網拍詐騙",
+     "Cases": 72,
+     "Losses": 210.0
+    },
+    {
+     "Name": "假投資詐騙",
+     "Cases": 70,
+     "Losses": 6625.0
+    },
+    {
+     "Name": "假買家騙賣家詐騙",
+     "Cases": 54,
+     "Losses": 693.2
+    },
+    {
+     "Name": "假交友(徵婚詐財)詐騙",
+     "Cases": 32,
+     "Losses": 569.7
+    },
+    {
+     "Name": "假中獎通知詐騙",
+     "Cases": 30,
+     "Losses": 340.8
+    }
+   ],
+   "Other": {
+    "Name": "Other",
+    "Cases": 132,
+    "Losses": 3305.9
+   }
+  },
+  "2025-04": {
+   "Date": "2025-03-31T16:00:00Z",
+   "TotalCases": 351,
+   "TotalLosses": 14507.2,
+   "TopFive": [
+    {
+     "Name": "假網拍詐騙",
+     "Cases": 74,
+     "Losses": 277.7
+    },
+    {
+     "Name": "假投資詐騙",
+     "Cases": 59,
+     "Losses": 6676.9
+    },
+    {
+     "Name": "假買家騙賣家詐騙",
+     "Cases": 39,
+     "Losses": 600.9
+    },
+    {
+     "Name": "假交友(投資詐財)詐騙",
+     "Cases": 22,
+     "Losses": 1723.1
+    },
+    {
+     "Name": "假交友(徵婚詐財)詐騙",
+     "Cases": 21,
+     "Losses": 273.7
+    }
+   ],
+   "Other": {
+    "Name": "Other",
+    "Cases": 136,
+    "Losses": 4954.8
+   }
+  },
+  "2025-05": {
+   "Date": "2025-04-30T16:00:00Z",
+   "TotalCases": 326,
+   "TotalLosses": 16637.9,
+   "TopFive": [
+    {
+     "Name": "假網拍詐騙",
+     "Cases": 70,
+     "Losses": 476.8
+    },
+    {
+     "Name": "假投資詐騙",
+     "Cases": 47,
+     "Losses": 7765.5
+    },
+    {
+     "Name": "假買家騙賣家詐騙",
+     "Cases": 28,
+     "Losses": 337.7
+    },
+    {
+     "Name": "色情應召詐財詐騙",
+     "Cases": 27,
+     "Losses": 692.6
+    },
+    {
+     "Name": "假交友(徵婚詐財)詐騙",
+     "Cases": 23,
+     "Losses": 582.6
+    }
+   ],
+   "Other": {
+    "Name": "Other",
+    "Cases": 131,
+    "Losses": 6782.7
+   }
+  },
+  "2025-06": {
+   "Date": "2025-05-31T16:00:00Z",
+   "TotalCases": 373,
+   "TotalLosses": 20797.7,
+   "TopFive": [
+    {
+     "Name": "假投資詐騙",
+     "Cases": 63,
+     "Losses": 12147.1
+    },
+    {
+     "Name": "假網拍詐騙",
+     "Cases": 63,
+     "Losses": 171.4
+    },
+    {
+     "Name": "釣魚連結詐騙",
+     "Cases": 29,
+     "Losses": 101.3
+    },
+    {
+     "Name": "假買家騙賣家詐騙",
+     "Cases": 27,
+     "Losses": 418.3
+    },
+    {
+     "Name": "假交友(徵婚詐財)詐騙",
+     "Cases": 22,
+     "Losses": 613.6
+    }
+   ],
+   "Other": {
+    "Name": "Other",
+    "Cases": 169,
+    "Losses": 7345.9
+   }
+  },
+  "2025-07": {
+   "Date": "2025-06-30T16:00:00Z",
+   "TotalCases": 415,
+   "TotalLosses": 19430.9,
+   "TopFive": [
+    {
+     "Name": "假網拍詐騙",
+     "Cases": 89,
+     "Losses": 713.2
+    },
+    {
+     "Name": "假投資詐騙",
+     "Cases": 57,
+     "Losses": 9779.7
+    },
+    {
+     "Name": "假交友(投資詐財)詐騙",
+     "Cases": 34,
+     "Losses": 3295.1
+    },
+    {
+     "Name": "假交友(徵婚詐財)詐騙",
+     "Cases": 31,
+     "Losses": 1195.0
+    },
+    {
+     "Name": "假買家騙賣家詐騙",
+     "Cases": 25,
+     "Losses": 331.1
+    }
+   ],
+   "Other": {
+    "Name": "Other",
+    "Cases": 179,
+    "Losses": 4116.7
+   }
+  },
+  "2025-08": {
+   "Date": "2025-07-31T16:00:00Z",
+   "TotalCases": 352,
+   "TotalLosses": 13260.7,
+   "TopFive": [
+    {
+     "Name": "假網拍詐騙",
+     "Cases": 89,
+     "Losses": 916.2
+    },
+    {
+     "Name": "假投資詐騙",
+     "Cases": 40,
+     "Losses": 7338.0
+    },
+    {
+     "Name": "假交友(投資詐財)詐騙",
+     "Cases": 34,
+     "Losses": 2837.7
+    },
+    {
+     "Name": "色情應召詐財詐騙",
+     "Cases": 28,
+     "Losses": 316.6
+    },
+    {
+     "Name": "假買家騙賣家詐騙",
+     "Cases": 23,
+     "Losses": 325.7
+    }
+   ],
+   "Other": {
+    "Name": "Other",
+    "Cases": 138,
+    "Losses": 1526.5
+   }
+  },
+  "2025-09": {
+   "Date": "2025-08-31T16:00:00Z",
+   "TotalCases": 317,
+   "TotalLosses": 18335.2,
+   "TopFive": [
+    {
+     "Name": "假網拍詐騙",
+     "Cases": 110,
+     "Losses": 629.0
+    },
+    {
+     "Name": "假投資詐騙",
+     "Cases": 36,
+     "Losses": 6186.0
+    },
+    {
+     "Name": "假交友(徵婚詐財)詐騙",
+     "Cases": 23,
+     "Losses": 182.1
+    },
+    {
+     "Name": "釣魚連結詐騙",
+     "Cases": 23,
+     "Losses": 91.8
+    },
+    {
+     "Name": "假交友(投資詐財)詐騙",
+     "Cases": 18,
+     "Losses": 1861.8
+    }
+   ],
+   "Other": {
+    "Name": "Other",
+    "Cases": 107,
+    "Losses": 9384.5
+   }
+  },
+  "2025-10": {
+   "Date": "2025-09-30T16:00:00Z",
+   "TotalCases": 330,
+   "TotalLosses": 17871.3,
+   "TopFive": [
+    {
+     "Name": "假網拍詐騙",
+     "Cases": 108,
+     "Losses": 1050.1
+    },
+    {
+     "Name": "假投資詐騙",
+     "Cases": 37,
+     "Losses": 8650.8
+    },
+    {
+     "Name": "假交友(徵婚詐財)詐騙",
+     "Cases": 29,
+     "Losses": 559.5
+    },
+    {
+     "Name": "假交友(投資詐財)詐騙",
+     "Cases": 27,
+     "Losses": 2514.8
+    },
+    {
+     "Name": "色情應召詐財詐騙",
+     "Cases": 24,
+     "Losses": 305.2
+    }
+   ],
+   "Other": {
+    "Name": "Other",
+    "Cases": 105,
+    "Losses": 4790.8
+   }
+  },
+  "2025-11": {
+   "Date": "2025-10-31T16:00:00Z",
+   "TotalCases": 326,
+   "TotalLosses": 17218.6,
+   "TopFive": [
+    {
+     "Name": "假網拍詐騙",
+     "Cases": 94,
+     "Losses": 625.4
+    },
+    {
+     "Name": "假投資詐騙",
+     "Cases": 42,
+     "Losses": 5735.3
+    },
+    {
+     "Name": "假交友(投資詐財)詐騙",
+     "Cases": 33,
+     "Losses": 3037.0
+    },
+    {
+     "Name": "假買家騙賣家詐騙",
+     "Cases": 21,
+     "Losses": 211.3
+    },
+    {
+     "Name": "色情應召詐財詐騙",
+     "Cases": 21,
+     "Losses": 108.8
+    }
+   ],
+   "Other": {
+    "Name": "Other",
+    "Cases": 115,
+    "Losses": 7500.7
+   }
+  },
+  "2025-12": {
+   "Date": "2025-11-30T16:00:00Z",
+   "TotalCases": 321,
+   "TotalLosses": 15526.1,
+   "TopFive": [
+    {
+     "Name": "假網拍詐騙",
+     "Cases": 112,
+     "Losses": 693.7
+    },
+    {
+     "Name": "假投資詐騙",
+     "Cases": 33,
+     "Losses": 3425.8
+    },
+    {
+     "Name": "假交友(投資詐財)詐騙",
+     "Cases": 32,
+     "Losses": 8834.4
+    },
+    {
+     "Name": "色情應召詐財詐騙",
+     "Cases": 28,
+     "Losses": 467.9
+    },
+    {
+     "Name": "釣魚連結詐騙",
+     "Cases": 19,
+     "Losses": 88.0
+    }
+   ],
+   "Other": {
+    "Name": "Other",
+    "Cases": 97,
+    "Losses": 2016.3
+   }
+  }
+ },
+ "全國": {
+  "2025-01": {
+   "Date": "2024-12-31T16:00:00Z",
+   "TotalCases": 11718,
+   "TotalLosses": 832529.0,
+   "TopFive": [
+    {
+     "Id": 2,
+     "Name": "假投資詐騙",
+     "Cases": 3149,
+     "Losses": 562859.8,
+     "CaseStudyId": "327303345054158848"
+    },
+    {
+     "Id": 1,
+     "Name": "假網拍詐騙",
+     "Cases": 1861,
+     "Losses": 6350.5,
+     "CaseStudyId": "365400853760184320"
+    },
+    {
+     "Id": 3,
+     "Name": "假買家騙賣家詐騙",
+     "Cases": 1148,
+     "Losses": 12203.0,
+     "CaseStudyId": "334882749754118144"
+    },
+    {
+     "Id": 5,
+     "Name": "假交友(投資詐財)詐騙",
+     "Cases": 1084,
+     "Losses": 127519.5,
+     "CaseStudyId": "312064826387992576"
+    },
+    {
+     "Id": 13,
+     "Name": "假中獎通知詐騙",
+     "Cases": 612,
+     "Losses": 6175.0,
+     "CaseStudyId": "322206935585656832"
+    }
+   ],
+   "Other": {
+    "Name": "其他",
+    "Cases": 3864,
+    "Losses": 117421.1
+   }
+  },
+  "2025-02": {
+   "Date": "2025-01-31T16:00:00Z",
+   "TotalCases": 9390,
+   "TotalLosses": 506171.8,
+   "TopFive": [
+    {
+     "Id": 2,
+     "Name": "假投資詐騙",
+     "Cases": 2043,
+     "Losses": 314482.3,
+     "CaseStudyId": "327303345054158848"
+    },
+    {
+     "Id": 1,
+     "Name": "假網拍詐騙",
+     "Cases": 1857,
+     "Losses": 6728.0,
+     "CaseStudyId": "365400853760184320"
+    },
+    {
+     "Id": 3,
+     "Name": "假買家騙賣家詐騙",
+     "Cases": 921,
+     "Losses": 9276.7,
+     "CaseStudyId": "334882749754118144"
+    },
+    {
+     "Id": 5,
+     "Name": "假交友(投資詐財)詐騙",
+     "Cases": 796,
+     "Losses": 85508.1,
+     "CaseStudyId": "312064826387992576"
+    },
+    {
+     "Id": 13,
+     "Name": "假中獎通知詐騙",
+     "Cases": 649,
+     "Losses": 7039.3,
+     "CaseStudyId": "322206935585656832"
+    }
+   ],
+   "Other": {
+    "Name": "其他",
+    "Cases": 3124,
+    "Losses": 83137.4
+   }
+  },
+  "2025-03": {
+   "Date": "2025-02-28T16:00:00Z",
+   "TotalCases": 15006,
+   "TotalLosses": 606982.1,
+   "TopFive": [
+    {
+     "Id": 1,
+     "Name": "假網拍詐騙",
+     "Cases": 2463,
+     "Losses": 9652.1,
+     "CaseStudyId": "365400853760184320"
+    },
+    {
+     "Id": 2,
+     "Name": "假投資詐騙",
+     "Cases": 2435,
+     "Losses": 352169.6,
+     "CaseStudyId": "327303345054158848"
+    },
+    {
+     "Id": 3,
+     "Name": "假買家騙賣家詐騙",
+     "Cases": 1688,
+     "Losses": 20320.5,
+     "CaseStudyId": "334882749754118144"
+    },
+    {
+     "Id": 13,
+     "Name": "假中獎通知詐騙",
+     "Cases": 1054,
+     "Losses": 10843.3,
+     "CaseStudyId": "322206935585656832"
+    },
+    {
+     "Id": 5,
+     "Name": "假交友(投資詐財)詐騙",
+     "Cases": 1009,
+     "Losses": 102758.2,
+     "CaseStudyId": "312064826387992576"
+    }
+   ],
+   "Other": {
+    "Name": "其他",
+    "Cases": 6357,
+    "Losses": 111238.5
+   }
+  },
+  "2025-04": {
+   "Date": "2025-03-31T16:00:00Z",
+   "TotalCases": 14187,
+   "TotalLosses": 623204.1,
+   "TopFive": [
+    {
+     "Id": 2,
+     "Name": "假投資詐騙",
+     "Cases": 2547,
+     "Losses": 314479.3,
+     "CaseStudyId": "327303345054158848"
+    },
+    {
+     "Id": 1,
+     "Name": "假網拍詐騙",
+     "Cases": 2229,
+     "Losses": 10815.3,
+     "CaseStudyId": "365400853760184320"
+    },
+    {
+     "Id": 3,
+     "Name": "假買家騙賣家詐騙",
+     "Cases": 1580,
+     "Losses": 17241.2,
+     "CaseStudyId": "334882749754118144"
+    },
+    {
+     "Id": 5,
+     "Name": "假交友(投資詐財)詐騙",
+     "Cases": 1193,
+     "Losses": 125193.8,
+     "CaseStudyId": "312064826387992576"
+    },
+    {
+     "Id": 12,
+     "Name": "假交友(徵婚詐財)詐騙",
+     "Cases": 862,
+     "Losses": 24107.6,
+     "CaseStudyId": "332367662917095424"
+    }
+   ],
+   "Other": {
+    "Name": "其他",
+    "Cases": 5776,
+    "Losses": 131366.8
+   }
+  },
+  "2025-05": {
+   "Date": "2025-04-30T16:00:00Z",
+   "TotalCases": 14266,
+   "TotalLosses": 735530.2,
+   "TopFive": [
+    {
+     "Id": 2,
+     "Name": "假投資詐騙",
+     "Cases": 2656,
+     "Losses": 376827.1,
+     "CaseStudyId": "327303345054158848"
+    },
+    {
+     "Id": 1,
+     "Name": "假網拍詐騙",
+     "Cases": 2145,
+     "Losses": 12247.2,
+     "CaseStudyId": "365400853760184320"
+    },
+    {
+     "Id": 3,
+     "Name": "假買家騙賣家詐騙",
+     "Cases": 1495,
+     "Losses": 17159.1,
+     "CaseStudyId": "334882749754118144"
+    },
+    {
+     "Id": 5,
+     "Name": "假交友(投資詐財)詐騙",
+     "Cases": 1193,
+     "Losses": 136025.2,
+     "CaseStudyId": "312064826387992576"
+    },
+    {
+     "Id": 12,
+     "Name": "假交友(徵婚詐財)詐騙",
+     "Cases": 973,
+     "Losses": 26133.7,
+     "CaseStudyId": "332367662917095424"
+    }
+   ],
+   "Other": {
+    "Name": "其他",
+    "Cases": 5804,
+    "Losses": 167138.0
+   }
+  },
+  "2025-06": {
+   "Date": "2025-05-31T16:00:00Z",
+   "TotalCases": 14625,
+   "TotalLosses": 747993.3,
+   "TopFive": [
+    {
+     "Id": 2,
+     "Name": "假投資詐騙",
+     "Cases": 2822,
+     "Losses": 376748.1,
+     "CaseStudyId": "327303345054158848"
+    },
+    {
+     "Id": 1,
+     "Name": "假網拍詐騙",
+     "Cases": 2219,
+     "Losses": 11010.0,
+     "CaseStudyId": "365400853760184320"
+    },
+    {
+     "Id": 3,
+     "Name": "假買家騙賣家詐騙",
+     "Cases": 1273,
+     "Losses": 13946.4,
+     "CaseStudyId": "334882749754118144"
+    },
+    {
+     "Id": 5,
+     "Name": "假交友(投資詐財)詐騙",
+     "Cases": 1203,
+     "Losses": 139730.0,
+     "CaseStudyId": "312064826387992576"
+    },
+    {
+     "Id": 12,
+     "Name": "假交友(徵婚詐財)詐騙",
+     "Cases": 961,
+     "Losses": 31893.3,
+     "CaseStudyId": "332367662917095424"
+    }
+   ],
+   "Other": {
+    "Name": "其他",
+    "Cases": 6147,
+    "Losses": 174665.7
+   }
+  },
+  "2025-07": {
+   "Date": "2025-06-30T16:00:00Z",
+   "TotalCases": 14565,
+   "TotalLosses": 720930.6,
+   "TopFive": [
+    {
+     "Id": 1,
+     "Name": "假網拍詐騙",
+     "Cases": 2786,
+     "Losses": 17161.2,
+     "CaseStudyId": "365400853760184320"
+    },
+    {
+     "Id": 2,
+     "Name": "假投資詐騙",
+     "Cases": 2382,
+     "Losses": 356019.2,
+     "CaseStudyId": "327303345054158848"
+    },
+    {
+     "Id": 5,
+     "Name": "假交友(投資詐財)詐騙",
+     "Cases": 1185,
+     "Losses": 131833.9,
+     "CaseStudyId": "312064826387992576"
+    },
+    {
+     "Id": 12,
+     "Name": "假交友(徵婚詐財)詐騙",
+     "Cases": 905,
+     "Losses": 19230.7,
+     "CaseStudyId": "332367662917095424"
+    },
+    {
+     "Id": 3,
+     "Name": "假買家騙賣家詐騙",
+     "Cases": 903,
+     "Losses": 9261.6,
+     "CaseStudyId": "334882749754118144"
+    }
+   ],
+   "Other": {
+    "Name": "其他",
+    "Cases": 6404,
+    "Losses": 187423.9
+   }
+  },
+  "2025-08": {
+   "Date": "2025-07-31T16:00:00Z",
+   "TotalCases": 13701,
+   "TotalLosses": 632696.9,
+   "TopFive": [
+    {
+     "Id": 1,
+     "Name": "假網拍詐騙",
+     "Cases": 3427,
+     "Losses": 23543.4,
+     "CaseStudyId": "365400853760184320"
+    },
+    {
+     "Id": 2,
+     "Name": "假投資詐騙",
+     "Cases": 1891,
+     "Losses": 299831.3,
+     "CaseStudyId": "327303345054158848"
+    },
+    {
+     "Id": 5,
+     "Name": "假交友(投資詐財)詐騙",
+     "Cases": 1191,
+     "Losses": 137660.1,
+     "CaseStudyId": "312064826387992576"
+    },
+    {
+     "Id": 3,
+     "Name": "假買家騙賣家詐騙",
+     "Cases": 832,
+     "Losses": 8846.0,
+     "CaseStudyId": "334882749754118144"
+    },
+    {
+     "Id": 12,
+     "Name": "假交友(徵婚詐財)詐騙",
+     "Cases": 831,
+     "Losses": 21178.3,
+     "CaseStudyId": "332367662917095424"
+    }
+   ],
+   "Other": {
+    "Name": "其他",
+    "Cases": 5529,
+    "Losses": 141637.7
+   }
+  },
+  "2025-09": {
+   "Date": "2025-08-31T16:00:00Z",
+   "TotalCases": 12428,
+   "TotalLosses": 553626.9,
+   "TopFive": [
+    {
+     "Id": 1,
+     "Name": "假網拍詐騙",
+     "Cases": 3625,
+     "Losses": 26710.7,
+     "CaseStudyId": "365400853760184320"
+    },
+    {
+     "Id": 2,
+     "Name": "假投資詐騙",
+     "Cases": 1544,
+     "Losses": 227061.2,
+     "CaseStudyId": "327303345054158848"
+    },
+    {
+     "Id": 5,
+     "Name": "假交友(投資詐財)詐騙",
+     "Cases": 1015,
+     "Losses": 144173.3,
+     "CaseStudyId": "312064826387992576"
+    },
+    {
+     "Id": 6,
+     "Name": "色情應召詐財詐騙",
+     "Cases": 856,
+     "Losses": 12551.5,
+     "CaseStudyId": "321136076590682112"
+    },
+    {
+     "Id": 12,
+     "Name": "假交友(徵婚詐財)詐騙",
+     "Cases": 785,
+     "Losses": 21669.9,
+     "CaseStudyId": "332367662917095424"
+    }
+   ],
+   "Other": {
+    "Name": "其他",
+    "Cases": 4603,
+    "Losses": 121460.2
+   }
+  },
+  "2025-10": {
+   "Date": "2025-09-30T16:00:00Z",
+   "TotalCases": 12122,
+   "TotalLosses": 494830.2,
+   "TopFive": [
+    {
+     "Id": 1,
+     "Name": "假網拍詐騙",
+     "Cases": 4141,
+     "Losses": 28120.6,
+     "CaseStudyId": "365400853760184320"
+    },
+    {
+     "Id": 2,
+     "Name": "假投資詐騙",
+     "Cases": 1331,
+     "Losses": 193962.9,
+     "CaseStudyId": "327303345054158848"
+    },
+    {
+     "Id": 5,
+     "Name": "假交友(投資詐財)詐騙",
+     "Cases": 1060,
+     "Losses": 105719.3,
+     "CaseStudyId": "312064826387992576"
+    },
+    {
+     "Id": 6,
+     "Name": "色情應召詐財詐騙",
+     "Cases": 901,
+     "Losses": 15349.4,
+     "CaseStudyId": "321136076590682112"
+    },
+    {
+     "Id": 12,
+     "Name": "假交友(徵婚詐財)詐騙",
+     "Cases": 758,
+     "Losses": 20754.4,
+     "CaseStudyId": "332367662917095424"
+    }
+   ],
+   "Other": {
+    "Name": "其他",
+    "Cases": 3931,
+    "Losses": 130923.5
+   }
+  },
+  "2025-11": {
+   "Date": "2025-10-31T16:00:00Z",
+   "TotalCases": 11881,
+   "TotalLosses": 514147.2,
+   "TopFive": [
+    {
+     "Id": 1,
+     "Name": "假網拍詐騙",
+     "Cases": 4054,
+     "Losses": 30197.5,
+     "CaseStudyId": "365400853760184320"
+    },
+    {
+     "Id": 2,
+     "Name": "假投資詐騙",
+     "Cases": 1517,
+     "Losses": 218747.0,
+     "CaseStudyId": "327303345054158848"
+    },
+    {
+     "Id": 5,
+     "Name": "假交友(投資詐財)詐騙",
+     "Cases": 1192,
+     "Losses": 126303.9,
+     "CaseStudyId": "312064826387992576"
+    },
+    {
+     "Id": 6,
+     "Name": "色情應召詐財詐騙",
+     "Cases": 985,
+     "Losses": 14621.6,
+     "CaseStudyId": "321136076590682112"
+    },
+    {
+     "Id": 12,
+     "Name": "假交友(徵婚詐財)詐騙",
+     "Cases": 739,
+     "Losses": 22026.6,
+     "CaseStudyId": "332367662917095424"
+    }
+   ],
+   "Other": {
+    "Name": "其他",
+    "Cases": 3394,
+    "Losses": 102250.7
+   }
+  },
+  "2025-12": {
+   "Date": "2025-11-30T16:00:00Z",
+   "TotalCases": 12522,
+   "TotalLosses": 577765.7,
+   "TopFive": [
+    {
+     "Id": 1,
+     "Name": "假網拍詐騙",
+     "Cases": 4140,
+     "Losses": 31373.9,
+     "CaseStudyId": "365400853760184320"
+    },
+    {
+     "Id": 2,
+     "Name": "假投資詐騙",
+     "Cases": 1621,
+     "Losses": 235679.4,
+     "CaseStudyId": "327303345054158848"
+    },
+    {
+     "Id": 5,
+     "Name": "假交友(投資詐財)詐騙",
+     "Cases": 1238,
+     "Losses": 159551.0,
+     "CaseStudyId": "312064826387992576"
+    },
+    {
+     "Id": 6,
+     "Name": "色情應召詐財詐騙",
+     "Cases": 1036,
+     "Losses": 23393.1,
+     "CaseStudyId": "321136076590682112"
+    },
+    {
+     "Id": 12,
+     "Name": "假交友(徵婚詐財)詐騙",
+     "Cases": 691,
+     "Losses": 18859.5,
+     "CaseStudyId": "332367662917095424"
+    }
+   ],
+   "Other": {
+    "Name": "其他",
+    "Cases": 3796,
+    "Losses": 108908.8
+   }
+  }
+ }
+}

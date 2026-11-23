@@ -1,0 +1,13 @@
+{
+ "video": "films/dune-messiah-trap/dune-messiah-trap.mp4",
+ "duration": 59.43,
+ "size": "1080x1920",
+ "fps": 30.0,
+ "cuts": [],
+ "shot_seconds": [
+  59.43
+ ],
+ "median_shot": 59.43,
+ "sheet": "films/dune-messiah-trap/qa/final-sheet.jpg",
+ "sheet_phone": "films/dune-messiah-trap/qa/final-sheet-360.jpg"
+}

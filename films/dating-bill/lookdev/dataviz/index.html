@@ -1,0 +1,45 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#F6F3EC;overflow:hidden}canvas{display:block}</style></head>
+<body><canvas id="c" width="1080" height="1920"></canvas>
+<script type="module">
+// 樣張：錨點卡（dataviz 文法：100 格單位圖，鉛筆逐格畫上）。ponytail: 只畫一張卡。
+import * as E from './engine.js';
+const g = document.getElementById('c').getContext('2d'), W = 1080, H = 1920;
+const cam = { x: W / 2, y: H / 2, zoom: 1, roll: 0 };
+const HAND = '"Yuppy TC"', SERIF = '"LiSong Pro"';
+const N_MEET = 60, N_MONEY = 10;                       // 60.18%、10.25% 取整到百格
+const cell = 78, gx = 150, gy = 640;
+const box = (i) => { const c = i % 10, r = Math.floor(i / 10); return [gx + c * cell, gy + r * cell]; };
+const sq = (x, y, s) => [[x, y], [x + s, y], [x + s, y + s], [x, y + s]];
+window.render = (t) => {
+  E.drawPaper(g, cam, { dots: 0.8 }); E.applyCam(g, cam);
+  // 圖標題（印刷體）
+  E.setType(g, '2013 · 臺北市 · 25–49 歲未婚女性', 90, 300, { size: 26, track: 2 });
+  g.save(); g.font = `400 64px ${SERIF}`; g.fillStyle = E.P.ink; g.fillText('為什麼還沒結婚？', 90, 400); g.restore();
+  g.fillStyle = E.P.rule; g.fillRect(90, 440, 900, 2);
+  // 100 格：逐格落下，前 60 格藍、接著 10 格紅
+  const speed = 40;                                     // 格／秒
+  let tip = null;
+  for (let i = 0; i < 100; i++) {
+    const land = 0.5 + i / speed, fresh = t - land;
+    const [x, y] = box(i);
+    if (fresh < 0) { E.pencilStroke(g, sq(x + 6, y + 6, cell - 12).concat([[x + 6, y + 6]]), { width: 1, color: E.P.rule, passes: 1, seed: i }); continue; }
+    const fill = i < N_MEET ? E.P.blue : i < N_MEET + N_MONEY ? E.P.red : '#E7E0D2';
+    E.inkShape(g, sq(x + 6, y + 6, cell - 12), { fill, hatch: i < N_MEET + N_MONEY ? 0.5 : 0.15, progress: Math.min(1, fresh * 4), seed: i });
+    tip = [x + cell / 2, y + cell / 2];
+  }
+  // 手寫註記（藍＝人、紅＝錢）
+  const p1 = Math.max(0, Math.min(1, (t - 2.2) / 0.8)), p2 = Math.max(0, Math.min(1, (t - 3.0) / 0.8));
+  E.handText(g, '60% 還沒遇到適合的人', 90, 1530, { size: 56, color: E.P.blue, progress: p1, font: HAND });
+  if (p1 > 0.5) E.leader(g, [300, 1480], [gx + 4.5 * cell, gy + 5.6 * cell], { color: E.P.blue, progress: (p1 - 0.5) * 2 });
+  E.handText(g, '10% 經濟因素', 560, 1630, { size: 56, color: E.P.red, progress: p2, font: HAND });
+  if (p2 > 0.5) E.leader(g, [700, 1580], [gx + 6.5 * cell, gy + 6.5 * cell], { color: E.P.red, progress: (p2 - 0.5) * 2 });
+  // 鉛筆
+  if (tip && t < 3.2) E.drawPencil(g, { tip: E.w2s(cam, tip[0], tip[1]), s: 0.9, lift: 0.15 });
+  // 圖說字幕
+  g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = E.P.rule; g.fillRect(90, 1740, 900, 2);
+  g.font = `400 40px ${SERIF}`; g.fillStyle = E.P.ink; g.fillText('六成說還沒遇到適合的人，', 90, 1805); g.fillText('說經濟因素的是一成。', 90, 1860); g.restore();
+};
+Promise.all([`400 40px ${HAND}`, `400 40px ${SERIF}`].map((f) => document.fonts.load(f, '六成還'))).then(() => { render(0); window.READY = true; });
+</script></body></html>

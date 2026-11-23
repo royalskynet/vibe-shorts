@@ -23,7 +23,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-from precheck import approval_problems, parse_narration, sentences, story_problems  # noqa: E402
+from precheck import approval_problems, gate_waived, parse_narration, sentences, story_problems  # noqa: E402
 from verify_tts import norm as asr_norm, to_simplified  # noqa: E402
 
 TTS_MODEL = "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-bf16"
@@ -90,9 +90,23 @@ def set_host(spec):
     ref_text(REF, REF_TEXT_FILE)  # 缺檔當場炸，附補法，不要等 mlx 丟 traceback
 
 
+SAY = {}  # cast.json 的 "say"：只改送進 TTS 的念法，不改稿與字幕（{"忒修斯": "特修斯"}）
+
+
+def spoken(text, say=None):
+    """送進 TTS 的字：照 say 換掉會念錯的多音字。稿、字幕、核稿比對都還是用原句。
+    11-15 vision-quest-theseus：Qwen3-TTS 把「忒修斯」的忒念成 tuī（Whisper 聽成「推休斯」「退休司」），
+    使用者核過的稿不能改字，只能在念的時候換成同音的「特」。"""
+    for a, b in (SAY if say is None else say).items():
+        text = text.replace(a, b)
+    return text
+
+
 def reusable(prev, text, clawd_lines, host=None):
-    """舊音檔能不能沿用：稿文同、核稿過、而且音色沒換（10-20 換旁白音色時，沒改稿的句子沿用了舊音色）。"""
-    return bool(prev) and prev["sim"] >= SIM_MIN and prev.get("who", "host") == who_of(text, clawd_lines, host)
+    """舊音檔能不能沿用：稿文同、核稿過、音色沒換（10-20 換旁白音色時，沒改稿的句子沿用了舊音色），
+    而且念法替換（cast.json say）沒變：舊 lines.json 沒 said 欄＝當時照原句念。"""
+    return bool(prev) and prev["sim"] >= SIM_MIN and prev.get("who", "host") == who_of(text, clawd_lines, host) \
+        and prev.get("said", text) == spoken(text)
 
 
 def lines_of(sections):
@@ -100,13 +114,16 @@ def lines_of(sections):
     return [(t, s.strip()) for t, body in sections for s in sentences(body) if s.strip()]
 
 
-def layout(items, gap_line=GAP_LINE, gap_section=GAP_SECTION, tail=TAIL):
+def layout(items, gap_line=GAP_LINE, gap_section=GAP_SECTION, tail=TAIL, pause_after=None):
     """items＝[(段名, 句子, 秒數)] → 每句的起訖時間。換段的停頓比同段長。
-    片子目錄有 pace.json（{"gap_line": 秒, "gap_section": 秒, "tail": 秒}）就用它的停頓；tail 給要放片尾卡的片。"""
+    片子目錄有 pace.json（{"gap_line": 秒, "gap_section": 秒, "tail": 秒}）就用它的停頓；tail 給要放片尾卡的片。
+    pause_after＝{第幾句（1 起算）: 額外秒數}，在那一句念完後多留一段空檔（例：劇透提醒後的倒數）。"""
+    pause_after = {int(k): float(v) for k, v in (pause_after or {}).items()}
     out, t, prev = [], LEAD, None
-    for sec, text, dur in items:
+    for n, (sec, text, dur) in enumerate(items, 1):
         if prev is not None:
             t += gap_section if sec != prev else gap_line
+            t += pause_after.get(n - 1, 0.0)
         out.append({"section": sec, "text": text, "dur": round(dur, 3),
                     "t0": round(t, 3), "t1": round(t + dur, 3)})
         t += dur
@@ -182,7 +199,7 @@ def main():
     # 稿子結構門先擋（單行超長、一行兩句）：elected-dictator 11-01 為此空建片三次
     prof = film / "rhythm-profile"
     dialogue = prof.is_file() and prof.read_text(encoding="utf-8").strip() == "dialogue"
-    probs = story_problems(sections, dialogue) + approval_problems(film)
+    probs = ([] if gate_waived(film) else story_problems(sections, dialogue)) + approval_problems(film)
     if probs:
         print("旁白稿結構沒過，先改稿再建片：\n  " + "\n  ".join(probs))
         return 1
@@ -193,6 +210,8 @@ def main():
     TEMPO = float(pace.get("tempo", 1.0))
     cj = json.loads(cast.read_text(encoding="utf-8")) if cast.is_file() else {}
     clawd_lines = set(cj.get("clawd", []))
+    SAY.clear()
+    SAY.update(cj.get("say", {}))
     if cj.get("host"):
         set_host(cj["host"])
     missing = clawd_lines - {t for _, t in items}
@@ -222,7 +241,7 @@ def main():
             raw = f"raw-{i + 1:02d}-{k}"
             # 送簡體：Qwen3-TTS 把繁體「詐」念成 jué（「反詐騙」→「反驅片」），簡體就念對
             ref_audio, ref_text = voice_for(text, clawd_lines)
-            generate_audio(text=to_simplified(text), model=model, lang_code="Chinese", ref_audio=ref_audio,
+            generate_audio(text=to_simplified(spoken(text)), model=model, lang_code="Chinese", ref_audio=ref_audio,
                            ref_text=ref_text, output_path=str(vdir), file_prefix=raw,
                            join_audio=True, verbose=False)
             speed_up(vdir / f"{raw}.wav")
@@ -241,10 +260,10 @@ def main():
             bad.append(f"{i + 1:02d} {text}（最好 {best[0]:.2f}：{best[2]}）")
         rows.append((sec, text, duration(vdir / name), round(best[0], 3), best[2]))
 
-    tl, dur = layout([(s, t, d) for s, t, d, _, _ in rows], pace.get("gap_line", GAP_LINE), pace.get("gap_section", GAP_SECTION), pace.get("tail", TAIL))
+    tl, dur = layout([(s, t, d) for s, t, d, _, _ in rows], pace.get("gap_line", GAP_LINE), pace.get("gap_section", GAP_SECTION), pace.get("tail", TAIL), pace.get("pause_after"))
     for x, (_, _, _, sim, heard), i in zip(tl, rows, range(len(rows))):
         x.update(file=f"{i + 1:02d}.wav", sim=sim, heard=heard,
-                 who=who_of(x["text"], clawd_lines))
+                 who=who_of(x["text"], clawd_lines), said=spoken(x["text"]))
     lj.write_text(json.dumps({"dur": dur, "lines": tl}, ensure_ascii=False, indent=1), encoding="utf-8")
     js = {"dur": dur, "lines": [{**{k: x[k] for k in ("section", "text", "t0", "t1", "who")},
                                  "phrases": phrases(x["text"], x["t0"], x["t1"])} for x in tl]}

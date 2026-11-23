@@ -1,0 +1,787 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>台北為什麼被叫「行人地獄」？路怎麼設計，駕駛就怎麼開</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}#mascot{display:none}#mascot svg{width:340px;height:340px}</style>
+<script src="engine.js"></script>
+<script src="timeline.js"></script>
+</head>
+<body>
+<div id="stage" style="position:relative;width:1080px;height:1920px">
+<canvas id="c" width="1080" height="1920" style="position:absolute;left:0;top:0"></canvas>
+<div id="mascot"></div>
+</div>
+<script type="module">
+// 單人旁白科普：一句一卡（TREATMENT.md 分鏡表），Clawd Bot 當主播站右上。
+// 主畫面是俯視路口：路寬、轉角半徑、斑馬線位置都是參數，同一個 crossing() 畫鉤子、機制、兩派做法與落點。
+// 兩派做法同色同尺寸、同樣的標籤樣式，不用配色暗示立場（TREATMENT.md 禁止清單）。
+// 所有動作都是 t 的封閉式（seek_check.mjs 會比亂序算出的同一幀）；循環用取餘數，不累積。
+import { poseAt, applyPose } from './mascot/clawd-bot-shot.mjs';
+const G = window.G, E = G.E, TL = window.TL, W = 1080, H = 1920;
+const g = document.getElementById('c').getContext('2d', { alpha: false });
+const { clamp, inv, lerp, mix, rgba } = G;
+
+const BG = '#1d1b19', BG2 = '#262320', CREAM = '#f5efe6', DIM = '#a39a8e', OR = '#d97757', ORL = '#f29172', GOLD = '#f6b966', RED = '#ff8577', GREEN = '#68e399', BLUE = '#7fa7d9';
+const ROAD = '#3b3733', WALK = '#5b544c', CURB = '#8a8177';
+const ZH = (w, px) => `${w} ${px}px "PingFang TC"`, MONO = (px, w = 500) => `${w} ${px}px Menlo, "PingFang TC"`;
+
+// 會出現在畫面上的事實數字集中在這裡，不要在別處重寫一次。每一個都要在 meta/facts.md 有一行附來源。
+const FACTS = {
+  CNN_YEAR: 2022,            // CNN「行人地獄」報導年
+  PED_YEAR: 2024,            // 行人死亡統計年
+  PED_DEATHS_2024: 366,      // 2024 全台行人死亡（交通部）
+  NO_YIELD_DEATHS_2024: 83,  // 其中車輛未停讓行人
+  LANE_STUDY_YEAR: 2018,     // 營建署委託研究完成年
+  NARROW_LANE_M: 3,          // 外車道 3 公尺
+  WIDE_LANE_M: 4.5,          // 外車道 4.5 公尺以上
+  WIDE_LANE_EXTRA_PCT: 50,   // 事故發生率高出 50% 以上
+  SPEED_LOW_KMH: 30,
+  SPEED_HIGH_KMH: 50,
+  FATALITY_RATIO: 5,         // 50 km/h 致死風險 > 30 km/h 的 5 倍
+  HOBOKEN_CURB_EXT: 40,      // 人行道外推 40 多處
+  HOBOKEN_MPH: 20,
+  HOBOKEN_KMH: 32,
+  HOBOKEN_20MPH_YEAR: 2022, // 20 mph 速限 2022-09-14 起實施（霍博肯市府）
+  HOBOKEN_SINCE: 2017,       // 2017 年 1 月起零死亡
+  HOBOKEN_YEARS: 9,
+  TPE_PLAN_START: 2023,
+  TPE_PLAN_YEARS: 5,
+  SCHOOL_ZONE_M: 150,        // 國小周圍 150 公尺通學區
+  SCHOOL_COUNT: 150,         // 150 多所國小（畫面寫 150+）
+  SCHOOL_ZONE_YEARS: 8,
+};
+
+// ---------- 字 ----------
+let TXT = [], NOW = 0;
+function say(s, x, y, px, col, p, o = {}) {
+  const font = o.mono ? MONO(px) : ZH(o.w || 600, px);
+  // 原地淡入，不往上滑（使用者 10-30：頻繁滑入眼睛不舒服；對標 @boundless__explorer DemDuhNk1ZR 全片無滑入）
+  g.save(); g.font = font; g.letterSpacing = o.ls || '0px'; g.textAlign = o.align || 'left'; g.textBaseline = 'alphabetic';
+  const w = g.measureText(s).width;
+  g.globalAlpha *= E.io(p); g.fillStyle = col; g.fillText(s, x, y); g.restore();
+  if (o.id) {
+    const x0 = o.align === 'center' ? x - w / 2 : o.align === 'right' ? x - w : x;
+    TXT.push({ id: o.id, text: s, x0, y0: y - px, x1: x0 + w, y1: y + px * 0.25, screen: true });
+  }
+  return w;
+}
+function plain(s, x, y, px, col, o = {}) {
+  g.font = o.mono ? MONO(px, o.w || 500) : ZH(o.w || 600, px); g.textAlign = o.align || 'left'; g.textBaseline = 'alphabetic';
+  g.letterSpacing = o.ls || '0px'; g.fillStyle = col; g.fillText(s, x, y); g.letterSpacing = '0px';
+}
+const pop = (lt, a, d = 0.5) => E.o3(inv(a, a + d, lt));   // 不用回彈（語氣沉穩）
+const loop = (x, n) => ((x % n) + n) % n;
+
+// ---------- 舞台：y 800–1630 的圓角框，框內畫什麼都裁在裡面 ----------
+const ST = { x: 60, y: 800, w: 960, h: 830 };
+function stage(fn) {
+  g.save(); g.beginPath(); g.roundRect(ST.x, ST.y, ST.w, ST.h, 28); g.clip();
+  g.fillStyle = BG2; g.fillRect(ST.x, ST.y, ST.w, ST.h);
+  fn(); g.restore();
+  g.strokeStyle = rgba(CREAM, 0.16); g.lineWidth = 2; g.beginPath(); g.roundRect(ST.x, ST.y, ST.w, ST.h, 28); g.stroke();
+}
+function cam(px, py, k, fn) { g.save(); g.translate(px, py); g.scale(k, k); g.translate(-px, -py); fn(); g.restore(); }
+
+// ---------- 俯視路口 ----------
+// o: cx, cy 路口中心；lw 單車道寬（px）；lanes 單向車道數；r 轉角半徑；set 斑馬線往後退；
+//    island 庇護島 0–1；bulb 人行道外推 0–1；park 路邊停車 0–1；hump 減速丘 0–1；red 斑馬線變紅 0–1；line 只畫線稿
+const geo = o => {
+  const lw = o.lw ?? 64, lanes = o.lanes ?? 2, hw = lw * lanes, r = o.r ?? 60, set = o.set ?? 0;
+  const d0 = hw + r + 14 + set;   // 斑馬線內緣到路口中心的距離
+  return { lw, lanes, hw, r, set, d0, zw: 78 };
+};
+const ARMS = [[1, 0], [-1, 0], [0, 1], [0, -1]];   // 東西南北四支
+function crossing(o) {
+  const { cx, cy } = o, { lw, lanes, hw, r, d0, zw } = geo(o), F = o.F ?? 3000;
+  const line = !!o.line;
+  if (!line) { g.fillStyle = WALK; g.fillRect(cx - F, cy - F, F * 2, F * 2); }
+  // 路面＋轉角：四角先補路面方塊，再用人行道圓蓋回去
+  if (!line) { g.fillStyle = ROAD; g.fillRect(cx - F, cy - hw, F * 2, hw * 2); g.fillRect(cx - hw, cy - F, hw * 2, F * 2); }
+  for (const [sx, sy] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+    const ox = cx + sx * hw, oy = cy + sy * hw;
+    if (!line) { g.fillStyle = ROAD; g.fillRect(Math.min(ox, ox + sx * r), Math.min(oy, oy + sy * r), r, r); G.disc(g, ox + sx * r, oy + sy * r, r, WALK); }
+    // 路緣線
+    g.strokeStyle = line ? rgba(CREAM, 0.7) : CURB; g.lineWidth = line ? 4 : 5; g.beginPath();
+    g.moveTo(ox, oy + sy * (r + F)); g.lineTo(ox, oy + sy * r);
+    g.arc(ox + sx * r, oy + sy * r, r, Math.atan2(0, -sx), Math.atan2(-sy, 0), sx * sy < 0);
+    g.lineTo(ox + sx * (r + F), oy); g.stroke();
+  }
+  // 停在路邊的車：每支的行車方向右側，最靠路口的先消失
+  const park = o.park ?? 0;
+  if (park > 0) ARMS.forEach(([ax, ay]) => {
+    for (let k = 0; k < 3; k++) {
+      const a = clamp((park - (2 - k) / 3) * 3); if (a <= 0) continue;
+      const d = d0 + zw + 34 + 46 + k * 116, off = hw - lw / 2;
+      // 東支：往東車道在南側；西支：北側；南支：往北車道在東側；北支：西側
+      const x = cx + ax * d + (ay ? -ay * off : 0), y = cy + ay * d + (ax ? ax * off : 0);
+      g.globalAlpha = a; car(x, y, ax ? 0 : Math.PI / 2, DIM, 86, 42); g.globalAlpha = 1;
+    }
+  });
+  // 人行道外推：從轉角沿路緣往外長，蓋掉最外側車道的前一段
+  const bulb = o.bulb ?? 0;
+  if (bulb > 0) for (const [sx, sy] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+    const ox = cx + sx * hw, oy = cy + sy * hw, dep = lw * 0.85 * bulb, len = r + zw + 150 * bulb;
+    g.fillStyle = line ? rgba(GOLD, 0.45) : mix(WALK, GOLD, 0.22);   // 新長出來的人行道帶一點金色，看得出改了哪裡
+    g.beginPath(); g.roundRect(sx > 0 ? ox - dep : ox, sy > 0 ? oy : oy - len, dep, len, 18); g.fill();
+    g.beginPath(); g.roundRect(sx > 0 ? ox : ox - len, sy > 0 ? oy - dep : oy, len, dep, 18); g.fill();
+    g.fillRect(sx > 0 ? ox - dep : ox, sy > 0 ? oy - dep : oy, dep, dep);
+  }
+  if (line) return;
+  // 標線：中央雙黃線、車道虛線（路口內不畫）
+  ARMS.forEach(([ax, ay]) => {
+    const s0 = d0 + zw + 20;
+    for (const off of [-4, 4]) {
+      g.fillStyle = GOLD;
+      if (ax) g.fillRect(ax > 0 ? cx + s0 : cx - F, cy + off - 2, F - s0, 4); else g.fillRect(cx + off - 2, ay > 0 ? cy + s0 : cy - F, 4, F - s0);
+    }
+    for (let l = 1; l < lanes; l++) for (const side of [-1, 1]) for (let s = s0; s < 1400; s += 60) {
+      const o2 = side * l * lw; g.fillStyle = rgba(CREAM, 0.55);
+      if (ax) g.fillRect(cx + ax * s - (ax < 0 ? 30 : 0), cy + o2 - 2, 30, 4); else g.fillRect(cx + o2 - 2, cy + ay * s - (ay < 0 ? 30 : 0), 4, 30);
+    }
+    // 停止線（各支進路口的那半邊）
+    g.fillStyle = CREAM; const sl = hw - lw * 0.85 * bulb;
+    if (ax) g.fillRect(cx + ax * (d0 + zw + 12) - 3, ax > 0 ? cy - sl : cy, 6, sl); else g.fillRect(ay > 0 ? cx : cx - sl, cy + ay * (d0 + zw + 12) - 3, sl, 6);
+  });
+  // 斑馬線
+  const red = o.red ?? 0, zc = red ? mix(CREAM, RED, red) : CREAM, dep = lw * 0.85 * bulb;
+  ARMS.forEach(([ax, ay]) => {
+    const hot = o.redArm ? (o.redArm[0] === ax && o.redArm[1] === ay) : true;
+    g.fillStyle = hot ? zc : CREAM;
+    for (let s = -hw + 8 + dep; s < hw - 8 - dep; s += 34) {
+      if (ax) g.fillRect(cx + ax * d0 - (ax < 0 ? zw : 0), cy + s, zw, 20); else g.fillRect(cx + s, cy + ay * d0 - (ay < 0 ? zw : 0), 20, zw);
+    }
+  });
+  // 庇護島：斑馬線正中間的一塊人行道
+  const isl = o.island ?? 0;
+  if (isl > 0) ARMS.forEach(([ax, ay]) => {
+    const L = (zw + 60) * isl, Wd = 34 * isl, m = d0 + zw / 2;
+    g.fillStyle = WALK; g.strokeStyle = GOLD; g.lineWidth = 4; g.beginPath();
+    if (ax) g.roundRect(cx + ax * m - L / 2, cy - Wd / 2, L, Wd, Wd / 2); else g.roundRect(cx - Wd / 2, cy + ay * m - L / 2, Wd, L, Wd / 2);
+    g.fill(); g.stroke();
+  });
+  // 減速丘：斑馬線外一條黃色條紋帶
+  const hump = o.hump ?? 0;
+  if (hump > 0) ARMS.forEach(([ax, ay]) => {
+    const m = d0 + zw + 120, th = 44;
+    g.save(); g.globalAlpha = hump;
+    if (ax) { g.translate(cx + ax * m, cy); } else { g.translate(cx, cy + ay * m); g.rotate(Math.PI / 2); }
+    g.fillStyle = '#c9a23a'; g.fillRect(-th / 2, -hw, th, hw * 2);
+    g.fillStyle = BG; for (let s = -hw; s < hw; s += 40) G.poly(g, [[-th / 2, s], [0, s + 14], [th / 2, s], [th / 2, s + 12], [0, s + 26], [-th / 2, s + 12]], BG);
+    g.restore();
+  });
+}
+// 北上外側車道右轉往東：回傳走了 s 像素時的位置與車頭方向
+function turnAt(o, s, y0 = o.cy + 900) {
+  const { lw, hw, r } = geo(o), R = r + lw / 2, Cx = o.cx + hw + r, Cy = o.cy + hw + r;
+  const L1 = y0 - Cy, La = R * Math.PI / 2;
+  if (s < L1) return { x: Cx - R, y: y0 - s, a: -Math.PI / 2 };
+  if (s < L1 + La) { const f = Math.PI + (s - L1) / R; return { x: Cx + R * Math.cos(f), y: Cy + R * Math.sin(f), a: f + Math.PI / 2 }; }
+  return { x: Cx + (s - L1 - La), y: Cy - R, a: 0 };
+}
+function car(x, y, a, col = ORL, len = 96, wid = 48) {
+  g.save(); g.translate(x, y); g.rotate(a);
+  g.fillStyle = col; g.beginPath(); g.roundRect(-len / 2, -wid / 2, len, wid, 12); g.fill();
+  g.fillStyle = rgba(BG, 0.55); g.fillRect(len * 0.08, -wid / 2 + 6, len * 0.2, wid - 12); g.fillRect(-len * 0.38, -wid / 2 + 7, len * 0.14, wid - 14);
+  g.restore();
+}
+function arrow(x, y, a, len, col = GOLD, w = 10) {   // 速度箭頭：從車頭往前
+  if (len <= 2) return;
+  g.save(); g.translate(x, y); g.rotate(a);
+  g.fillStyle = col; g.fillRect(56, -w / 2, len, w);
+  G.poly(g, [[56 + len + 26, 0], [56 + len, -w * 1.8], [56 + len, w * 1.8]], col);
+  g.restore();
+}
+function walker(x, y, col = CREAM, k = 1) {   // 俯視行人：肩膀＋頭
+  g.fillStyle = col; g.beginPath(); g.ellipse(x, y, 20 * k, 12 * k, 0, 0, Math.PI * 2); g.fill();
+  G.disc(g, x, y, 10 * k, mix(col, BG, 0.3));
+}
+
+// ---------- 側視人形 ----------
+function person(x, y, s, col, o = {}) {   // 原點＝腳底，s＝身高；o.cane 拐杖、o.bag 書包、o.ph 走路相位
+  const ph = o.ph ?? (NOW * 3 + x * 0.01), lean = o.cane ? 0.12 : 0;
+  y -= s * 0.012 * Math.abs(Math.sin(ph));
+  g.save(); g.translate(x, y); g.rotate(lean);
+  g.strokeStyle = col; g.lineCap = 'round'; g.lineWidth = s * 0.1;
+  const sw = Math.sin(ph) * 0.35;
+  g.beginPath(); g.moveTo(0, -s * 0.42); g.lineTo(Math.sin(sw) * s * 0.42, 0); g.moveTo(0, -s * 0.42); g.lineTo(-Math.sin(sw) * s * 0.42, 0); g.stroke();
+  g.fillStyle = col; g.beginPath(); g.roundRect(-s * 0.15, -s * 0.78, s * 0.3, s * 0.42, s * 0.1); g.fill();
+  G.disc(g, 0, -s * 0.88, s * 0.11, col);
+  if (o.bag) { g.fillStyle = o.bag; g.beginPath(); g.roundRect(-s * 0.3, -s * 0.74, s * 0.17, s * 0.28, s * 0.05); g.fill(); }
+  g.restore();
+  if (o.cane) G.seg(g, [x + s * 0.24, y - s * 0.5], [x + s * 0.3, y], s * 0.035, GOLD);
+}
+function sideCar(x, y, col = ORL, s = 1) {   // 側視小客車，原點＝前輪著地點右邊
+  g.fillStyle = col; g.beginPath(); g.roundRect(x - 230 * s, y - 70 * s, 230 * s, 50 * s, 14 * s); g.fill();
+  g.beginPath(); g.roundRect(x - 180 * s, y - 112 * s, 120 * s, 50 * s, 16 * s); g.fill();
+  g.fillStyle = rgba(BG, 0.5); g.fillRect(x - 168 * s, y - 102 * s, 46 * s, 34 * s); g.fillRect(x - 114 * s, y - 102 * s, 44 * s, 34 * s);
+  G.disc(g, x - 50 * s, y - 20 * s, 22 * s, '#111'); G.disc(g, x - 180 * s, y - 20 * s, 22 * s, '#111');
+}
+function zebraSide(x0, x1, y) {   // 側視地面的斑馬線
+  g.fillStyle = ROAD; g.fillRect(ST.x, y, ST.w, 40);
+  for (let x = x0; x < x1; x += 70) { g.fillStyle = CREAM; g.fillRect(x, y + 4, 42, 12); }
+}
+
+// ---------- 圖表零件 ----------
+function gauge(x, y, R, v, o = {}) {   // 半圓速度表 0–80 km/h；o.num false 不顯示數字
+  const max = 80;
+  g.lineCap = 'butt'; g.lineWidth = 22; g.strokeStyle = rgba(CREAM, 0.16); g.beginPath(); g.arc(x, y, R, Math.PI, Math.PI * 2); g.stroke();
+  g.strokeStyle = o.col || ORL; g.beginPath(); g.arc(x, y, R, Math.PI, Math.PI + Math.PI * clamp(v / max)); g.stroke();
+  for (let k = 0; k <= max; k += 10) {
+    const a = Math.PI + Math.PI * k / max, c = Math.cos(a), s = Math.sin(a);
+    G.seg(g, [x + c * (R - 30), y + s * (R - 30)], [x + c * (R - (k % 20 ? 42 : 52)), y + s * (R - (k % 20 ? 42 : 52))], 4, rgba(CREAM, 0.5));
+    if (o.num !== false && k % 20 === 0) plain(String(k), x + c * (R - 82), y + s * (R - 82) + 12, 28, DIM, { mono: true, align: 'center' });
+  }
+  const a = Math.PI + Math.PI * clamp(v / max);
+  G.seg(g, [x, y], [x + Math.cos(a) * (R - 26), y + Math.sin(a) * (R - 26)], 10, CREAM); G.disc(g, x, y, 18, CREAM);
+  if (o.num !== false) { plain(String(Math.round(v)), x, y + 86, 72, CREAM, { mono: true, align: 'center', w: 700 }); plain('km/h', x, y + 126, 28, DIM, { mono: true, align: 'center' }); }
+  if (o.label) plain(o.label, x, y + (o.num === false ? 80 : 176), 40, CREAM, { align: 'center' });
+}
+function dots(x, y, w, cols, n, p, hi, col, base = rgba(CREAM, 0.3), r) {
+  const s = w / cols; r = r || s * 0.36;
+  const shown = Math.floor(n * clamp(p));
+  for (let i = 0; i < shown; i++) {
+    const cx = x + (i % cols) * s + s / 2, cy = y + Math.floor(i / cols) * s + s / 2;
+    G.disc(g, cx, cy, r, i < hi ? col : base);
+  }
+  return Math.ceil(n / cols) * s;
+}
+function stamp(x, y, s, col, p, rot = -0.14, px = 88) {
+  if (p <= 0) return;
+  const k = 1 + 0.25 * (1 - E.o3(p));
+  g.save(); g.translate(x, y); g.scale(k, k); g.rotate(rot); g.globalAlpha = clamp(p * 4);
+  g.font = ZH(800, px); const w = g.measureText(s).width + 80;
+  g.lineWidth = 10; g.strokeStyle = col; g.strokeRect(-w / 2, -px * 0.95, w, px * 1.5);
+  plain(s, 0, px * 0.35, px, col, { align: 'center', w: 800 });
+  g.restore();
+}
+function chip(x, y, s, p = 1) {   // 兩派共用的標籤樣式（同色同大小）
+  if (p <= 0) return;
+  g.save(); g.globalAlpha = clamp(p * 2);
+  g.font = ZH(700, 46); const w = g.measureText(s).width + 56;
+  g.fillStyle = rgba(BG, 0.82); g.strokeStyle = GOLD; g.lineWidth = 4;
+  g.beginPath(); g.roundRect(x - w / 2, y - 50, w, 76, 38); g.fill(); g.stroke();
+  plain(s, x, y + 2, 46, GOLD, { align: 'center', w: 700 });
+  g.restore();
+}
+function school(x, y, s, col = CREAM, flag = GOLD) {   // 國小圖示：房子＋旗
+  g.fillStyle = col; g.fillRect(x - s / 2, y - s * 0.5, s, s * 0.5);
+  G.poly(g, [[x - s * 0.6, y - s * 0.48], [x, y - s * 0.95], [x + s * 0.6, y - s * 0.48]], col);
+  g.fillStyle = BG; g.fillRect(x - s * 0.1, y - s * 0.3, s * 0.2, s * 0.3);
+  G.seg(g, [x, y - s * 0.95], [x, y - s * 1.35], Math.max(2, s * 0.04), col); g.fillStyle = flag; g.fillRect(x, y - s * 1.35, s * 0.28, s * 0.16);
+}
+function timeline(x, y, w, n, p, labels, col = GOLD) {   // n 格的時間軸，p 0–1 填滿
+  g.fillStyle = rgba(CREAM, 0.14); g.beginPath(); g.roundRect(x, y, w, 46, 23); g.fill();
+  if (p > 0) { g.fillStyle = col; g.beginPath(); g.roundRect(x, y, Math.max(46, w * p), 46, 23); g.fill(); }
+  for (let k = 0; k <= n; k++) {
+    const xx = x + w * k / n; g.fillStyle = rgba(BG, 0.6); if (k && k < n) g.fillRect(xx - 2, y, 4, 46);
+    if (labels && labels[k] != null) plain(String(labels[k]), xx, y + 100, 34, k / n <= p + 1e-6 ? CREAM : DIM, { mono: true, align: 'center' });
+  }
+}
+function speedSign(x, y, s, val) {   // 美式速限牌
+  g.fillStyle = CREAM; g.strokeStyle = '#111'; g.lineWidth = s * 0.03;
+  g.beginPath(); g.roundRect(x - s * 0.4, y - s * 0.5, s * 0.8, s, s * 0.06); g.fill();
+  g.beginPath(); g.roundRect(x - s * 0.36, y - s * 0.46, s * 0.72, s * 0.92, s * 0.04); g.stroke();
+  plain('SPEED', x, y - s * 0.28, s * 0.13, '#111', { mono: true, align: 'center', w: 700 });
+  plain('LIMIT', x, y - s * 0.13, s * 0.13, '#111', { mono: true, align: 'center', w: 700 });
+  plain(String(val), x, y + s * 0.34, s * 0.42, '#111', { mono: true, align: 'center', w: 700 });
+}
+
+// ---------- 地圖：台灣本島輪廓（手描約 20 點，只當示意底圖） ----------
+// ponytail: 輪廓誤差約 10 公里；要精確改抓 Natural Earth 再投影。
+const TW = [[121.56,25.29],[121.93,25.02],[121.83,24.6],[121.62,24.05],[121.48,23.45],[121.3,22.95],[121.0,22.6],[120.86,22.08],[120.84,21.9],[120.72,21.98],[120.62,22.3],[120.3,22.55],[120.17,22.9],[120.1,23.3],[120.12,23.7],[120.3,24.1],[120.6,24.5],[120.85,24.83],[121.05,25.05],[121.3,25.15]];
+function taiwan(cx, cy, k, a = 1) {
+  g.save(); g.globalAlpha = a; g.beginPath();
+  TW.forEach(([lo, la], i) => { const x = cx + (lo - 121) * k * Math.cos(23.7 * G.D2R), y = cy - (la - 23.7) * k; i ? g.lineTo(x, y) : g.moveTo(x, y); });
+  g.closePath(); g.fillStyle = '#34302c'; g.fill(); g.lineWidth = 5; g.strokeStyle = rgba(CREAM, 0.6); g.stroke(); g.restore();
+}
+
+// ---------- 每張卡的舞台 ----------
+const X0 = { cx: 470, cy: 1150 };   // 預設路口中心（偏左上，右下轉角是主角）
+function hookCross(lt) {   // 鉤子：行人在斑馬線上小跑，一台車大弧度右轉切過來
+  const o = { ...X0, r: 130 };
+  stage(() => {
+    crossing(o);
+    const { hw, d0, zw } = geo(o), px = o.cx + d0 + zw / 2;
+    const u = loop(lt + 2, 5) / 5;   // 行人跟車錯開：車到斑馬線時人已經過完
+    const wy = o.cy + hw + 30 - u * (hw * 2 + 60) * 1.8;   // 跑著過
+    walker(px, Math.max(o.cy - hw - 30, wy), GOLD, 1.7);
+    const s = loop(lt * 520 + 600, 2600); const p = turnAt(o, s);
+    car(p.x, p.y, p.a); arrow(p.x, p.y, p.a, 120);
+  });
+}
+function wideLanes(lt) {   // 車道往外拉開，速度箭頭跟著變長
+  const k = E.io(inv(0.3, 2.6, lt)), lw = lerp(56, 92, k);
+  const o = { ...X0, cx: 540, cy: 1060, lw, r: 70 };
+  stage(() => {
+    crossing(o);
+    const { hw } = geo(o), x = o.cx + hw - lw / 2, y = loop(1700 - lt * 600, 1100) + 700;
+    car(x, y, -Math.PI / 2); arrow(x, y, -Math.PI / 2, lerp(40, 200, k));
+    G.seg(g, [o.cx - hw, 1560], [o.cx + hw, 1560], 6, GOLD);
+    plain('路寬', o.cx, 1600, 36, GOLD, { align: 'center' });
+  });
+}
+function cnn(lt) {
+  stage(() => {
+    taiwan(540, 1215, 215);
+    stamp(540, 1180, '行人地獄', RED, inv(0.4, 0.8, lt), -0.12, 96);
+    const k = pop(lt, 1.0); if (k > 0) { g.globalAlpha = k; plain(`CNN · ${FACTS.CNN_YEAR}`, 780, 1560, 40, CREAM, { mono: true, align: 'center' }); g.globalAlpha = 1; }
+  });
+}
+function deaths(lt, hiP = 0) {   // 366 個點；hiP>0 時前 83 個轉紅
+  stage(() => {
+    const n = FACTS.PED_DEATHS_2024, hi = Math.floor(FACTS.NO_YIELD_DEATHS_2024 * hiP);
+    dots(110, 850, 860, 24, n, hiP ? 1 : E.o2(inv(0.2, 2.6, lt)), hi, RED, rgba(CREAM, 0.42), 11);
+    plain('每點 1 人', 110, 1590, 30, DIM, { mono: true });
+    if (hiP) plain(`${hi} 人 · 車子沒停下來讓`, 970, 1590, 36, RED, { align: 'right' });
+    else plain(`${Math.floor(n * E.o2(inv(0.2, 2.6, lt)))}`, 970, 1590, 44, CREAM, { mono: true, align: 'right', w: 700 });
+  });
+}
+function road(y, lanes, lw, o = {}) {   // 橫向直路（上下各一排人行道）
+  const h = lanes * lw;
+  g.fillStyle = WALK; g.fillRect(ST.x, y - h / 2 - 80, ST.w, h + 160);
+  g.fillStyle = ROAD; g.fillRect(ST.x, y - h / 2, ST.w, h);
+  for (let l = 1; l < lanes; l++) for (let x = ST.x; x < ST.x + ST.w; x += 70) { g.fillStyle = rgba(CREAM, 0.55); g.fillRect(x + (o.off || 0) % 70, y - h / 2 + l * lw - 2, 36, 4); }
+  return h;
+}
+function tape(lt) {   // 捲尺從路邊拉到路中
+  stage(() => {
+    const lw = 120, h = road(1215, 3, lw), y0 = 1215 + h / 2, k = E.io(inv(0.3, 1.8, lt));
+    car(260 + loop(lt * 300, 900) - 100, 1215 - lw, 0, DIM, 120, 60);
+    g.fillStyle = GOLD; g.fillRect(820, y0 - h * k, 28, h * k);
+    for (let j = 0; j <= 12; j++) if (j * h / 12 <= h * k) g.fillRect(812, y0 - j * h / 12 - 2, j % 4 ? 12 : 22, 4);
+    g.fillStyle = '#c9a23a'; g.beginPath(); g.roundRect(790, y0 - 10, 90, 90, 14); g.fill();
+  });
+}
+function throttle(lt) {   // 車道一格格變寬、儀表往右擺
+  const k = E.io(inv(0.2, 2.4, lt));
+  stage(() => {
+    const lw = lerp(80, 150, k);
+    road(1000, 2, lw);
+    car(loop(lt * lerp(200, 700, k), 1200) - 120, 1000 + lw / 2, 0, ORL, 120, 60);
+    gauge(540, 1520, 200, lerp(25, 65, k), { num: false, label: '' });
+  });
+}
+const SCALE = 80;   // 每公尺 80px（車道比較圖）
+function laneCompare(lt, hot = 0) {   // 左 3 m、右 4.5 m 兩條車道並排
+  stage(() => {
+    const wN = FACTS.NARROW_LANE_M * SCALE, wW = FACTS.WIDE_LANE_M * SCALE, xA = 150, xB = 560, y0 = 900, y1 = 1500;
+    [[xA, wN, `${FACTS.NARROW_LANE_M} m`, 0], [xB, wW, `${FACTS.WIDE_LANE_M} m`, 1]].forEach(([x, w, lab, j]) => {
+      const k = pop(lt, 0.2 + j * 0.4, 0.6); if (k <= 0) return;
+      g.globalAlpha = k;
+      g.fillStyle = ROAD; g.fillRect(x, y0, w, y1 - y0);
+      g.fillStyle = CREAM; g.fillRect(x - 3, y0, 6, y1 - y0); g.fillRect(x + w - 3, y0, 6, y1 - y0);
+      const hk = j ? hot : 0;
+      if (hk) { g.strokeStyle = rgba(GOLD, hk); g.lineWidth = 10; g.strokeRect(x - 8, y0 - 8, w + 16, y1 - y0 + 16); }
+      g.save(); g.beginPath(); g.rect(x, y0, w, y1 - y0); g.clip();
+      car(x + w / 2, y0 + loop(800 - lt * 260 - j * 300, 760) - 80 + 100, -Math.PI / 2, j ? ORL : DIM, 110, 54);
+      g.restore();
+      // 尺寸線
+      G.seg(g, [x, y1 + 50], [x + w, y1 + 50], 4, GOLD); G.seg(g, [x, y1 + 30], [x, y1 + 70], 4, GOLD); G.seg(g, [x + w, y1 + 30], [x + w, y1 + 70], 4, GOLD);
+      plain(lab, x + w / 2, y1 + 110, 44 * (1 + 0.5 * hk), hk ? GOLD : CREAM, { mono: true, align: 'center', w: 700 });
+      g.globalAlpha = 1;
+    });
+    plain('外側車道', 540, 870, 34, DIM, { align: 'center' });
+  });
+}
+function laneBars(lt) {   // 事故發生率：3 m 為 1，4.5 m 以上高出五成
+  stage(() => {
+    const k1 = E.o3(inv(0.2, 1.0, lt)), k2 = E.o3(inv(0.8, 2.2, lt)), base = 1600, u = 420;
+    const cols = [[300, 1, k1, `${FACTS.NARROW_LANE_M} m`, DIM], [700, 1 + FACTS.WIDE_LANE_EXTRA_PCT / 100, k2, `${FACTS.WIDE_LANE_M} m 以上`, ORL]];
+    cols.forEach(([x, v, k, lab, col]) => {
+      g.fillStyle = col; g.fillRect(x - 110, base - 60 - u * v * k, 220, u * v * k);
+      plain(lab, x, base - 10, 40, CREAM, { mono: true, align: 'center' });
+    });
+    G.seg(g, [180, base - 60 - u], [900, base - 60 - u], 3, rgba(CREAM, 0.4));
+    const p = pop(lt, 2.0); if (p > 0) { g.globalAlpha = p; plain(`+${FACTS.WIDE_LANE_EXTRA_PCT}%`, 700, base - 60 - u * 1.5 * k2 - 30, 80, GOLD, { mono: true, align: 'center', w: 700 }); g.globalAlpha = 1; }
+    plain('事故發生率', 180, 880, 34, DIM);
+  });
+}
+const CORNER = { cx: 300, cy: 980 };   // 轉角特寫：路口偏左上，右下轉角放大
+function cornerZoom(lt) {
+  const z = lerp(0.7, 1.15, E.io(inv(0.1, 2.0, lt)));
+  stage(() => cam(560, 1215, z, () => {
+    const o = { ...CORNER, r: 50 }; crossing(o);
+    const { hw } = geo(o);
+    g.strokeStyle = GOLD; g.lineWidth = 8; G.ring(g, o.cx + hw + 25, o.cy + hw + 25, 90 + 10 * Math.sin(lt * 4), 8, rgba(GOLD, 0.8));
+  }));
+}
+function cornerGrow(lt) {   // 轉角圓弧被拉大
+  const r = lerp(40, 200, E.io(inv(0.2, 2.2, lt)));
+  stage(() => cam(560, 1215, 1.15, () => {
+    const o = { ...CORNER, r }; crossing(o);
+    const { hw } = geo(o);
+    g.setLineDash([12, 10]); g.strokeStyle = GOLD; g.lineWidth = 4; g.beginPath(); g.arc(o.cx + hw + r, o.cy + hw + r, r, Math.PI, Math.PI * 1.5); g.stroke(); g.setLineDash([]);
+    G.seg(g, [o.cx + hw + r, o.cy + hw + r], [o.cx + hw + r - r * Math.SQRT1_2, o.cy + hw + r - r * Math.SQRT1_2], 4, GOLD);
+    plain('R', o.cx + hw + r - r * 0.3, o.cy + hw + r - r * 0.45, 40, GOLD, { mono: true, w: 700 });
+  }));
+}
+function bigTurn(lt, red = 0) {   // 車沿大圓弧轉彎，速度箭頭不縮；red>0 斑馬線轉紅
+  const o = { ...CORNER, r: 200, red, redArm: [1, 0] };
+  stage(() => cam(560, 1215, 1.15, () => {
+    crossing(o);
+    const s = red ? lerp(250, 880, E.io(inv(0, 2.4, lt))) : loop(lt * 520, 1600);
+    const p = turnAt(o, s, o.cy + 900); car(p.x, p.y, p.a); arrow(p.x, p.y, p.a, 110);
+    if (red) { const { hw, d0, zw } = geo(o); walker(o.cx + d0 + zw / 2, o.cy + hw - 40 - 40 * E.io(inv(0.2, 2.4, lt)), GOLD, 1.7); }
+  }));
+}
+function speedIntro(lt) { stage(() => gauge(540, 1380, 330, lerp(0, FACTS.SPEED_LOW_KMH, E.io(inv(0.3, 1.8, lt))))); }
+function speedRisk(lt) {   // 儀表 30 → 50；右邊方塊從 1 格疊到 5 格以上
+  stage(() => {
+    const k = E.io(inv(0.2, 1.6, lt));
+    gauge(330, 1380, 230, lerp(FACTS.SPEED_LOW_KMH, FACTS.SPEED_HIGH_KMH, k));
+    const n = 1 + (FACTS.FATALITY_RATIO - 1) * E.o2(inv(1.0, 3.0, lt));
+    for (let j = 0; j < Math.ceil(n); j++) {
+      const f = clamp(n - j); g.fillStyle = j ? RED : DIM;
+      g.globalAlpha = f; g.fillRect(720, 1540 - (j + 1) * 112, 200, 96); g.globalAlpha = 1;
+    }
+    const q = pop(lt, 3.0); if (q > 0) { g.globalAlpha = q; g.fillStyle = RED; g.fillRect(720, 1540 - 6 * 112 + 40, 200, 56); plain(`${FACTS.FATALITY_RATIO}×+`, 820, 900, 64, RED, { mono: true, align: 'center', w: 700 }); g.globalAlpha = 1; }
+    plain(`${FACTS.SPEED_LOW_KMH} km/h = 1`, 820, 1590, 30, DIM, { mono: true, align: 'center' });
+  });
+}
+function hobokenMap(lt) {   // 示意：哈德遜河兩岸，西岸紐澤西的霍博肯
+  const z = lerp(0.85, 1.1, E.io(inv(0, 3, lt)));
+  stage(() => cam(500, 1200, z, () => {
+    g.fillStyle = '#34302c'; g.fillRect(-500, 0, 1100, 3000);
+    g.fillStyle = rgba(BLUE, 0.45); G.poly(g, [[600, 0], [760, 0], [700, 3000], [540, 3000]], rgba(BLUE, 0.45));
+    g.fillStyle = '#2c2926'; G.poly(g, [[760, 0], [1500, 0], [1500, 3000], [700, 3000]], '#2c2926');
+    plain('紐澤西', 230, 960, 46, DIM, { align: 'center' }); plain('紐約', 900, 1300, 46, DIM, { align: 'center' }); plain('哈德遜河', 640, 1560, 30, BLUE, { align: 'center' });
+    const k = pop(lt, 0.4); if (k > 0) { g.globalAlpha = 0.35; G.disc(g, 470, 1180, 70 * k + 12 * Math.sin(lt * 3), OR); g.globalAlpha = 1; G.disc(g, 470, 1180, 22 * k, OR); plain('霍博肯', 440, 1290, 56, CREAM, { align: 'center', w: 700 }); }
+  }));
+}
+function daylight(lt) {   // 轉角停車格裡的車被抽走
+  const o = { ...X0, r: 70, park: 1 - E.io(inv(0.4, 2.6, lt)) };
+  stage(() => { crossing(o); });
+}
+function curbExt(lt) {   // 人行道往外長、計數器跳到 40+
+  const k = E.io(inv(0.3, 2.0, lt));
+  const o = { ...X0, r: lerp(70, 40, k), bulb: k };
+  stage(() => {
+    crossing(o);
+    const n = Math.round(FACTS.HOBOKEN_CURB_EXT * E.o2(inv(0.3, 2.6, lt)));
+    g.fillStyle = rgba(BG, 0.85); g.beginPath(); g.roundRect(700, 1460, 290, 140, 20); g.fill();
+    plain(`${n}${n >= FACTS.HOBOKEN_CURB_EXT ? '+' : ''} 處`, 845, 1555, 64, GOLD, { mono: true, align: 'center', w: 700 });
+  });
+}
+function speedLimit(lt) {
+  stage(() => {
+    const k = E.o3(inv(0.2, 0.9, lt));
+    speedSign(300, lerp(700, 1200, k), 440, FACTS.HOBOKEN_MPH);
+    gauge(760, 1400, 200, lerp(0, FACTS.HOBOKEN_KMH, E.io(inv(0.8, 2.2, lt))));
+  });
+}
+function zeroYears(lt) {   // 九年，每年蓋一個 0
+  stage(() => {
+    for (let j = 0; j < FACTS.HOBOKEN_YEARS; j++) {
+      const x = 130 + (j % 3) * 280, y = 860 + Math.floor(j / 3) * 240, k = pop(lt, 0.1 + j * 0.08, 0.4);
+      if (k <= 0) continue;
+      g.globalAlpha = k; g.fillStyle = BG; g.beginPath(); g.roundRect(x, y, 260, 210, 18); g.fill();
+      g.fillStyle = OR; g.fillRect(x, y, 260, 52);
+      plain(String(FACTS.HOBOKEN_SINCE + j), x + 130, y + 40, 34, CREAM, { mono: true, align: 'center', w: 700 });
+      g.globalAlpha = 1;
+      const s = pop(lt, 1.0 + j * 0.22, 0.3); if (s > 0) { g.save(); g.translate(x + 130, y + 150); g.scale(1 + 0.4 * (1 - s), 1 + 0.4 * (1 - s)); g.globalAlpha = s; plain('0', 0, 30, 110, GREEN, { mono: true, align: 'center', w: 700 }); g.restore(); }
+    }
+  });
+}
+// —— 台灣：從路口改 ——
+const TP = { cx: 470, cy: 1180, r: 90 };
+function tpBase(lt) {
+  stage(() => {
+    cam(TP.cx, TP.cy, lerp(1.25, 1, E.io(inv(0, 2.4, lt))), () => crossing(TP));
+
+  });
+}
+function tpSetback(lt) {   // 斑馬線往後滑、庇護島長出
+  const o = { ...TP, set: lerp(0, 70, E.io(inv(0.2, 1.6, lt))), island: E.o3(inv(1.4, 2.6, lt)) };
+  stage(() => { crossing(o); });
+}
+function tpBulb(lt) {   // 人行道外推、減速丘浮起
+  const k = E.io(inv(0.2, 1.6, lt));
+  const o = { ...TP, set: 70, island: 1, r: lerp(90, 50, k), bulb: k, hump: E.o3(inv(1.4, 2.4, lt)) };
+  stage(() => { crossing(o); });
+}
+function tpCost(lt) {   // 外推蓋掉停車格，外側車道收掉
+  const k = E.io(inv(0.3, 2.2, lt));
+  const o = { ...TP, set: 70, island: 1, r: 50, bulb: 1, hump: 1, park: 1 - k };
+  stage(() => {
+    crossing(o);
+    const q = pop(lt, 1.6); if (q > 0) { g.globalAlpha = q; g.fillStyle = rgba(BG, 0.85); g.beginPath(); g.roundRect(620, 1440, 370, 160, 20); g.fill(); plain('停車格 ↓', 805, 1505, 46, RED, { align: 'center' }); plain('車道 ↓', 805, 1570, 46, RED, { align: 'center' }); g.globalAlpha = 1; }
+  });
+}
+function tpYears(lt) {   // 時間軸 2023 → 2028
+  stage(() => {
+    const p = E.io(inv(0.3, 2.6, lt)), n = FACTS.TPE_PLAN_YEARS;
+   
+    timeline(120, 1180, 840, n, p, Array.from({ length: n + 1 }, (_, k) => FACTS.TPE_PLAN_START + k));
+    for (let k = 0; k < n; k++) { const q = clamp((p * n - k) * 2); if (q > 0) { g.globalAlpha = q; cam(120 + 840 * (k + 0.5) / n, 1080, 0.16, () => crossing({ cx: 120 + 840 * (k + 0.5) / n, cy: 1080, r: 50, bulb: 1, line: true, F: 360 })); g.globalAlpha = 1; } }
+    plain(`${n} 年`, 540, 1480, 90, GOLD, { mono: true, align: 'center', w: 700 });
+  });
+}
+// —— 台灣：從學校改 ——
+function block(lt, zone = 0, slow = 0) {   // 學校周圍的街廓俯視圖；zone 0–1 畫出 150 m 圈
+  const sx = 540, sy = 1215;
+  g.fillStyle = WALK; g.fillRect(ST.x, ST.y, ST.w, ST.h);
+  g.fillStyle = ROAD; for (const x of [250, 830]) g.fillRect(x - 40, ST.y, 80, ST.h); for (const y of [960, 1470]) g.fillRect(ST.x, y - 40, ST.w, 80);
+  if (zone > 0) {
+    const R = 330 * E.o3(zone);
+    g.save(); g.beginPath(); g.arc(sx, sy, R, 0, Math.PI * 2); g.clip();
+    g.fillStyle = rgba(GOLD, 0.28); g.fillRect(ST.x, ST.y, ST.w, ST.h); g.restore();
+    G.ring(g, sx, sy, R, 6, GOLD);
+    if (zone >= 1) { G.seg(g, [sx, sy], [sx + 330, sy], 4, GOLD); plain(`${FACTS.SCHOOL_ZONE_M} m`, sx + 200, sy - 18, 40, GOLD, { mono: true, align: 'center', w: 700 }); }
+  }
+  school(sx, sy + 60, 150);
+  if (slow >= 0) {   // 一台車沿下方道路往東開，進圈內就放慢（位置是 t 的分段線性封閉式）
+    const L = 1100, T = 6.0, u = loop(lt, T) / T, inZ = x => Math.abs(x - sx) < 300;
+    // 圈外速度 1、圈內速度 1-0.55*slow：用總長度換算位置
+    const vIn = 1 - 0.55 * slow, a = sx - 300 - ST.x + 100, b = 600, c = L - a - b, tot = a + b / vIn + c, d = u * tot;
+    const x = ST.x - 100 + (d < a ? d : d < a + b / vIn ? a + (d - a) * vIn : a + b + (d - a - b / vIn));
+    car(x, 1470 + 20, 0, ORL, 96, 46); arrow(x, 1490, 0, inZ(x) ? 120 * vIn : 120);
+  }
+}
+function scBase(lt) { stage(() => { block(lt, 0, 0); }); }
+function scZone(lt) { stage(() => { block(lt, inv(0.3, 1.8, lt)); }); }
+function scMeasure(lt) {   // 施工前後兩個儀表＋公告欄
+  stage(() => {
+   
+    gauge(290, 1260, 180, lerp(0, 52, E.io(inv(0.2, 1.4, lt))), { num: false, label: '施工前' });
+    gauge(790, 1260, 180, lerp(0, 32, E.io(inv(0.9, 2.1, lt))), { num: false, label: '施工後', col: GREEN });
+    const k = pop(lt, 1.8); if (k > 0) {
+      g.globalAlpha = k; g.fillStyle = CREAM; g.beginPath(); g.roundRect(330, 1420, 420, 170, 14); g.fill();
+      plain('公開', 540, 1480, 44, BG, { align: 'center', w: 800 });
+      g.fillStyle = rgba(BG, 0.4); for (let j = 0; j < 2; j++) g.fillRect(380, 1510 + j * 30, 320 * clamp((lt - 2.0) * 2 - j), 12);
+      g.globalAlpha = 1;
+    }
+  });
+}
+function scSlow(lt) { stage(() => { block(lt, 1, E.io(inv(0.2, 1.4, lt))); }); }
+function scAll(lt) {   // 150+ 所國小一排排亮起，時間軸 8 年
+  stage(() => {
+   
+    const n = FACTS.SCHOOL_COUNT, p = E.o2(inv(0.2, 2.6, lt)), cols = 19;
+    for (let i = 0; i < n; i++) { const x = 130 + (i % cols) * 46, y = 1010 + Math.floor(i / cols) * 54; school(x, y, 30, i < n * p ? GOLD : rgba(CREAM, 0.25), i < n * p ? OR : 'rgba(0,0,0,0)'); }
+    timeline(130, 1480, 820, FACTS.SCHOOL_ZONE_YEARS, E.io(inv(0.4, 3.0, lt)), null);
+    plain(`${FACTS.SCHOOL_ZONE_YEARS} 年`, 950, 1590, 40, GOLD, { mono: true, align: 'right', w: 700 });
+  });
+}
+// —— 落點 ——
+function calmCross(lt) {   // 路口收小，同一台車轉彎變慢、停在斑馬線前
+  const k = E.io(inv(0.2, 2.0, lt));
+  const o = { ...X0, r: lerp(130, 40, k), bulb: k, set: 40 * k };
+  stage(() => {
+    crossing(o);
+    const s = loop(lt * 300 + 600, 2200), p = turnAt(o, s);
+    car(p.x, p.y, p.a); arrow(p.x, p.y, p.a, lerp(120, 30, k), GREEN);
+  });
+}
+function elders(lt) {   // 阿公阿嬤慢慢走過斑馬線，車停在線前
+  stage(() => {
+    g.fillStyle = '#2c2926'; g.fillRect(ST.x, 1520, ST.w, 110);
+    zebraSide(330, 820, 1480);
+    sideCar(280, 1480, DIM, 0.9);
+    const x = 360 + lt * 45;
+    person(x, 1480, 260, CREAM, { cane: true, ph: lt * 2.2 });
+    person(x + 150, 1480, 250, ORL, { cane: true, ph: lt * 2.2 + 1.5 });
+    G.disc(g, 920, 920, 50, rgba(GOLD, 0.5));
+  });
+}
+function kids(lt) {   // 放學：小朋友沿人行道慢慢走
+  stage(() => {
+    g.fillStyle = '#2c2926'; g.fillRect(ST.x, 1500, ST.w, 130);
+    school(220, 1300, 260, rgba(CREAM, 0.5), GOLD);
+    const cols = [GOLD, BLUE, GREEN, ORL];
+    for (let j = 0; j < 4; j++) person(360 + j * 140 + lt * 40, 1500, 170 + (j % 2) * 20, CREAM, { bag: cols[j], ph: lt * 2.6 + j });
+    G.disc(g, 880, 940, 60, rgba(OR, 0.55));
+  });
+}
+function everyone(lt) {   // 每個人：老、小、大人一起慢慢走
+  stage(() => {
+    g.fillStyle = '#2c2926'; g.fillRect(ST.x, 1520, ST.w, 110);
+    zebraSide(170, 960, 1480);
+    const crowd = [[200, CREAM, { cane: true }, 250], [340, ORL, { bag: GOLD }, 170], [470, GOLD, {}, 290], [620, CREAM, { bag: BLUE }, 160], [740, BLUE, {}, 280], [870, ORL, { cane: true }, 240]];
+    crowd.forEach(([x, col, o, s], j) => person(x + lt * 30 - 60, 1480, s, col, { ...o, ph: lt * 2.4 + j }));
+    g.globalAlpha = 0.5; sideCar(160, 1480, DIM, 0.6); g.globalAlpha = 1;
+  });
+}
+function question(lt) {   // 線稿路口留兩條轉彎軌跡：慢的貼轉角、快的大弧度
+  stage(() => {
+    const o = { ...X0, r: 110, line: true }; crossing(o);
+    const slow = { ...X0, r: 30 }, fast = { ...X0, r: 170 };
+    [[slow, GREEN, 260], [fast, RED, 620]].forEach(([q, col, v]) => {
+      g.strokeStyle = rgba(col, 0.8); g.lineWidth = 8; g.setLineDash([16, 14]); g.beginPath();
+      for (let s = 0; s < 1800; s += 20) { const p = turnAt(q, s); s ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y); }
+      g.stroke(); g.setLineDash([]);
+      const p = turnAt(q, loop(lt * v, 1800)); car(p.x, p.y, p.a, col, 80, 40);
+    });
+    const k = pop(lt, 0.8); if (k > 0) { g.save(); g.translate(860, 1000); g.scale(k, k); plain('？', 0, 60, 220, GOLD, { align: 'center', w: 800 }); g.restore(); }
+  });
+}
+
+// ---------- 卡 ----------
+// 一張卡對一句旁白（timeline.js 第 i 句）；卡的起點＝那句開口前 0.25 秒。hud＝數字的出處。
+const CARDS = [
+  { head: '行人地獄', sub: '為什麼要用跑的？', hud: '示意圖', draw: hookCross },
+  { head: '行人地獄', sub: '想開快', hud: '道路設計通論', draw: wideLanes },
+  { head: '行人地獄', sub: `CNN · ${FACTS.CNN_YEAR}`, hud: 'CNN Travel', draw: cnn },
+  { head: `${FACTS.PED_DEATHS_2024} 人`, sub: `${FACTS.PED_YEAR} · 全台行人失去生命`, hud: '交通部（經 TVBS、公視）', draw: lt => deaths(lt, 0) },
+  { head: '路寬', hud: '示意圖', draw: tape },
+  { head: '路寬', sub: '越寬越敢踩', hud: '示意圖', draw: throttle },
+  { head: '路寬', sub: `營建署 ${FACTS.LANE_STUDY_YEAR}`, hud: '中央社 · 公視', draw: lt => laneCompare(lt, 0) },
+  { head: '路寬', sub: `≥ ${FACTS.WIDE_LANE_M} m`, hud: '中央社', draw: lt => laneCompare(lt, E.o3(inv(0.2, 0.8, lt))) },
+  { head: '路寬', sub: `事故 +${FACTS.WIDE_LANE_EXTRA_PCT}%`, hud: '中央社', draw: laneBars },
+  { head: '轉角', hud: '示意圖', draw: cornerZoom },
+  { head: '轉角', hud: '示意圖', draw: cornerGrow },
+  { head: '轉角', sub: '全速', hud: '示意圖', draw: lt => bigTurn(lt, 0) },
+  { head: '轉角', sub: '斑馬線', hud: '示意圖', draw: lt => bigTurn(lt, E.o3(inv(1.2, 1.8, lt))) },
+  { head: '轉角', sub: `${FACTS.NO_YIELD_DEATHS_2024} / ${FACTS.PED_DEATHS_2024} 人`, tag: '車子沒停下來讓', hud: '交通部（經 TVBS、公視）', draw: lt => deaths(lt, E.io(inv(0.3, 2.0, lt))) },
+  { head: '車速', hud: '示意圖', draw: speedIntro },
+  { head: '車速', sub: `${FACTS.SPEED_LOW_KMH} → ${FACTS.SPEED_HIGH_KMH} · ${FACTS.FATALITY_RATIO} 倍以上`, hud: 'Rosén & Sander 2009', draw: speedRisk },
+  { head: '霍博肯', sub: '紐澤西', hud: '示意地圖', draw: hobokenMap },
+  { head: '霍博肯', sub: '停車格 ↓', hud: 'Fox 5 NY · BD+C', draw: daylight },
+  { head: '霍博肯', sub: `${FACTS.HOBOKEN_CURB_EXT} 多處外推`, hud: 'BD+C', draw: curbExt },
+  { head: '霍博肯', sub: `${FACTS.HOBOKEN_MPH} 英里 ≈ ${FACTS.HOBOKEN_KMH} km/h`, tag: `${FACTS.HOBOKEN_20MPH_YEAR} 年起`, hud: 'BD+C · 霍博肯市府', draw: speedLimit },
+  { head: '霍博肯', sub: `${FACTS.HOBOKEN_YEARS} 年 0 人`, tag: `${FACTS.HOBOKEN_SINCE} 年 1 月起`, hud: 'Fox 5 NY · OPB', draw: zeroYears },
+  { head: '從路口改', hud: '公視 · TVBS 車勢', draw: tpBase },
+  { head: '從路口改', sub: '斑馬線後退 · 安全島', hud: '公視 · TVBS 車勢', draw: tpSetback },
+  { head: '從路口改', sub: '減速丘', hud: '自由時報', draw: tpBulb },
+  { head: '從路口改', sub: '代價', hud: '做法本身', draw: tpCost },
+  { head: '從路口改', sub: `${FACTS.TPE_PLAN_START} 起 · ${FACTS.TPE_PLAN_YEARS} 年`, hud: 'TVBS 車勢', draw: tpYears },
+  { head: '從學校改', hud: 'NOWnews · 公視', draw: scBase },
+  { head: '從學校改', sub: `${FACTS.SCHOOL_ZONE_M} 公尺通學區`, hud: 'NOWnews · 公視', draw: scZone },
+  { head: '從學校改', sub: '前後量車速', hud: 'NOWnews', draw: scMeasure },
+  { head: '從學校改', sub: '要開更慢', hud: '公視', draw: scSlow },
+  { head: '從學校改', sub: `${FACTS.SCHOOL_COUNT}+ 所 · ${FACTS.SCHOOL_ZONE_YEARS} 年`, hud: 'NOWnews · 公視', draw: scAll },
+  { head: '慢慢走', sub: '小路口', hud: '示意圖', draw: calmCross },
+  { head: '慢慢走', sub: '阿公阿嬤', hud: '示意圖', draw: elders },
+  { head: '慢慢走', sub: '小朋友', hud: '示意圖', draw: kids },
+  { head: '你家路口呢？', sub: '慢慢轉，還是直接切？', hud: '示意圖', draw: question },
+  { head: '好好走', sub: '每個人', hud: '示意圖', draw: everyone },
+];
+// 段名 → 畫面上的章名（鉤子不標）。懶人包段 10-30 拿掉（使用者：整支就是懶人包，片尾不必重講）
+const CHAP = { 鉤子: '', 機制: '一、路怎麼讓車變快', 轉折: '二、怎麼讓車慢下來', 落點: '三、慢慢走', 提問: '三、慢慢走', 收尾: '三、慢慢走' };
+const N = CARDS.length;
+if (TL.lines.length !== N) throw new Error(`timeline.js 有 ${TL.lines.length} 句，卡片 ${N} 張，對不上`);
+const DUR = TL.dur;
+const T0 = TL.lines.map((l, i) => i === 0 ? 0 : l.t0 - 0.25);
+const cardAt = t => { let i = 0; while (i + 1 < N && t >= T0[i + 1]) i++; return i; };
+
+// ---------- 背景：上方斜紋帶等速慢捲，讓每張卡都有連續動態 ----------
+function band(t) {
+  g.save(); g.beginPath(); g.rect(0, 0, W, 120); g.clip();
+  g.fillStyle = BG2; g.fillRect(0, 0, W, 120);
+  const off = (t * 40) % 80;
+  for (let x = -160; x < W + 160; x += 80) G.poly(g, [[x + off, 0], [x + off + 40, 0], [x + off - 80, 120], [x + off - 120, 120]], rgba(OR, 0.35));
+  g.restore();
+}
+
+// ---------- 字幕 ----------
+function caption(t) {
+  const L = TL.lines.find(l => t >= l.t0 - 0.1 && t < l.t1 + 0.2);
+  if (!L) return;
+  const s = L.text.replace(/[。！]$/, ''), px = 42, maxW = 1000;
+  g.font = ZH(500, px);
+  const fits = r => g.measureText(r).width <= maxW;
+  // 在標點後斷行，貪婪裝滿一行；單段本身太長才逐字斷
+  const segs = s.match(/[^，、；：]+[，、；：]?/g), rows = [];
+  let cur = '';
+  for (const sg of segs) {
+    if (fits(cur + sg)) { cur += sg; continue; }
+    if (cur) rows.push(cur);
+    cur = '';
+    for (const ch of sg) { if (!fits(cur + ch)) { rows.push(cur); cur = ''; } cur += ch; }
+  }
+  if (cur) rows.push(cur);
+  const h = 50 + rows.length * 58;
+  g.fillStyle = '#0f0e0d'; g.fillRect(0, 1880 - h, W, h);
+  rows.forEach((r, j) => plain(r, W / 2, 1880 - h + 66 + j * 58, px, CREAM, { align: 'center', w: 500 }));
+}
+
+// ---------- 主持人 ----------
+const svgText = await fetch('./mascot/clawd-bot.svg').then(r => { if (!r.ok) throw new Error('取不到 mascot/clawd-bot.svg'); return r.text(); });
+const host = document.getElementById('mascot'); host.innerHTML = svgText;
+const ROOT = host.querySelector('svg'); if (!ROOT) throw new Error('mascot svg 解析失敗');
+const TRACK = { fps: 30, states: [{ t: 0, state: 'idle' }], looks: CARDS.map((c, i) => ({ t: T0[i], x: -0.5, y: 0.5 })), pokes: [] };
+function poseHost(t) {
+  applyPose(ROOT, poseAt(t, TRACK));
+  // 嘴跟旁白開合；表情維持 idle
+  if (!TL.lines.some(l => t >= l.t0 && t <= l.t1)) return;
+  const a = 0.25 + 0.75 * Math.abs(Math.sin(t * 13.5)) * (0.55 + 0.45 * Math.abs(Math.sin(t * 4.3 + 1)));
+  ROOT.querySelector('#mouth').setAttribute('d', `M-5,8 Q0,${(9 + a * 5).toFixed(2)} 5,8`);
+}
+
+// ---------- 主迴圈 ----------
+// 換卡＝原地交叉淡化 XF 秒：先畫上一張、存起來，再畫這一張，把上一張以漸弱透明度疊回去。
+// 不滑入、不換底色、不插章名全屏卡（使用者 10-30；對標 DemDuhNk1ZR 66.9 秒 0 次硬切）。
+const XF = 0.6;
+const snap = Object.assign(document.createElement('canvas'), { width: W, height: H });
+function render(t) {
+  t = clamp(t, 0, DUR); TXT = []; NOW = t;
+  const i = cardAt(t), lt = t - T0[i];
+  const k = i && lt < XF ? E.io(lt / XF) : 1;
+  if (k < 1) { drawCard(i - 1, t); snap.getContext('2d').drawImage(g.canvas, 0, 0); TXT = []; }
+  drawCard(i, t);
+  if (k < 1) { g.globalAlpha = 1 - k; g.drawImage(snap, 0, 0); g.globalAlpha = 1; }
+  return finish(t);
+}
+function drawCard(i, t) {
+  const cd = CARDS[i], lt = t - T0[i];
+  g.fillStyle = BG; g.fillRect(0, 0, W, H);
+  band(t);
+  plain('行人地獄懶人包', 60, 186, 30, DIM, { mono: true, ls: '4px' });
+  const ch = CHAP[TL.lines[i].section]; if (ch === undefined) throw new Error(`段名 ${TL.lines[i].section} 沒有章名`);
+  if (ch) plain(ch, 60, 246, 44, CREAM, { w: 600 });
+  // 進度條按章分組，章與章之間空一格
+  let gx = 60;
+  for (let j = 0; j < N; j++) {
+    if (j && CHAP[TL.lines[j].section] !== CHAP[TL.lines[j - 1].section]) gx += 14;
+    g.fillStyle = j <= i ? OR : rgba(CREAM, 0.2); g.fillRect(gx, 276, 14, j === i ? 10 : 5); gx += 20;
+  }
+  // 大標＝這一段的主題，同主題連續幾張卡共用、不重播動畫（短句卡也讀得完）；副標＝這張卡的關鍵詞。
+  // 第 0 卡第 0 幀就完整顯示（封面）。
+  let gi = i; while (gi > 0 && CARDS[gi - 1].head === cd.head) gi--;
+  const glt = t - T0[gi];
+  const pin = i === 0 ? () => 1 : (a, b) => inv(a, b, lt);
+  const big = cd.head.length > 6 ? 120 : cd.head.length > 4 ? 150 : 180, hy = 330 + big * 0.86 + 60;
+  say(cd.head, 60, hy, big, CREAM, i === 0 ? 1 : inv(0.05, 0.6, glt), { id: 'head' + (gi + 1) });
+  if (cd.sub) say(cd.sub, 64, hy + 110, 68, ORL, pin(0.15, 0.7), { id: 'sub' + (i + 1) });
+  if (cd.tag) say(cd.tag, 64, hy + 190, 46, GOLD, pin(0.3, 0.85), { id: 'tag' + (i + 1) });
+  plain(`來源｜${cd.hud}`, 60, 1690, 30, DIM, { mono: true });
+  cd.draw(lt);
+}
+function finish(t) {
+  caption(t);
+  poseHost(t);
+  const fade = t > DUR - 0.6 ? inv(DUR - 0.6, DUR, t) : 0;
+  if (fade) { g.globalAlpha = fade; g.fillStyle = '#000'; g.fillRect(0, 0, W, H); g.globalAlpha = 1; }
+  // 主播畫進 canvas：DOM SVG 疊層的合成結果會受上一幀影響，尋幀一致過不了
+  const tok = ++mascotTok, img = new Image();
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(ROOT));
+  return img.decode().then(() => {
+    if (tok !== mascotTok) return;   // 已經畫下一幀了，舊圖不能蓋上去
+    g.globalAlpha = 1 - fade; g.drawImage(img, 730, 60, 340, 340); g.globalAlpha = 1;
+  });
+}
+let mascotTok = 0;
+
+// ---------- 對外契約 ----------
+window.DUR = DUR;
+window.render = render;
+window.TEXTS = t => { render(t); return TXT.filter(b => b.screen); };
+window.CUES = TL.lines.map(l => ({ t0: l.t0, t1: l.t1, text: l.text }));
+window.SHAKES = [];
+window.EV = (() => {
+  const e = [{ t: 0, type: 'bed', len: DUR }];
+  // 不加任何音效：換卡「登」一聲使用者 10-30 嫌吵拿掉，只留配樂
+  return e.sort((a, b) => a.t - b.t);
+})();
+window.VOICE = TL.lines.map((l, j) => ({ t: l.t0, file: `out/voice/${String(j + 1).padStart(2, '0')}.wav` }));
+
+// 字型：這段程式碼本身就含畫面上所有字（卡片、標籤、圖表字），整段拿去預載
+const allText = document.querySelector('script[type=module]').textContent + TL.lines.map(l => l.text).join('') + '0123456789';
+await Promise.all([document.fonts.load(ZH(600, 180), allText), document.fonts.load(ZH(500, 42), allText), document.fonts.load(ZH(700, 46), allText), document.fonts.load(MONO(30), allText)]);
+await document.fonts.ready;
+for (let i = 0; i < N; i++) render(T0[i] + 0.6);
+render(0);
+window.READY = true;
+</script>
+</body>
+</html>

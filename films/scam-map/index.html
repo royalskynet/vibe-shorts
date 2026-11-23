@@ -1,0 +1,617 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>電話網路詐騙最多的城市</title>
+<style>
+  html,body{margin:0;background:#0A1020;overflow:hidden}
+  canvas{display:block}
+</style>
+<script src="map.js"></script>
+<script src="timeline.js"></script>
+<script src="basemap.js"></script>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+(() => {
+const W = 1080, H = 1920;
+const c = document.getElementById('c'), g = c.getContext('2d', { alpha: false });
+const MAP = window.MAP, TL = window.TL, BASE = window.BASEMAP;
+
+// 會出現在畫面上的事實數字集中在這裡，不要在別處重寫一次。
+// 每一個都要在 meta/facts.md 有一行附來源，scripts/precheck.py 會比對。
+// 跟 map.js（從原始資料算出來的）對不上就直接丟錯，渲染會失敗，不會默默畫出舊數字。
+const FACTS = {
+  YEAR: 2025,                 // 統計年度
+  TOTAL_CASES: 156411,        // 2025 全年全國受理件數
+  NATIONAL_PER100K: 671,      // 全國每十萬人件數
+  NATIONAL_ONE_IN: 149,       // 全國平均每幾人一件
+  HSINCHU_PER100K: 881,       // 新竹市每十萬人件數
+  HSINCHU_ONE_IN: 114,        // 新竹市每幾人一件
+  HSINCHU_ABOVE_PCT: 31,      // 新竹市比全國高幾 %
+  MONTHS_TOTAL: 21,           // 2025-01～2026-09 月數
+  MONTHS_FIRST: 18,           // 新竹市人均第一的月數
+  KINMEN_PER100K: 209,        // 金門縣每十萬人件數
+  SHOP_HSINCHU_PCT: 24,       // 新竹市假網拍件數佔比
+  SHOP_NATIONAL_PCT: 22,      // 全國假網拍件數佔比
+  INVEST_LOSS_PCT: 51,        // 假投資財損佔比（全國）
+};
+(() => {
+  const by = n => MAP.counties.find(c => c.name === n);
+  const hc = by('新竹市'), km = by('金門縣'), nat = MAP.national;
+  const want = {
+    TOTAL_CASES: nat.cases, NATIONAL_PER100K: nat.per100k, NATIONAL_ONE_IN: Math.round(1e5 / nat.per100k),
+    HSINCHU_PER100K: hc.per100k, HSINCHU_ONE_IN: Math.round(hc.pop / hc.cases),
+    HSINCHU_ABOVE_PCT: Math.round((hc.per100k / nat.per100k - 1) * 100),
+    MONTHS_TOTAL: MAP.months.length, MONTHS_FIRST: MAP.months.filter(m => m.name === '新竹市').length,
+    KINMEN_PER100K: km.per100k,
+    SHOP_HSINCHU_PCT: Math.round(MAP.methods['新竹市'][0].cases * 100),
+    SHOP_NATIONAL_PCT: Math.round(MAP.methods['全國'][0].cases * 100),
+    INVEST_LOSS_PCT: Math.round(MAP.methods['全國'][1].loss * 100),
+  };
+  const bad = Object.entries(want).filter(([k, v]) => FACTS[k] !== v).map(([k, v]) => `${k} 寫 ${FACTS[k]}，資料算出 ${v}`);
+  if (bad.length) throw new Error('FACTS 跟資料對不上：' + bad.join('；'));
+})();
+
+// 夜色地圖：深藍海、縣市按人均件數上色（低＝藍灰、高＝橘紅），重點縣市用螢光粉
+const C = {
+  sea: '#0A1020', grid: 'rgba(120,160,255,0.07)', line: 'rgba(10,16,32,0.9)',
+  pink: '#FF3D7F', yellow: '#FFD23F', cyan: '#3DD6FF', white: '#F4F1EA', dim: 'rgba(244,241,234,0.55)',
+};
+const SANS = "'PingFang TC',sans-serif";
+const MONO = "'SF Mono','Menlo',monospace";
+
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const lerp = (a, b, k) => a + (b - a) * k;
+const seg = (t, a, b) => clamp((t - a) / (b - a), 0, 1);
+const ss = k => k * k * (3 - 2 * k);
+const eo = k => 1 - Math.pow(1 - k, 3);
+const back = k => { const s = 1.7; return 1 + (s + 1) * Math.pow(k - 1, 3) + s * Math.pow(k - 1, 2); };
+const rnd = s => { const x = Math.sin(s * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+const fmt = n => Math.round(n).toLocaleString('en-US');
+
+let NOW = 0, TXT = [];
+
+// ---------- 字 ----------
+function measure(s, size, font, weight) { g.font = `${weight} ${size}px ${font}`; return g.measureText(s).width; }
+function txt(s, x, y, o = {}) {
+  const size = o.size || 48, font = o.font || SANS, weight = o.weight || 800;
+  g.font = `${weight} ${size}px ${font}`;
+  g.textAlign = o.align || 'left'; g.textBaseline = 'alphabetic';
+  if (o.stroke) { g.lineWidth = o.stroke; g.strokeStyle = o.strokeColor || C.sea; g.lineJoin = 'round'; g.strokeText(s, x, y); }
+  g.fillStyle = o.fill || C.white; g.fillText(s, x, y);
+  if (o.id) {
+    const w = g.measureText(s).width, x0 = o.align === 'center' ? x - w / 2 : o.align === 'right' ? x - w : x;
+    const m = o.screen ? g.getTransform() : { e: 0, f: 0 };   // 螢幕字要算進 render 的 OVER_DY 平移
+    TXT.push({ id: o.id, text: s, x0: x0 + m.e, y0: y - size + m.f, x1: x0 + w + m.e, y1: y + size * 0.25 + m.f, screen: !!o.screen });
+  }
+}
+
+// ---------- 地圖 ----------
+const PATHS = MAP.counties.map(cn => {
+  const p = new Path2D();
+  for (const r of cn.rings) { p.moveTo(r[0], r[1]); for (let i = 2; i < r.length; i += 2) p.lineTo(r[i], r[i + 1]); p.closePath(); }
+  return p;
+});
+const IDX = Object.fromEntries(MAP.counties.map((cn, i) => [cn.name, i]));
+const LO = Math.min(...MAP.counties.map(c => c.per100k)), HI = Math.max(...MAP.counties.map(c => c.per100k));
+function heat(v) {   // 人均件數 → 顏色：藍灰 → 黃 → 橘紅
+  const k = (v - LO) / (HI - LO);
+  const a = [64, 84, 120], b = [255, 196, 64], d = [255, 82, 54];
+  const m = k < 0.5 ? a.map((x, i) => lerp(x, b[i], k * 2)) : b.map((x, i) => lerp(x, d[i], (k - 0.5) * 2));
+  return `rgb(${m.map(Math.round).join(',')})`;
+}
+
+// ---------- 衛星底圖 ----------
+// 對標的地圖爆款都是衛星底圖＋半透明色塊（2026-10-14 抽幀比對）。平塗地圖鏡頭怎麼推，相鄰幀都幾乎一樣：
+// 拿掉色塊轉場後 rhythm_check 亮度差異 0.89，推移加倍也只到 1.12（基準 ≥2.38）。
+// 圖與授權見 fetch_basemap.py；授權要求畫面上標出處，見 attrib()。
+const MAP_ALPHA = 0.6;
+const FEATHER = 0.06;   // 細圖四邊淡出的寬度（佔短邊比例），不然跟大圖的色差會露出接縫
+const TILES = BASE.tiles.map(tl => ({ ...tl, img: new Image() }));
+const tilesLoaded = Promise.all(TILES.map(tl => new Promise((ok, bad) => {
+  tl.img.onload = () => {
+    if (tl.name === 'wide') { tl.draw = tl.img; return ok(); }
+    const w = tl.img.naturalWidth, h = tl.img.naturalHeight, f = Math.min(w, h) * FEATHER;
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    const x = cv.getContext('2d'); x.drawImage(tl.img, 0, 0);
+    x.globalCompositeOperation = 'destination-in';
+    for (const [x0, y0, x1, y1] of [[0, 0, f, 0], [w, 0, w - f, 0], [0, 0, 0, f], [0, h, 0, h - f]]) {
+      const gr = x.createLinearGradient(x0, y0, x1, y1); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, '#000');
+      x.fillStyle = gr; x.fillRect(0, 0, w, h);
+    }
+    tl.draw = cv; ok();
+  };
+  tl.img.onerror = () => bad(new Error('底圖載不到：' + tl.src));
+  tl.img.src = tl.src;
+})));
+const tile = n => TILES.find(tl => tl.name === n);
+const blit = tl => g.drawImage(tl.draw, ...tl.rect);
+// 衛星圖只貼陸地：2016 圖層的海面有軌道邊界弧線、雲點和色差帶（2026-10-14 新竹推近時看到），海面改用平色
+let LAND = null;
+function basemap() {
+  if (!LAND) { LAND = new Path2D(); for (const p of PATHS) LAND.addPath(p); }
+  g.save(); g.clip(LAND); blit(tile('wide')); blit(tile('north')); g.restore();
+  // 離島照 build_map.py fit_inset 的同一個變換貼進小框
+  for (const [name, tn] of [['金門縣', 'kinmen'], ['連江縣', 'matsu']]) {
+    const b = MAP.insets[name], [cx, cy, z, bx, by] = MAP.insetXf[name];
+    g.save(); g.beginPath(); g.rect(b[0], b[1], b[2] - b[0], b[3] - b[1]); g.clip();
+    g.fillStyle = C.sea; g.fillRect(b[0], b[1], b[2] - b[0], b[3] - b[1]);
+    g.clip(PATHS[IDX[name]]);
+    g.translate(bx, by); g.scale(z, z); g.translate(-cx, -cy); blit(tile(tn));
+    g.restore();
+  }
+  // 壓暗一層：字和色塊要讀得清楚
+  g.fillStyle = 'rgba(10,16,32,0.35)'; g.fillRect(-3000, -3000, 8000, 8000);
+}
+function attrib() {
+  txt('衛星影像：EOxCloudless 2016（Copernicus Sentinel）', W / 2, H - 22, { size: 22, weight: 500, align: 'center', fill: 'rgba(244,241,234,0.7)', stroke: 4 });
+}
+
+// 每張卡傳一個 style(name) → {fill, alpha, glow}
+function drawMap(style) {
+  for (let i = 0; i < PATHS.length; i++) {
+    const s = style(MAP.counties[i].name, MAP.counties[i]);
+    g.globalAlpha = (s.alpha ?? 1) * MAP_ALPHA;   // 半透明，衛星底圖的紋理要透出來
+    g.fillStyle = s.fill; g.fill(PATHS[i]);
+    if (s.glow) {
+      g.save(); g.shadowColor = s.glow; g.shadowBlur = 40; g.strokeStyle = s.glow; g.lineWidth = 6 / CAM.z; g.stroke(PATHS[i]); g.restore();
+    }
+    g.globalAlpha = 1;
+    g.strokeStyle = C.line; g.lineWidth = 2 / CAM.z; g.stroke(PATHS[i]);
+  }
+  // 離島小框
+  g.strokeStyle = 'rgba(244,241,234,0.35)'; g.lineWidth = 2 / CAM.z; g.setLineDash([10 / CAM.z, 8 / CAM.z]);
+  for (const [n, b] of Object.entries(MAP.insets)) g.strokeRect(b[0], b[1], b[2] - b[0], b[3] - b[1]);
+  g.setLineDash([]);
+}
+const heatStyle = (n, cn) => ({ fill: heat(cn.per100k) });
+
+// ---------- 鏡頭 ----------
+// 每張卡一個目標（地圖座標中心 x,y 與倍率 z）；卡開始的 0.6 秒內推過去，之後慢慢漂
+let CAM = { x: W / 2, y: 960, z: 1 };
+const at = n => ({ x: MAP.counties[IDX[n]].cx, y: MAP.counties[IDX[n]].cy });
+const VIEW = {
+  all: { x: 560, y: 960, z: 1.0 },
+  hsinchu: { ...at('新竹市'), z: 3.4 },
+  north: { x: 690, y: 560, z: 1.7 },
+  kinmen: { x: 200, y: 500, z: 2.6 },
+  top: { x: 560, y: 900, z: 0.82 },
+  // 2026-10-14 對標拆解：爆款一支 15–19 次「0.3–0.8 秒內鏡頭跨大半張地圖」，rhythm_check 的分數六成來自這些尖峰；
+  // 我們 5 張卡共用 top，換卡鏡頭不動。每張卡給不同落點、遠近交替。
+  far: { x: 600, y: 900, z: 0.55 },
+  south: { x: 470, y: 1260, z: 1.9 },
+  taipei: { ...at('臺北市'), z: 3.0 },
+  kaohsiung: { ...at('高雄市'), z: 2.6 },
+  east: { x: 780, y: 1050, z: 2.0 },
+};
+
+// ---------- 卡 ----------
+// lines：這張卡涵蓋 timeline.js 的第幾句（0 起算）。卡的起點＝第一句開口前 0.25 秒。
+const CARDS = [
+  { head: '哪裡？', lines: [0], view: 'far', draw: hook },
+  { head: `${fmt(FACTS.TOTAL_CASES)}件`, lines: [1], view: 'all', draw: national },
+  { head: `1／${FACTS.NATIONAL_ONE_IN}`, lines: [2], view: 'south', draw: oneIn },
+  { head: '新竹市', lines: [3, 4], view: 'hsinchu', draw: reveal },
+  { head: `${FACTS.MONTHS_FIRST}／${FACTS.MONTHS_TOTAL}`, lines: [5], view: 'north', draw: monthsCard },
+  { head: '金門', lines: [6], view: 'kinmen', draw: kinmen },
+  { head: '工程師？', lines: [7], view: 'hsinchu', draw: engineers },
+  { head: '一樣', lines: [8, 9], view: 'east', draw: sameMix },
+  { head: '假網拍', lines: [10], view: 'taipei', draw: shopping },
+  { head: '假投資', lines: [11], view: 'far', draw: investing },
+  { head: '網購', lines: [12], view: 'kaohsiung', draw: phoneCard },
+  { head: '查過嗎？', lines: [13], view: 'all', draw: ending },
+];
+const N = CARDS.length;
+const LEAD_IN = 0.25;
+const T0 = CARDS.map((cd, i) => i === 0 ? 0 : TL.lines[cd.lines[0]].t0 - LEAD_IN);
+const DUR = TL.dur;
+const T1 = CARDS.map((_, i) => i < N - 1 ? T0[i + 1] : DUR);
+const lineT = j => TL.lines[j];
+const cardAt = t => { let i = 0; while (i < N - 1 && t >= T0[i + 1]) i++; return i; };
+
+function camera(t) {
+  const i = cardAt(t), to = VIEW[CARDS[i].view], from = VIEW[CARDS[Math.max(0, i - 1)].view];
+  const k = eo(seg(t, T0[i], T0[i] + 0.6));
+  // 卡內持續推近＋平移：0.04 時卡內幾乎不動，rhythm_check 量到 63% 靜止秒
+  const d = seg(t, T0[i], T1[i]), drift = 1 + 0.18 * d;
+  return { x: lerp(from.x, to.x, k) + Math.sin(t * 0.7) * 30 + (i % 2 ? 60 : -60) * d, y: lerp(from.y, to.y, k) + Math.cos(t * 0.6) * 30,
+           z: lerp(from.z, to.z, k) * drift };
+}
+
+// ---------- 背景 ----------
+function sea(t) {
+  g.fillStyle = C.sea; g.fillRect(0, 0, W, H);   // 底圖之外的保底；流動網格已拿掉，爆款沒有
+}
+
+// ---------- 共用元件 ----------
+function panel(x, y, w, h, a = 0.86) {
+  g.fillStyle = `rgba(10,16,32,${a})`; g.beginPath(); g.roundRect(x, y, w, h, 28); g.fill();
+  g.strokeStyle = 'rgba(244,241,234,0.18)'; g.lineWidth = 2; g.stroke();
+}
+function bar(x, y, w, h, k, color, label, value, id) {
+  g.fillStyle = 'rgba(244,241,234,0.12)'; g.beginPath(); g.roundRect(x, y, w, h, h / 2); g.fill();
+  g.fillStyle = color; g.beginPath(); g.roundRect(x, y, Math.max(h, w * k), h, h / 2); g.fill();
+  txt(label, x, y - 18, { size: 44, id: id + 'l', screen: true });
+  txt(value, x + w, y - 18, { size: 44, font: MONO, align: 'right', fill: color, id: id + 'v', screen: true });
+}
+function people(cx, cy, n, cols, size, redIdx, k, t) {   // n 個小人，第 redIdx 個變紅
+  const rows = Math.ceil(n / cols), gap = size * 1.25;
+  const x0 = cx - (cols - 1) * gap / 2, y0 = cy - (rows - 1) * gap / 2;
+  for (let i = 0; i < n; i++) {
+    const on = i / n < k * 1.6;
+    if (!on) continue;
+    const x = x0 + (i % cols) * gap, y = y0 + Math.floor(i / cols) * gap;
+    const red = i === redIdx && k > 0.55;
+    const s = red ? 1.6 + 0.25 * Math.sin(t * 9) : 1;
+    g.fillStyle = red ? C.pink : 'rgba(244,241,234,0.55)';
+    g.beginPath(); g.arc(x, y - size * 0.22 * s, size * 0.2 * s, 0, 7); g.fill();
+    g.beginPath(); g.roundRect(x - size * 0.26 * s, y - size * 0.02 * s, size * 0.52 * s, size * 0.38 * s, size * 0.16 * s); g.fill();
+  }
+}
+function stamp(s, x, y, t0, color, size = 200) {
+  const k = seg(NOW, t0, t0 + 0.28);
+  if (k <= 0) return;
+  const z = lerp(2.4, 1, back(k));
+  g.save(); g.translate(x, y); g.rotate(-0.12); g.scale(z, z); g.globalAlpha = clamp(k * 2, 0, 1);
+  const bw = Math.max(size * 1.8, measure(s, size, SANS, 900) + size * 0.6);   // 框跟著字寬，不切字
+  g.strokeStyle = color; g.lineWidth = 14; g.beginPath(); g.roundRect(-bw / 2, -size * 0.75, bw, size * 1.1, 24); g.stroke();
+  txt(s, 0, size * 0.18, { size, fill: color, align: 'center', weight: 900 });
+  g.restore();
+}
+function ring(x, y, r, t, color) {   // 地圖上的脈衝圈
+  for (let j = 0; j < 3; j++) {
+    const k = ((t * 0.9 + j / 3) % 1);
+    g.strokeStyle = color; g.globalAlpha = 1 - k; g.lineWidth = 6 / CAM.z;
+    g.beginPath(); g.arc(x, y, (20 + k * 120) / CAM.z, 0, 7); g.stroke();
+  }
+  g.globalAlpha = 1;
+}
+
+// ---------- 各卡畫面：map(t,k) 畫在地圖座標裡，over(t,k) 畫在螢幕座標上 ----------
+function hook() {
+  return {
+    map: t => drawMap((n, cn) => {
+      const f = Math.floor(t * 6 + rnd(IDX[n]) * 20) % 7 === 0;   // 縣市輪流亮起來
+      return { fill: f ? C.yellow : 'rgba(64,84,120,0.9)' };
+    }),
+    over: t => {
+      for (let i = 0; i < 9; i++) {
+        const a = i / 9 * 6.283 + t * 0.9, r = 380 + Math.sin(t * 2 + i) * 40;
+        txt('?', W / 2 + Math.cos(a) * r, 980 + Math.sin(a) * r * 1.3, { size: 90, fill: 'rgba(255,61,127,0.55)', align: 'center', weight: 900 });
+      }
+    },
+  };
+}
+function national(i) {
+  return {
+    map: t => {
+      const k = seg(t, T0[i] + 0.2, T1[i] - 0.3);
+      drawMap((n, cn) => ({ fill: heat(cn.per100k), alpha: 0.25 + 0.75 * clamp(k * 1.3 - rnd(IDX[n]) * 0.3, 0, 1) }));
+      // 報案點像雨點一樣落在地圖上
+      for (let j = 0; j < 260 * k; j++) {
+        const cn = MAP.counties[Math.floor(rnd(j) * 22)], r2 = rnd(j * 7.3) * 30, a2 = rnd(j * 3.1) * 6.283;
+        const pulse = 0.5 + 0.5 * Math.sin(t * 6 + j);
+        g.fillStyle = `rgba(255,61,127,${0.4 + 0.5 * pulse})`;
+        g.beginPath(); g.arc(cn.cx + Math.cos(a2) * r2, cn.cy + Math.sin(a2) * r2, 5, 0, 7); g.fill();
+      }
+    },
+    over: t => {
+      const k = eo(seg(t, T0[i] + 0.2, T0[i] + 1.8));
+      panel(110, 1380, 860, 170);
+      txt(`${FACTS.YEAR} 全年報案`, 160, 1450, { size: 44, fill: C.dim, id: 'n1', screen: true });
+      txt(fmt(FACTS.TOTAL_CASES * k), 920, 1515, { size: 92, font: MONO, align: 'right', fill: C.pink, weight: 800 });
+    },
+  };
+}
+function oneIn(i) {
+  return {
+    map: t => drawMap((n, cn) => ({ fill: heat(cn.per100k), alpha: 0.3 })),
+    over: t => {
+      const k = seg(t, T0[i] + 0.1, T1[i] - 0.4);
+      panel(70, 470, 940, 1020, 0.9);
+      people(W / 2, 990, FACTS.NATIONAL_ONE_IN, 13, 66, 77, k, t);
+      txt(`每 ${FACTS.NATIONAL_ONE_IN} 人 1 件報案`, W / 2, 1440, { size: 52, align: 'center', id: 'o1', screen: true });
+    },
+  };
+}
+function reveal(i, cd) {
+  const tB = lineT(cd.lines[1]).t0;   // 第二句開口：叫出長條
+  return {
+    map: t => {
+      drawMap((n, cn) => n === '新竹市'
+        ? { fill: C.pink, glow: C.pink }
+        : { fill: heat(cn.per100k), alpha: 0.55 });
+      const h = at('新竹市'); ring(h.x, h.y, t, C.pink);
+    },
+    over: t => {
+      stamp('#1', 830, 560, T0[i] + 0.35, C.yellow, 130);
+      const k = eo(seg(t, tB - 0.1, tB + 0.9));
+      if (k <= 0) return;
+      panel(90, 1250, 900, 360);
+      bar(150, 1370, 780, 44, k * FACTS.HSINCHU_PER100K / 1000, C.pink, '新竹市（每十萬人）', fmt(FACTS.HSINCHU_PER100K), 'r1');
+      bar(150, 1520, 780, 44, k * FACTS.NATIONAL_PER100K / 1000, 'rgba(244,241,234,0.7)', '全國平均', fmt(FACTS.NATIONAL_PER100K), 'r2');
+      if (t > tB + 1.0) stamp(`+${FACTS.HSINCHU_ABOVE_PCT}%`, 780, 1180, tB + 1.0, C.yellow, 90);
+      // 反方稽核第四輪：分母是戶籍人口，不是在地實際人口（audit/verdicts.md 爭點 1）
+      txt('電話網路詐騙受理件數 ÷ 戶籍人口', 540, 1592, { size: 30, align: 'center', fill: C.dim, weight: 600, id: 'r3', screen: true });
+    },
+  };
+}
+function monthsCard(i) {
+  return {
+    map: t => drawMap((n, cn) => n === '新竹市' ? { fill: C.pink, glow: C.pink } : { fill: heat(cn.per100k), alpha: 0.4 }),
+    over: t => {
+      panel(70, 1060, 940, 560);
+      const k = seg(t, T0[i] + 0.2, T1[i] - 0.5);
+      MAP.months.forEach((m, j) => {
+        const col = j % 7, row = Math.floor(j / 7), x = 110 + col * 126, y = 1110 + row * 160;
+        const on = j / MAP.months.length < k;
+        const hc = m.name === '新竹市';
+        g.fillStyle = !on ? 'rgba(244,241,234,0.08)' : hc ? C.pink : 'rgba(61,214,255,0.55)';
+        const pop = on ? 1 + 0.08 * Math.sin(t * 7 + j) : 1;
+        g.save(); g.translate(x + 54, y + 60); g.scale(pop, pop);
+        g.beginPath(); g.roundRect(-54, -60, 108, 120, 16); g.fill(); g.restore();
+        txt(m.m.slice(2).replace('-', '.'), x + 54, y + 150, { size: 24, font: MONO, fill: C.dim, align: 'center' });
+        // 簡稱：新竹市＝竹、新竹縣＝竹縣、臺中市＝中、桃園市＝桃
+        const short = hc ? '竹' : m.name === '新竹縣' ? '竹縣' : m.name.replace(/^臺/, '')[0];
+        if (on) txt(short, x + 54, y + 78, { size: short.length > 1 ? 38 : 50, align: 'center', fill: hc ? C.white : C.sea, weight: 900 });
+      });
+    },
+  };
+}
+function kinmen(i) {
+  return {
+    map: t => {
+      drawMap((n, cn) => n === '金門縣' ? { fill: C.cyan, glow: C.cyan } : n === '新竹市' ? { fill: C.pink } : { fill: heat(cn.per100k), alpha: 0.45 });
+      const k = at('金門縣'); ring(k.x, k.y, t, C.cyan);
+    },
+    over: t => {
+      const k = eo(seg(t, T0[i] + 0.3, T0[i] + 1.3));
+      panel(90, 1250, 900, 360);
+      bar(150, 1370, 780, 44, k * FACTS.HSINCHU_PER100K / 1000, C.pink, '新竹市', fmt(FACTS.HSINCHU_PER100K), 'k1');
+      bar(150, 1520, 780, 44, k * FACTS.KINMEN_PER100K / 1000, C.cyan, '金門縣', fmt(FACTS.KINMEN_PER100K), 'k2');
+      if (t > T0[i] + 1.4) stamp('¼', 830, 1150, T0[i] + 1.4, C.cyan, 110);
+    },
+  };
+}
+function engineers(i) {
+  return {
+    map: t => {
+      drawMap((n, cn) => n === '新竹市' ? { fill: C.pink, glow: C.pink } : { fill: heat(cn.per100k), alpha: 0.5 });
+    },
+    over: t => {
+      // 晶片：方塊＋接腳，接腳一根根亮起
+      const k = seg(t, T0[i] + 0.1, T1[i] - 0.2);
+      g.save(); g.translate(W / 2, 1300); g.rotate(Math.sin(t * 1.3) * 0.05);
+      g.fillStyle = '#1B2540'; g.beginPath(); g.roundRect(-170, -170, 340, 340, 26); g.fill();
+      g.strokeStyle = C.cyan; g.lineWidth = 6; g.stroke();
+      for (let j = 0; j < 24; j++) {
+        const side = Math.floor(j / 6), p = (j % 6) / 5 * 260 - 130, on = j / 24 < k * 1.4;
+        g.strokeStyle = on ? C.yellow : 'rgba(244,241,234,0.25)'; g.lineWidth = 12;
+        const [x1, y1, x2, y2] = side === 0 ? [p, -170, p, -230] : side === 1 ? [170, p, 230, p] : side === 2 ? [p, 170, p, 230] : [-170, p, -230, p];
+        g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
+      }
+      txt('?', 0, 70, { size: 220, align: 'center', fill: C.yellow, weight: 900 });
+      g.restore();
+    },
+  };
+}
+function stacked(x, y, w, h, rows, key, k, hi, t, id, label) {
+  let acc = 0;
+  txt(label, x, y - 22, { size: 42, id: id + 'l', screen: true });
+  const cols = [C.pink, C.yellow, C.cyan, '#9B7BFF', 'rgba(244,241,234,0.25)'];
+  rows.forEach((r, j) => {
+    const ww = w * r[key] * k;
+    const lift = j === hi ? 10 + 6 * Math.sin(t * 8) : 0;
+    g.globalAlpha = hi == null || j === hi ? 1 : 0.35;
+    g.fillStyle = cols[j]; g.fillRect(x + acc, y - lift, Math.max(0, ww - 4), h + lift * 2);
+    g.globalAlpha = 1;
+    acc += ww;
+  });
+}
+const METHOD_COLS = [C.pink, C.yellow, C.cyan, '#9B7BFF', 'rgba(244,241,234,0.25)'];
+function legend(x, y, rows) {
+  rows.slice(0, 4).forEach((r, j) => {
+    g.fillStyle = METHOD_COLS[j]; g.fillRect(x + (j % 2) * 430, y + Math.floor(j / 2) * 64 - 30, 34, 34);
+    txt(r.name.replace('(投資詐財)', ''), x + 50 + (j % 2) * 430, y + Math.floor(j / 2) * 64, { size: 36, fill: C.dim, id: 'lg' + j, screen: true });
+  });
+}
+function sameMix(i, cd) {
+  const tB = lineT(cd.lines[1]).t0;
+  return {
+    map: t => drawMap((n, cn) => n === '新竹市' ? { fill: C.pink } : { fill: heat(cn.per100k), alpha: 0.25 }),
+    over: t => {
+      if (t < tB) { stamp('?', W / 2, 1050, T0[i] + 0.15, C.pink, 260); return; }
+      const k = eo(seg(t, tB, tB + 1.0));
+      panel(70, 900, 940, 640);
+      stacked(130, 1040, 820, 90, MAP.methods['新竹市'], 'cases', k, null, t, 's1', '新竹市');
+      stacked(130, 1240, 820, 90, MAP.methods['全國'], 'cases', k, null, t, 's2', '全國');
+      legend(130, 1420, MAP.methods['全國']);
+    },
+  };
+}
+function shopping(i) {
+  return {
+    map: t => drawMap((n, cn) => ({ fill: heat(cn.per100k), alpha: 0.25 })),
+    over: t => {
+      panel(70, 900, 940, 640);
+      stacked(130, 1040, 820, 90, MAP.methods['新竹市'], 'cases', 1, 0, t, 'h1', '新竹市');
+      stacked(130, 1240, 820, 90, MAP.methods['全國'], 'cases', 1, 0, t, 'h2', '全國');
+      txt(`${FACTS.SHOP_HSINCHU_PCT}%`, 130 + 820 * MAP.methods['新竹市'][0].cases / 2, 1105, { size: 50, font: MONO, align: 'center', fill: C.sea, weight: 900 });
+      txt(`${FACTS.SHOP_NATIONAL_PCT}%`, 130 + 820 * MAP.methods['全國'][0].cases / 2, 1305, { size: 50, font: MONO, align: 'center', fill: C.sea, weight: 900 });
+      legend(130, 1420, MAP.methods['全國']);
+    },
+  };
+}
+function investing(i) {
+  return {
+    map: t => drawMap((n, cn) => ({ fill: heat(cn.per100k), alpha: 0.2 })),
+    over: t => {
+      // 一疊鈔票，一半被抽走
+      const k = eo(seg(t, T0[i] + 0.3, T0[i] + 1.6));
+      panel(70, 760, 940, 820);
+      txt('全國被騙走的錢', W / 2, 860, { size: 46, fill: C.dim, align: 'center', id: 'v0', screen: true });
+      const n = 20, half = Math.round(n * FACTS.INVEST_LOSS_PCT / 100);
+      for (let j = 0; j < n; j++) {
+        const inv = j < half, y = 1420 - j * 26;
+        const dx = inv ? lerp(0, -170, k) : lerp(0, 170, k);
+        const wob = Math.sin(t * 5 + j) * 4;
+        g.fillStyle = inv ? C.yellow : 'rgba(244,241,234,0.35)';
+        g.beginPath(); g.roundRect(W / 2 - 150 + dx + wob, y, 300, 20, 6); g.fill();
+      }
+      if (k > 0.6) {
+        txt(`假投資 ${FACTS.INVEST_LOSS_PCT}%`, W / 2 - 170, 1520, { size: 56, align: 'center', fill: C.yellow, id: 'v1', screen: true });
+        txt('其他', W / 2 + 170, 1520, { size: 56, align: 'center', fill: C.dim, id: 'v2', screen: true });
+      }
+    },
+  };
+}
+function phoneCard(i) {
+  return {
+    map: t => drawMap((n, cn) => ({ fill: heat(cn.per100k), alpha: 0.2 })),
+    over: t => {
+      const k = eo(seg(t, T0[i] + 0.1, T0[i] + 0.8));
+      g.save(); g.translate(W / 2, lerp(1900, 1150, k)); g.rotate(Math.sin(t * 1.6) * 0.04);
+      g.fillStyle = '#111827'; g.beginPath(); g.roundRect(-230, -420, 460, 840, 60); g.fill();
+      g.strokeStyle = C.white; g.lineWidth = 8; g.stroke();
+      g.fillStyle = '#1E2A47'; g.beginPath(); g.roundRect(-200, -370, 400, 740, 34); g.fill();
+      // 商品格一直往上滑，最上面那格被標成假網拍
+      for (let j = 0; j < 6; j++) {
+        const y = -340 + ((j * 150 - t * 160) % 900 + 900) % 900 - 60;
+        if (y > 330) continue;
+        g.fillStyle = j % 3 === 0 ? C.pink : 'rgba(244,241,234,0.2)';
+        g.beginPath(); g.roundRect(-170, y, 340, 120, 18); g.fill();
+      }
+      g.restore();
+      // 購物車
+      const bob = Math.sin(t * 6) * 10;
+      g.save(); g.translate(W / 2 + 250, 700 + bob); g.strokeStyle = C.yellow; g.lineWidth = 14; g.lineJoin = 'round';
+      g.beginPath(); g.moveTo(-110, -70); g.lineTo(-70, -70); g.lineTo(-30, 50); g.lineTo(90, 50); g.lineTo(110, -30); g.lineTo(-55, -30); g.stroke();
+      g.fillStyle = C.yellow; g.beginPath(); g.arc(-15, 85, 16, 0, 7); g.arc(80, 85, 16, 0, 7); g.fill();
+      g.restore();
+    },
+  };
+}
+function ending(i) {
+  return {
+    map: t => {
+      drawMap(heatStyle);
+      const h = at('新竹市'); ring(h.x, h.y, t, C.pink);
+    },
+    over: t => {
+      const top = MAP.counties.slice(0, 3);
+      panel(560, 1330, 450, 300);
+      top.forEach((cn, j) => {
+        txt(`${j + 1}. ${cn.name}`, 600, 1410 + j * 80, { size: 44, id: 'e' + j, screen: true, fill: j === 0 ? C.pink : C.white });
+        txt(fmt(cn.per100k), 980, 1410 + j * 80, { size: 44, font: MONO, align: 'right', fill: C.dim });
+      });
+    },
+  };
+}
+
+const SCENES = CARDS.map((cd, i) => cd.draw(i, cd));
+
+// ---------- 字幕：照 timeline.js 的句子，講到哪句顯示哪句 ----------
+function caption(t) {
+  const L = TL.lines.find(l => t >= l.t0 - 0.1 && t < l.t1 + 0.2);
+  if (!L) return;
+  const s = L.text.replace(/[。！]$/, ''), size = 58, maxW = 960;
+  // 太長就在逗號處拆兩行
+  let rows = [s];
+  if (measure(s, size, SANS, 800) > maxW) {
+    const cut = s.indexOf('，') > 0 ? s.indexOf('，') + 1 : Math.ceil(s.length / 2);
+    rows = [s.slice(0, cut), s.slice(cut)];
+  }
+  const y0 = 1730 - (rows.length - 1) * 74;
+  rows.forEach((r, j) => txt(r, W / 2, y0 + j * 74, { size, align: 'center', stroke: 12, strokeColor: 'rgba(10,16,32,0.95)' }));
+}
+
+// ---------- 大標 ----------
+function head(i, t) {
+  const s = CARDS[i].head, k = back(seg(t, T0[i] + 0.05, T0[i] + 0.4));
+  const size = s.length > 5 ? 110 : 150;
+  g.save(); g.translate(60, 300); g.scale(1, clamp(k, 0, 1.2));
+  txt(s, 0, 0, { size, weight: 900, fill: C.white, stroke: 14 });
+  g.restore();
+  // 進度條：第幾張卡
+  for (let j = 0; j < N; j++) {
+    g.fillStyle = j < i ? C.pink : j === i ? C.yellow : 'rgba(244,241,234,0.2)';
+    g.fillRect(60 + j * ((W - 120) / N), 90, (W - 120) / N - 8, 10);
+  }
+}
+const headBox = i => {
+  const s = CARDS[i].head, size = s.length > 5 ? 110 : 150;
+  return { id: 'head' + (i + 1), text: s, x0: 60, y0: 300 - size, x1: 60 + measure(s, size, SANS, 900), y1: 320 };
+};
+
+// ---------- 主迴圈 ----------
+// 換卡只靠 camera() 的 0.6 秒鏡頭移動，沒有色塊轉場：對標的地圖爆款都是平移縮放或硬切（2026-10-14 抽幀比對）。
+const OVER_DY = -70;   // 卡片疊層整體上移：面板底在 1610–1630，兩行字幕頂在 1598，會壓到
+function render(t) {
+  NOW = t = clamp(t, 0, DUR);
+  TXT = [];
+  const i = cardAt(t), sc = SCENES[i];
+  sea(t);
+  CAM = camera(t);
+  g.save();
+  g.translate(W / 2, 960); g.scale(CAM.z, CAM.z); g.translate(-CAM.x, -CAM.y);
+  basemap();
+  sc.map(t);
+  g.restore();
+  g.save(); g.translate(0, OVER_DY); sc.over(t); g.restore();
+  head(i, t);
+  caption(t);
+  attrib();
+  const fade = t > DUR - 0.5 ? seg(t, DUR - 0.5, DUR) : 0;
+  if (fade) { g.fillStyle = C.sea; g.globalAlpha = fade; g.fillRect(0, 0, W, H); g.globalAlpha = 1; }
+}
+
+// ---------- 對外契約 ----------
+window.DUR = DUR;
+window.render = render;
+window.TEXTS = t => {
+  render(t);
+  const i = cardAt(clamp(t, 0, DUR));
+  const out = TXT.filter(b => b.screen);
+  if (t - T0[i] > 0.5) out.push(headBox(i));
+  return out;
+};
+window.CUES = TL.lines.map(l => ({ t0: l.t0, t1: l.t1, text: l.text }));
+window.SHAKES = [];
+window.EV = (() => {
+  const e = [{ t: 0, type: 'bed', len: DUR }];
+  for (let i = 0; i < N; i++) {
+    if (i) e.push({ t: T0[i] - 0.18, type: 'whoosh' });
+    e.push({ t: T0[i] + 0.05, type: 'pop' });
+  }
+  const ci = name => CARDS.findIndex(c => c.draw === name);
+  e.push({ t: T0[ci(national)] + 0.2, type: 'ticks', len: 1.6 });
+  e.push({ t: T0[ci(reveal)] + 0.35, type: 'stamp' });
+  e.push({ t: lineT(CARDS[ci(reveal)].lines[1]).t0 + 1.0, type: 'stamp' });
+  e.push({ t: T0[ci(kinmen)] + 1.4, type: 'stamp' });
+  e.push({ t: T0[ci(sameMix)] + 0.15, type: 'stamp' });
+  e.push({ t: T0[ci(investing)] + 0.3, type: 'swish', len: 1.3 });
+  e.push({ t: T0[N - 1] + 0.2, type: 'bell' });
+  return e.sort((a, b) => a.t - b.t);
+})();
+window.VOICE = TL.lines.map((l, j) => ({ t: l.t0, file: `out/voice/${String(j + 1).padStart(2, '0')}.wav` }));
+
+const allText = CARDS.map(c => c.head).join('') + TL.lines.map(l => l.text).join('') + MAP.counties.map(c => c.name).join('')
+  + '全年報案人裡件被騙新竹市每十萬人全國平均金門縣其他假網拍假投資假交友買家騙賣家全國被騙走的錢竹中桃電話網路詐騙受理件數÷戶籍人口0123456789%¼✕?#';
+if (document.fonts && document.fonts.load) {
+  Promise.all([
+    document.fonts.load("900 150px 'PingFang TC'", allText),
+    document.fonts.load("800 58px 'PingFang TC'", allText),
+    tilesLoaded,
+  ]).then(() => document.fonts.ready).then(() => {
+    // 每張卡先畫一次：MONO 與「／」等沒預載到的字形第一次畫會走後備字型，冷啟動的 worker 首幀就跟接續畫的不同（seek_check 抓到 8.633s）
+    for (let i = 0; i < N; i++) render(T0[i] + 0.6);
+    render(0);
+    window.READY = true;
+  });
+} else { window.READY = true; }
+})();
+</script>
+</body>
+</html>

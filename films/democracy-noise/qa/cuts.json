@@ -1,0 +1,13 @@
+{
+ "video": "films/democracy-noise/democracy-noise.mp4",
+ "duration": 83.57,
+ "size": "1080x1920",
+ "fps": 30.0,
+ "cuts": [],
+ "shot_seconds": [
+  83.57
+ ],
+ "median_shot": 83.57,
+ "sheet": "films/democracy-noise/qa/final-sheet.jpg",
+ "sheet_phone": "films/democracy-noise/qa/final-sheet-360.jpg"
+}

@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>為什麼能力不足的人，最難看出自己有問題？</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}#mascot{display:none}#mascot svg{width:340px;height:340px}</style>
+<script src="engine.js"></script>
+<script src="timeline.js"></script>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<div id="mascot"></div>
+<script type="module">
+// 單人旁白科普，米色插畫風（範本 films/taipei-silence；版面上下往中間收照 films/democracy-noise，使用者 11-05）。
+// 全片同一張米色底、換卡原地交叉淡化；一句一個畫面狀態（CARDS），字幕一卡一個逗號短語（timeline.js 的 phrases）。
+// 只有封面有大標；其他卡只有品牌標籤＋畫面＋字幕＋來源。本片不屬於任何系列，片尾不寫集數。
+// 顏色語意整片固定：最差的那一群＝芥末黃，最好的那一群＝鼠尾草綠，自估＝陶土紅，實際＝深棕。
+// 禁止清單（TREATMENT.md）：不畫真人照片與可辨識人臉、不畫信心曲線、不畫槍枝與擬真搶劫（搶匪是剪影＋檸檬）。
+// 所有動作都是 t 的封閉式（seek_check.mjs 會比亂序算出的同一幀）；循環用取餘數，不累積。
+import { poseAt, applyPose } from './mascot/clawd-bot-shot.mjs';
+import { PALETTE, person, prop } from './illust/illust.mjs';
+const G = window.G, E = G.E, TL = window.TL, W = 1080, H = 1920;
+const g = document.getElementById('c').getContext('2d', { alpha: false });
+const { clamp, inv, lerp, mix } = G;
+
+const CREAM = PALETTE.cream, INK = PALETTE.ink, TERRA = PALETTE.terra, MUST = PALETTE.mustard, COAT = PALETTE.coat, PAPER = PALETTE.paper, LINE = PALETTE.line;
+const SAGE = '#7FA57A', BLUE = '#6F8FB0', MUTE = '#B3A797', SOFT = '#EBE1D2', DIM = '#8C7B6B';
+const SAGE_D = '#557A51', MUST_D = '#9A6F1C';
+const TERRA_D = '#9C3F26', SAGE_DD = '#3C5E3D';   // 牛皮紙底板上的字用深一階，手機上才讀得出
+const DESK = '#C8B79E';   // 資料卡的牛皮紙底板：比米色深一階，字藏掉後畫面才站得住（textless_check）
+const ZH = (w, px) => `${w} ${px}px "PingFang TC"`;
+const BRAND = '悖論小酒館', HANDLE = '@paradoxbar';
+const GY = 1270;   // 畫面地平線：小人腳底（drawCard 縮 0.9 後在 1231）
+
+// 會出現在畫面上的事實數字集中在這裡，不要在別處重寫一次。每一個都要在 meta/facts.md 有一行附來源。
+const FACTS = {
+  ROBBERY_YEAR: 1995,              // SOURCES #1
+  ROBBERY_CITY: '匹茲堡',          // #1
+  QUOTE: '可是我有抹檸檬汁',       // #1 "But I wore the juice"
+  PAPER_YEAR: 1999,                // #2
+  LOGIC_BOTTOM_ACTUAL_PCT: 12,     // #2 Study 2
+  LOGIC_BOTTOM_EST_PCT: 62,        // #2 Study 2
+  GRAMMAR_PEERS_GRADED: 5,         // #2 Study 3
+  GRAMMAR_TOP_BEFORE: 69.5,        // #2 Table 1
+  GRAMMAR_TOP_AFTER: 79.7,
+  GRAMMAR_BOTTOM_BEFORE: 60.5,
+  GRAMMAR_BOTTOM_AFTER: 65.4,
+  GRAMMAR_BOTTOM_ACTUAL: 10.1,
+  TRAINING_MIN: 10,                // #2 Study 4
+  LOGIC4_ITEMS: 10,
+  LOGIC4_BOTTOM_ACTUAL: 0.4,       // #2 Table 2
+  LOGIC4_BOTTOM_EST_BEFORE: 5.3,
+  LOGIC4_BOTTOM_EST_AFTER: 1.0,
+};
+
+// ---------- 字 ----------
+let TXT = [];
+function say(s, x, y, px, col, p, o = {}) {
+  g.save(); g.font = ZH(o.w || 700, px); g.textAlign = o.align || 'left'; g.textBaseline = 'alphabetic';
+  const w = g.measureText(s).width;
+  g.globalAlpha *= E.io(p); g.fillStyle = col; g.fillText(s, x, y);
+  // PingFang 最粗只到 Semibold；o.bold 描同色邊加粗，大標在奶油底上才讀得出（封面 OCR）
+  if (o.bold) { g.strokeStyle = col; g.lineWidth = px * o.bold; g.lineJoin = 'round'; g.strokeText(s, x, y); }
+  g.restore();
+  if (o.id) {
+    const x0 = o.align === 'center' ? x - w / 2 : o.align === 'right' ? x - w : x;
+    // 卡片內容會被 drawCard 縮向中間，字框換回螢幕座標，readcheck／藏字檢查才量得準
+    const m = g.getTransform();
+    TXT.push({ id: o.id, text: s, x0: m.a * x0 + m.e, y0: m.d * (y - px) + m.f, x1: m.a * (x0 + w) + m.e, y1: m.d * (y + px * 0.25) + m.f, screen: true });
+  }
+  return w;
+}
+function plain(s, x, y, px, col, o = {}) {
+  g.font = ZH(o.w || 600, px); g.textAlign = o.align || 'left'; g.textBaseline = 'alphabetic';
+  g.fillStyle = col; g.fillText(s, x, y);
+}
+const pop = (lt, a, d = 0.5) => E.o3(inv(a, a + d, lt));
+const loop = (x, n) => ((x % n) + n) % n;
+const rr = (x, y, w, h, r, col) => { g.fillStyle = col; g.beginPath(); g.roundRect(x, y, w, h, r); g.fill(); };
+const man = (x, y, s, body, o = {}) => person(g, { x, y, s, body, ...o });
+// 畫面裡的數字標籤：比字幕大一點、遠小於大標（< precheck HEADLINE_PX），算插畫的一部分
+const fig = (s, x, y, col, p = 1, id) => say(s, x, y, 64, col, p, { id, align: 'center', bold: 0.03 });
+
+// ---------- 共用零件 ----------
+const board = () => rr(60, 560, 960, 710, 32, DESK);
+const seat = () => { rr(60, 1090, 960, 30, 14, '#A5835D'); rr(80, 1114, 920, GY - 1114, 10, '#C7A77F'); g.fillStyle = 'rgba(59,47,42,0.08)'; g.fillRect(80, 1114, 920, 16); };
+function line(pts, col, w) { g.strokeStyle = col; g.lineWidth = w; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.stroke(); }
+function tick(x, y, s, col, p = 1, w = 12) {   // 打勾，p 控制畫到哪
+  if (p <= 0) return;
+  const A = [x - s, y], B = [x - s * 0.25, y + s * 0.7], C = [x + s, y - s * 0.8], q = clamp(p);
+  const pts = q < 0.4 ? [A, [lerp(A[0], B[0], q / 0.4), lerp(A[1], B[1], q / 0.4)]] : [A, B, [lerp(B[0], C[0], (q - 0.4) / 0.6), lerp(B[1], C[1], (q - 0.4) / 0.6)]];
+  line(pts, col, w);
+}
+function cross(x, y, s, col, w = 8) { line([[x - s, y - s], [x + s, y + s]], col, w); line([[x + s, y - s], [x - s, y + s]], col, w); }
+function lemon(x, y, r, rot = 0) {
+  g.save(); g.translate(x, y); g.rotate(rot);
+  g.fillStyle = MUST; g.beginPath(); g.ellipse(0, 0, r, r * 0.74, 0, 0, Math.PI * 2); g.fill();
+  G.disc(g, r * 1.0, 0, r * 0.16, MUST); G.disc(g, -r * 1.0, 0, r * 0.12, MUST_D);
+  g.fillStyle = 'rgba(255,250,242,0.45)'; g.beginPath(); g.ellipse(-r * 0.25, -r * 0.3, r * 0.34, r * 0.14, -0.3, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = SAGE_D; g.lineWidth = r * 0.09; g.lineCap = 'round'; g.beginPath(); g.moveTo(-r * 1.05, 0); g.quadraticCurveTo(-r * 1.4, -r * 0.3, -r * 1.3, -r * 0.55); g.stroke();
+  g.restore();
+}
+function pen(x, y, rot, col, s = 1) {   // 筆尖在 (x, y)，rot 0 ＝筆身朝右上
+  g.save(); g.translate(x, y); g.rotate(rot); g.scale(s, s);
+  g.fillStyle = INK; g.beginPath(); g.moveTo(0, 0); g.lineTo(46, -14); g.lineTo(46, 14); g.closePath(); g.fill();
+  rr(46, -18, 200, 36, 8, col); rr(246, -18, 34, 36, 10, MUTE);
+  g.restore();
+}
+function sheet(x, y, w, h, rot, o = {}) {   // 一張考卷，(x, y) 是中心
+  g.save(); g.translate(x, y); g.rotate(rot); g.globalAlpha *= o.alpha ?? 1;
+  g.save(); g.shadowColor = 'rgba(59,47,42,0.22)'; g.shadowBlur = 16; g.shadowOffsetY = 5; rr(-w / 2, -h / 2, w, h, 12, PAPER); g.restore();
+  rr(-w / 2 + w * 0.12, -h / 2 + h * 0.09, w * 0.42, h * 0.05, 4, o.head || INK);
+  for (let k = 0; k < (o.rows ?? 5); k++) rr(-w / 2 + w * 0.12, -h / 2 + h * (0.24 + k * 0.14), w * 0.76, h * 0.035, 3, LINE);
+  g.restore();
+}
+
+// 百分位尺：0–100 橫條，X(v) 換算位置
+const RX0 = 130, RW = 820, RX = v => RX0 + RW * v / 100;
+function ruler(y, a = 1) {
+  g.save(); g.globalAlpha *= a;
+  rr(RX0, y - 16, RW, 32, 16, PAPER);
+  for (let v = 0; v <= 100; v += 10) { g.fillStyle = v % 50 ? DIM : INK; g.fillRect(RX(v) - 2, y + 22, 4, v % 50 ? 16 : 28); }
+  [0, 50, 100].forEach(v => plain(String(v), RX(v), y + 92, 38, INK, { align: 'center', w: 600 }));
+  g.restore();
+}
+function gap(y, a, b, p = 1) { if (b > a) { g.globalAlpha = p; rr(RX(a), y - 16, RX(b) - RX(a), 32, 16, TERRA); g.globalAlpha = 1; } }
+function dot(x, y, col, p = 1) { if (p <= 0) return; G.disc(g, x, y, 34 * p, CREAM); G.disc(g, x, y, 26 * p, col); }
+
+// 直式百分位尺（改考卷前後）：0 在下、100 在上
+const VY0 = 1190, VH = 500, VY = v => VY0 - VH * v / 100;
+function vruler(x, a = 1) {
+  g.save(); g.globalAlpha *= a;
+  rr(x - 18, VY(100), 36, VH, 18, PAPER);
+  [0, 50, 100].forEach(v => { g.fillStyle = INK; g.fillRect(x - 54, VY(v) - 2, 26, 4); plain(String(v), x - 66, VY(v) + 13, 36, INK, { align: 'right', w: 600 }); });
+  g.restore();
+}
+// 十格考卷：n 可以是小數（0.4 題＝第一格填四成）
+function cells(y, n, col) {
+  const cw = 76, gp = 8, x0 = 124;
+  for (let k = 0; k < 10; k++) {
+    const x = x0 + k * (cw + gp), f = clamp(n - k);
+    rr(x, y, cw, 110, 14, PAPER);
+    if (f > 0) rr(x, y, Math.max(14, cw * f), 110, 14, col);
+  }
+}
+
+// ---------- 每張卡的畫面（畫在 y 540–1270；x≥830、y<530 是主播位置）；i＝卡號，beat(i,k)＝第 k 個字幕短語開始的卡內秒數 ----------
+function c1(lt) {
+  // 會議桌：最左邊那個人講個不停，對話框越長越大；其他人只是聽。第 0 幀對話框已在，封面不空
+  const grow = E.io(inv(0, 3.2, lt));
+  [[430, MUTE, 'think', 1], [640, MUTE, 'shrug', 1], [850, MUTE, 'think', -1]].forEach(([x, c, pose, dir], k) => man(x, GY, 300, c, { pose, dir, face: 'worried', shadow: false, tilt: Math.sin(lt * 1.8 + k) * 0.015 }));
+  man(190, GY, 340, TERRA, { pose: 'armsUp', face: 'smile', shadow: false, tilt: Math.sin(lt * 4) * 0.03 });
+  seat();
+  prop(g, 'speech', { x: 330 + grow * 120, y: 850 - grow * 40 + Math.sin(lt * 3) * 5, s: 260 + grow * 190, tail: 'left', stroke: TERRA, color: TERRA });
+}
+function c2(lt, i) {
+  // 大對話框上蓋「臉皮厚？」，蓋完再打一個問號：這個解釋先存疑
+  man(190, GY, 440, TERRA, { pose: 'armsUp', face: 'smile', tilt: Math.sin(lt * 3.2) * 0.02 });
+  prop(g, 'speech', { x: 610, y: 830 + Math.sin(lt * 2.4) * 5, s: 560, tail: 'left', stroke: TERRA, color: TERRA });
+  const st = inv(0.5, 0.85, lt), k = lerp(1.7, 1, E.o3(st));
+  if (st > 0) {
+    g.save(); g.translate(610, 830); g.rotate(-0.09); g.scale(k, k); g.globalAlpha = clamp(st * 2);
+    rr(-210, -70, 420, 140, 18, CREAM); g.strokeStyle = TERRA; g.lineWidth = 9; g.beginPath(); g.roundRect(-210, -70, 420, 140, 18); g.stroke();
+    plain('臉皮厚？', 0, 22, 64, TERRA, { align: 'center', w: 800 }); g.restore();
+  }
+  const q = E.o3(inv(beat(i, 1), beat(i, 1) + 0.5, lt));
+  if (q > 0) prop(g, 'question', { x: 860, y: 1120 + Math.sin(lt * 2.5) * 8, s: 200 * q });
+}
+function c3(lt) {
+  // 視野扇形掃過，扇形裡有一塊看不到的黑色缺口
+  const hx = 240, hy = 900, R = 760, a0 = -0.62, a1 = 0.46, sw = Math.sin(lt * 0.9) * 0.05;
+  g.fillStyle = 'rgba(217,164,65,0.66)'; g.beginPath(); g.moveTo(hx, hy); g.arc(hx, hy, R, a0 + sw, a1 + sw); g.closePath(); g.fill();
+  [[0.33, -0.34], [0.55, 0.3], [0.78, -0.42], [0.8, 0.28]].forEach(([d, a], k) => G.disc(g, hx + Math.cos(a + sw) * R * d, hy + Math.sin(a + sw) * R * d, 24, [SAGE, BLUE, SAGE, BLUE][k]));
+  const o = E.o3(inv(0.1, 1.1, lt)), c = -0.06 + sw;
+  g.fillStyle = INK; g.beginPath(); g.moveTo(hx, hy); g.arc(hx, hy, R, c - 0.2 * o, c + 0.2 * o); g.closePath(); g.fill();
+  if (o > 0.5) prop(g, 'question', { x: hx + R * 0.72, y: hy - 44, s: 110, color: CREAM, alpha: inv(0.5, 1, o) });
+  man(200, GY, 440, COAT, { pose: 'think', face: 'smile' });
+}
+function bank(x, y, s) {
+  g.save(); g.translate(x, y); g.scale(s, s);
+  rr(-150, -250, 300, 250, 8, '#D8C9B2');
+  g.fillStyle = '#A5835D'; g.beginPath(); g.moveTo(-180, -250); g.lineTo(0, -340); g.lineTo(180, -250); g.closePath(); g.fill();
+  [-105, -35, 35, 105].forEach(px => rr(px - 14, -230, 28, 230, 6, CREAM));
+  plain('銀行', 0, -262, 44, CREAM, { align: 'center', w: 700 });
+  g.restore();
+}
+function c4(lt, i) {
+  // 剪影人形（不畫真人長相），檸檬擠汁抹過臉，右邊是銀行；1995 匹茲堡
+  fig(`${FACTS.ROBBERY_YEAR} ${FACTS.ROBBERY_CITY}`, 300, 590, TERRA, 1, 'fig-year');
+  bank(800, GY, 0.95);
+  const hx = 300, hy = GY - 84 * 5.2, b = beat(i, 2);
+  const walk = E.io(inv(b + 1.0, b + 2.4, lt)), x = lerp(hx, hx + 170, walk);
+  man(x, GY, 520, INK, { pose: walk > 0 && walk < 1 ? 'walk' : 'stand', t: lt });
+  const squeeze = clamp(inv(b - 0.2, b + 0.5, lt)) * (1 - inv(b + 1.0, b + 1.4, lt));
+  lemon(hx + 170, hy - 100 + (1 - squeeze) * -40, 74 * (1 - 0.14 * Math.abs(Math.sin(lt * 7)) * squeeze), 0.6);
+  for (let k = 0; k < 4; k++) { const q = loop(lt * 1.4 + k * 0.25, 1); if (squeeze > 0.2) G.disc(g, lerp(hx + 110, hx + 20, q), lerp(hy - 60, hy - 6, q), 11, MUST); }
+  const sm = inv(b, b + 1.0, lt);
+  if (sm > 0) { g.fillStyle = `rgba(217,164,65,${0.85 * sm})`; g.beginPath(); g.ellipse(x + 8, GY - 84 * 5.2, 46, 50, 0, 0, Math.PI * 2); g.fill(); }
+}
+function c5(lt, i) {
+  // 監視器畫框：臉上黃黃的，但人拍得一清二楚；被抓時的話用引號卡
+  rr(120, 570, 840, 500, 24, INK); rr(142, 592, 796, 456, 14, '#DDD2C0');
+  man(540, 1030, 400, INK, { pose: 'stand' });
+  g.fillStyle = 'rgba(217,164,65,0.85)'; g.beginPath(); g.ellipse(546, 1030 - 84 * 4, 38, 42, 0, 0, Math.PI * 2); g.fill();
+  const y = 610 + loop(lt * 90, 420); g.fillStyle = 'rgba(59,47,42,0.08)'; g.fillRect(142, y, 796, 18);
+  if (loop(lt, 1) < 0.6) G.disc(g, 188, 638, 15, TERRA);
+  plain('REC', 216, 652, 38, INK, { w: 700 });
+  const fr = E.o3(inv(0.5, 1.2, lt));
+  g.strokeStyle = TERRA; g.lineWidth = 10; g.lineCap = 'round';
+  const fx0 = 540 - 92, fx1 = 540 + 92, fy0 = 655, fy1 = 830, L = 44 * fr;
+  [[fx0, fy0, 1, 1], [fx1, fy0, -1, 1], [fx0, fy1, 1, -1], [fx1, fy1, -1, -1]].forEach(([x, yy, sx, sy]) => { g.beginPath(); g.moveTo(x + sx * L, yy); g.lineTo(x, yy); g.lineTo(x, yy + sy * L); g.stroke(); });
+  const q = pop(lt, beat(i, 2), 0.5);
+  if (q > 0) { prop(g, 'card', { x: 540, y: 1165, w: 840, h: 150, alpha: q }); g.save(); g.globalAlpha = q; plain(`「${FACTS.QUOTE}」`, 540, 1188, 60, TERRA, { align: 'center', w: 800 }); g.restore(); }
+}
+function c6(lt, i) {
+  // 剪報滑到桌上，旁邊一疊考卷，百分位尺升起
+  board();
+  const s = E.o3(inv(0.1, 0.9, lt));
+  g.save(); g.translate(lerp(-260, 310, s), 760); g.rotate(-0.05);
+  g.save(); g.shadowColor = 'rgba(59,47,42,0.22)'; g.shadowBlur = 16; g.shadowOffsetY = 5; rr(-210, -170, 420, 340, 10, PAPER); g.restore();
+  plain('檸檬汁搶匪被捕', 0, -104, 46, INK, { align: 'center', w: 800 });
+  rr(-180, -80, 150, 150, 8, SOFT); G.disc(g, -105, -22, 26, INK); rr(-132, 2, 54, 66, 10, INK); lemon(-60, -50, 20, 0.5);
+  for (let k = 0; k < 6; k++) rr(-10, -74 + k * 25, 190, 9, 4, LINE);
+  rr(-180, 96, 360, 9, 4, LINE); rr(-180, 124, 260, 9, 4, LINE);
+  g.restore();
+  const b = beat(i, 1), n = Math.round(clamp(inv(b, b + 0.8, lt)) * 5);
+  for (let k = 0; k < n; k++) sheet(760 + k * 4, 780 - k * 12, 280, 360, 0.04 - k * 0.012, { rows: 5 });
+  const r = E.o3(inv(beat(i, 2), beat(i, 2) + 0.7, lt));
+  if (r > 0) { g.save(); g.translate(0, (1 - r) * 180); g.globalAlpha = r; ruler(1080); plain('贏過幾成同學', 540, 1040, 44, INK, { align: 'center', w: 700 }); g.restore(); }
+}
+function c7(lt, i) {
+  // 百分位尺：實際停在 12，自估跑到 62，中間落差線拉長
+  board();
+  const y = 980, A = FACTS.LOGIC_BOTTOM_ACTUAL_PCT, Z = FACTS.LOGIC_BOTTOM_EST_PCT, b = beat(i, 2);
+  ruler(y);
+  plain('贏過幾成同學', 540, 630, 44, INK, { align: 'center', w: 600 });
+  const p = E.io(inv(b, b + 1.5, lt)), v = lerp(A, Z, p);
+  gap(y, A, v);
+  const a = pop(lt, beat(i, 1), 0.5);
+  dot(RX(A), y, INK, a);
+  if (a > 0) { man(RX(A), y - 44, 200, MUST, { pose: 'stand', face: 'none', alpha: a }); plain(`實際 ${A}`, RX(A) + 40, y + 180, 60, INK, { align: 'center', w: 800 }); }
+  if (p > 0) {
+    dot(RX(v), y, TERRA);
+    man(RX(v), y - 44, 280, MUST, { pose: p >= 1 ? 'armsUp' : 'walk', face: 'smile', t: lt, alpha: 0.95, shadow: false });
+    if (p >= 1) plain(`以為 ${Z}`, RX(Z), y + 180, 60, TERRA_D, { align: 'center', w: 800 });
+  }
+}
+function c8(lt, i) {
+  // 同一支筆：先寫答案，翻過來打勾。寫的和改的是同一套能力
+  board();
+  prop(g, 'card', { x: 540, y: 850, w: 860, h: 480 });
+  const b1 = beat(i, 1), b2 = beat(i, 2);
+  plain('答案', 170, 730, 44, DIM, { w: 700 });
+  const wp = clamp(inv(0, Math.max(0.8, b2), lt)), wx = lerp(180, 700, wp), wob = Math.sin(lt * 16) * 10;
+  line([[180, 800], ...Array.from({ length: 24 }, (_, k) => [lerp(180, wx, k / 23), 800 + Math.sin(k * 1.6) * 16])], INK, 9);
+  const f = E.io(inv(b2 - 0.2, b2 + 0.5, lt));
+  const px = lerp(wx, 760, f), py = lerp(800 + wob * (1 - f), 930, f);
+  tick(740, 920, 52, TERRA, inv(b2 + 0.5, b2 + 1.1, lt), 16);
+  pen(px, py - 8, lerp(-0.75, -0.75 + Math.PI * 2, f), SAGE, 0.9);
+  plain('判斷對錯', 170, 945, 44, DIM, { w: 700 });
+  const q = pop(lt, b2 + 0.7, 0.5);
+  if (q > 0) { g.save(); g.globalAlpha = q; rr(300, 1130, 480, 96, 48, TERRA); plain('同一套能力', 540, 1198, 56, CREAM, { align: 'center', w: 800 }); g.restore(); }
+}
+function c9(lt, i) {
+  // 考卷上的題目其實都錯（灰叉），紅勾一個一個打在錯題上；旁邊的人很滿意
+  board();
+  prop(g, 'card', { x: 380, y: 880, w: 580, h: 640 });
+  plain('其實都錯', 140, 640, 40, DIM, { w: 700 });
+  for (let k = 0; k < 5; k++) {
+    const y = 720 + k * 104;
+    cross(170, y, 22, MUTE, 9);
+    rr(220, y - 8, 180 + (k * 37) % 70, 14, 7, LINE);
+    tick(560, y, 34, TERRA, inv(0.5 + k * 0.42, 0.85 + k * 0.42, lt), 12);
+  }
+  man(840, GY, 400, MUST, { pose: lt > 2.2 ? 'armsUp' : 'think', dir: -1, face: 'smile' });
+}
+function c10(lt) {
+  // 五份同學的考卷扇形攤開，站在前面的人低頭看
+  board();
+  const p = E.o3(inv(0.1, 1.2, lt));
+  for (let k = 0; k < 5; k++) {
+    const a = (k - 2) * 0.27 * p, cx = 540, cy = 1310;
+    sheet(cx + Math.sin(a) * 500, cy - Math.cos(a) * 500, 250, 330, a, { head: [BLUE, SAGE, MUST, TERRA, COAT][k] });
+  }
+  man(540, GY, 300, MUST, { pose: 'think', face: 'worried' });
+  prop(g, 'question', { x: 660, y: 1000 + Math.sin(lt * 2.5) * 6, s: 80, color: DIM, alpha: pop(lt, 1.2) });
+}
+function c11(lt, i) {
+  // 左右分：最好的那一群、最差的那一群，各拿一疊五份
+  const b = beat(i, 2);
+  [[290, '最好的那一群', SAGE, 'stand'], [790, '最差的那一群', MUST, 'stand']].forEach(([x, name, c, pose], j) => {
+    const q = pop(lt, beat(i, 1) + j * 0.4, 0.5);
+    g.save(); g.globalAlpha = Math.max(q, 0.999);
+    rr(x - 230, 590, 460, 660, 28, DESK);
+    g.globalAlpha = q; plain(name, x, 668, 50, INK, { align: 'center', w: 700 });
+    g.restore();
+    const b1 = beat(i, 1), n = Math.round(clamp(inv(b1 + 0.3, b1 + 1.3, lt)) * FACTS.GRAMMAR_PEERS_GRADED);   // 念到兩群人就發考卷
+    for (let k = 0; k < n; k++) sheet(x - 100 + k * 8, 860 - k * 12, 150, 200, 0.05 - k * 0.02, { head: c, rows: 3 });
+    if (q > 0) man(x + 110, GY - 24, 300, c, { pose, dir: -1, face: 'none', alpha: q, tilt: Math.sin(lt * 2 + j) * 0.015 });
+    const m = pop(lt, b, 0.4);
+    if (m > 0) { g.save(); g.globalAlpha = m; plain(`${FACTS.GRAMMAR_PEERS_GRADED} 份`, x + 110, 830, 56, TERRA_D, { align: 'center', w: 800 }); g.restore(); }
+  });
+}
+function twoCols(lt, active) {
+  const xl = 330, xr = 810;
+  board();
+  vruler(xl, active === 0 ? 1 : 0.45); vruler(xr, active === 1 ? 1 : 0.45);
+  plain('最好的那一群', xl - 30, 610, 44, active === 0 ? INK : DIM, { align: 'center', w: 700 });
+  plain('最差的那一群', xr - 30, 610, 44, active === 1 ? INK : DIM, { align: 'center', w: 700 });
+  return [xl, xr];
+}
+function c12(lt, i) {
+  // 左邊的百分位點從 70 爬到 80
+  const [x] = twoCols(lt, 0), b = beat(i, 2);
+  const p = E.io(inv(b, b + 1.1, lt)), v = lerp(FACTS.GRAMMAR_TOP_BEFORE, FACTS.GRAMMAR_TOP_AFTER, p);
+  g.fillStyle = TERRA; g.beginPath(); g.roundRect(x - 18, VY(v), 36, VY(FACTS.GRAMMAR_TOP_BEFORE) - VY(v) + 1, 18); g.fill();
+  dot(x, VY(v), SAGE_D);
+  plain(`${Math.round(v)}`, x + 50, VY(v) + 22, 64, SAGE_DD, { w: 800 });
+  man(x + 120, GY, 340, SAGE, { pose: p >= 1 ? 'armsUp' : 'think', dir: 1, face: 'smile', tilt: Math.sin(lt * 2) * 0.015 });
+}
+function c13(lt, i) {
+  // 右邊：改完還在六成以上，實際約 10；落差線留在那裡
+  const [, x] = twoCols(lt, 1), b = beat(i, 1);
+  const p = E.io(inv(b, b + 1.4, lt)), v = lerp(FACTS.GRAMMAR_BOTTOM_BEFORE, FACTS.GRAMMAR_BOTTOM_AFTER, p), A = FACTS.GRAMMAR_BOTTOM_ACTUAL;
+  const q = E.o3(inv(0.2, 1.1, lt));
+  g.fillStyle = TERRA; g.beginPath(); g.roundRect(x - 18, VY(v), 36, (VY(A) - VY(v)) * q, 18); g.fill();
+  dot(x, VY(v), TERRA); dot(x, VY(A), INK, q);
+  plain(`以為 ${Math.round(v)}`, x - 56, VY(v) + 20, 56, TERRA_D, { align: 'right', w: 800 });
+  plain(`實際 ${Math.round(A)}`, x - 56, VY(A) + 20, 56, INK, { align: 'right', w: 800 });
+  man(190, GY, 340, MUST, { pose: 'shrug', face: 'smile', tilt: Math.sin(lt * 2) * 0.015 });
+}
+function c14(lt, i) {
+  // 小冊子翻開，計時器跑十分鐘
+  board();
+  const o = E.o3(inv(0.1, 1.0, lt)), cx = 340, cy = 800, w = 240, h = 340;
+  g.save(); g.shadowColor = 'rgba(59,47,42,0.22)'; g.shadowBlur = 16; g.shadowOffsetY = 6;
+  rr(cx, cy - h / 2, w, h, 10, PAPER); rr(cx - w * o, cy - h / 2, w * o, h, 10, '#FFF4E2'); g.restore();
+  g.fillStyle = 'rgba(59,47,42,0.1)'; g.fillRect(cx - 3, cy - h / 2, 6, h);
+  for (let k = 0; k < 5; k++) { rr(cx + 30, cy - 120 + k * 52, 180, 12, 6, LINE); if (o > 0.6) rr(cx - 210, cy - 120 + k * 52, 180, 12, 6, k === 2 ? TERRA : LINE); }
+  const tx = 790, ty = 790, R = 150, a = clamp(inv(0.6, Math.max(2.2, TL.lines[i].t1 - T0[i] - 0.2), lt));
+  G.disc(g, tx, ty, R + 16, INK); G.disc(g, tx, ty, R, PAPER);
+  g.fillStyle = 'rgba(200,103,74,0.75)'; g.beginPath(); g.moveTo(tx, ty); g.arc(tx, ty, R - 8, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * a); g.closePath(); g.fill();
+  line([[tx, ty], [tx + Math.cos(-Math.PI / 2 + Math.PI * 2 * a) * (R - 22), ty + Math.sin(-Math.PI / 2 + Math.PI * 2 * a) * (R - 22)]], INK, 10);
+  rr(tx - 26, ty - R - 48, 52, 34, 8, INK);
+  plain(`${FACTS.TRAINING_MIN} 分鐘`, tx, ty + R + 86, 60, TERRA_D, { align: 'center', w: 800 });
+  man(240, GY, 280, MUST, { pose: 'think', face: 'none', tilt: Math.sin(lt * 1.8) * 0.015 });
+}
+function grid(lt, est, estLabel, act) {
+  board();
+  plain('以為答對', 124, 690, 46, TERRA_D, { w: 700 }); plain(estLabel, 956, 690, 60, TERRA_D, { align: 'right', w: 800 });
+  cells(714, est, TERRA);
+  plain('實際答對', 124, 950, 46, INK, { w: 700 }); plain(`${FACTS.LOGIC4_BOTTOM_ACTUAL} 題`, 956, 950, 60, INK, { align: 'right', w: 800 });
+  cells(974, act, INK);
+  plain(`共 ${FACTS.LOGIC4_ITEMS} 題`, 540, 1190, 40, INK, { align: 'center', w: 600 });
+}
+function c15(lt, i) {
+  // 十格考卷：實際不到半格先出來，自估的五格再亮
+  const b = beat(i, 1), b2 = beat(i, 2);
+  const act = FACTS.LOGIC4_BOTTOM_ACTUAL * E.o3(inv(b, b + 0.6, lt)), est = FACTS.LOGIC4_BOTTOM_EST_BEFORE * E.io(inv(b2, b2 + 1.2, lt));
+  grid(lt, est, lt >= b2 ? `${FACTS.LOGIC4_BOTTOM_EST_BEFORE} 題` : '', act);   // 念到「五題」才出數字
+}
+function c16(lt, i) {
+  // 亮著的五格熄到剩一格，跟實際靠近
+  const b = beat(i, 1), p = E.io(inv(b, b + 1.5, lt));
+  const est = lerp(FACTS.LOGIC4_BOTTOM_EST_BEFORE, FACTS.LOGIC4_BOTTOM_EST_AFTER, p);
+  grid(lt, est, `${p >= 1 ? FACTS.LOGIC4_BOTTOM_EST_AFTER.toFixed(1) : FACTS.LOGIC4_BOTTOM_EST_BEFORE} 題`, FACTS.LOGIC4_BOTTOM_ACTUAL);
+}
+function c17(lt, i) {
+  // 樓梯：人站第一階，上面幾階被遮住，往上看不到
+  const sw = 150, sh = 112, x0 = 150, n = 6, b = beat(i, 1);
+  for (let k = 0; k < n; k++) {
+    const x = x0 + k * sw, top = GY - (k + 1) * sh, hid = k >= 1;
+    rr(x, top, (n - k) * sw, sh + 2, 8, hid ? '#B9A78D' : '#A5835D');
+  }
+  // 遮住的部分：一片霧從第二階往上蓋
+  const fog = g.createLinearGradient(x0 + sw * 1.2, 0, x0 + sw * 2.3, 0);
+  fog.addColorStop(0, 'rgba(245,239,230,0)'); fog.addColorStop(1, 'rgba(245,239,230,0.5)');
+  g.fillStyle = fog; g.fillRect(x0 + sw * 1.2, 500, 900, GY - 500 + 2);
+  man(x0 + sw * 0.55, GY - sh, 300, MUST, { pose: 'think', face: 'worried', tilt: Math.sin(lt * 1.6) * 0.02 });
+  prop(g, 'question', { x: x0 + sw * 2.2, y: GY - sh - 240 + Math.sin(lt * 2.5) * 8, s: 130, color: DIM, alpha: pop(lt, 0.6) });
+  prop(g, 'bulb', { x: 760, y: 700, s: 160, on: E.o3(inv(b, b + 1.2, lt)), t: lt, alpha: pop(lt, b - 0.2, 0.6) });
+}
+function c18(lt, i) {
+  // 百分位尺回來：自估點停在 62，點上的人換成「我」
+  board();
+  const y = 1040, Z = FACTS.LOGIC_BOTTOM_EST_PCT, b = beat(i, 2);
+  ruler(y);
+  plain('贏過幾成同學', 540, 640, 44, INK, { align: 'center', w: 600 });
+  dot(RX(Z), y, TERRA);
+  const p = E.o3(inv(b, b + 0.6, lt));
+  const c = mix(COAT, MUST, p);
+  man(RX(Z), y - 44, 320, c, { pose: p > 0.5 ? 'shrug' : 'stand', face: p > 0.5 ? 'worried' : 'none', shadow: false, tilt: Math.sin(lt * 1.6) * 0.012 });
+  if (p > 0) { g.save(); g.globalAlpha = p; G.disc(g, RX(Z) + 150, y - 330, 60, TERRA); plain('我', RX(Z) + 150, y - 308, 64, CREAM, { align: 'center', w: 800 }); g.restore(); }
+  plain(`${Z}`, RX(Z), y + 180, 60, TERRA_D, { align: 'center', w: 800 });
+}
+
+// head：卡名。只有封面（第 0 卡）畫成大標（兩行），其他卡不畫。
+const SRC = `Kruger & Dunning ${FACTS.PAPER_YEAR}`, NYT = 'Morris《紐約時報》2010';
+const CARDS = [
+  { head: ['越不懂的人', '越有把握？'], hud: '示意圖', hl: ['越有把握'], draw: c1 },
+  { head: '臉皮厚', hud: '示意圖', hl: ['臉皮厚'], draw: c2 },
+  { head: '盲點', hud: '示意圖', hl: ['盲點'], draw: c3 },
+  { head: '檸檬汁', hud: NYT, hl: ['檸檬汁'], draw: c4 },
+  { head: '監視器', hud: NYT, hl: ['拍不到臉', '檸檬汁'], draw: c5 },
+  { head: '做實驗', hud: `${NYT}／${SRC}`, hl: ['邏輯題', '多少同學'], draw: c6 },
+  { head: '落差', hud: SRC, hl: ['一成二', '六成二'], draw: c7 },
+  { head: '同一套', hud: `${SRC}／${NYT}`, hl: ['那套能力'], draw: c8 },
+  { head: '看不出', hud: SRC, hl: ['看不出自己寫錯'], draw: c9 },
+  { head: '看別人', hud: SRC, hl: ['別人的答案'], draw: c10 },
+  { head: '改考卷', hud: SRC, hl: ['五份'], draw: c11 },
+  { head: '往上調', hud: SRC, hl: ['往上調'], draw: c12 },
+  { head: '還是六成', hud: SRC, hl: ['六成'], draw: c13 },
+  { head: '教學', hud: SRC, hl: ['十分鐘'], draw: c14 },
+  { head: '十題', hud: SRC, hl: ['不到半題', '五題'], draw: c15 },
+  { head: '改口', hud: SRC, hl: ['一題'], draw: c16 },
+  { head: '還沒學到', hud: '示意圖', hl: ['還沒學到'], draw: c17 },
+  { head: '可能是我', hud: '示意圖', hl: ['就是我'], draw: c18 },
+];
+const N = CARDS.length;
+if (TL.lines.length !== N) throw new Error(`timeline.js 有 ${TL.lines.length} 句，卡片 ${N} 張，對不上`);
+const DUR = TL.dur;
+const T0 = TL.lines.map((l, i) => i === 0 ? 0 : l.t0 - 0.2);
+const END0 = TL.lines[N - 1].t1 + 0.3;   // 片尾品牌卡
+const cardAt = t => { let i = 0; while (i + 1 < N && t >= T0[i + 1]) i++; return i; };
+const beat = (i, k) => { const p = TL.lines[i].phrases; return (p && p[k] ? p[k].t0 : TL.lines[i].t0) - T0[i]; };
+const PH = TL.lines.flatMap((l, i) => (l.phrases || [{ text: l.text, t0: l.t0, t1: l.t1 }]).map(p => ({ ...p, card: i })));
+
+// ---------- 頂部品牌標籤 ----------
+function series() {
+  // 上下往中間收（使用者 11-05）：IG 網格 3:4 上下各裁約 240px，Shorts 底部有說明欄
+  plain(BRAND, 540, 290, 34, DIM, { align: 'center', w: 600 });
+  rr(510, 312, 60, 5, 3, TERRA);
+}
+
+// ---------- 字幕：一卡一個逗號短語，關鍵詞陶土紅，上方一條短橫線 ----------
+function caption(t) {
+  const j = PH.findIndex((p, k) => t >= p.t0 - 0.05 && t < Math.min(p.t1 + 0.25, PH[k + 1] ? PH[k + 1].t0 - 0.05 : Infinity));
+  if (j < 0 || t >= END0) return;
+  const p = PH[j], hl = CARDS[p.card].hl || [];
+  const px = 58, maxW = 900;
+  g.font = ZH(700, px);
+  const rows = g.measureText(p.text).width <= maxW ? [p.text] : [p.text.slice(0, Math.ceil(p.text.length / 2)), p.text.slice(Math.ceil(p.text.length / 2))];
+  const y0 = rows.length > 1 ? 1330 : 1340;
+  rr(510, y0 - 80, 60, 6, 3, INK);
+  rows.forEach((r, k) => rich(r, 540, y0 + k * 74, px, hl));
+}
+function rich(s, cx, y, px, hl) {
+  const mark = Array(s.length).fill(false);
+  for (const w of hl) { let i = s.indexOf(w); while (i >= 0) { for (let k = 0; k < w.length; k++) mark[i + k] = true; i = s.indexOf(w, i + 1); } }
+  g.font = ZH(700, px); g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+  let x = cx - g.measureText(s).width / 2;
+  for (let k = 0; k < s.length; k++) { g.fillStyle = mark[k] ? TERRA : INK; g.fillText(s[k], x, y); x += g.measureText(s[k]).width; }
+}
+
+// ---------- 片尾品牌卡 ----------
+function endCard(t) {
+  g.fillStyle = CREAM; g.fillRect(0, 0, W, H);
+  const lt = t - END0;
+  // 中等字級（< precheck HEADLINE_PX），三個小人是主角
+  say(BRAND, 540, 640, 68, INK, 1, { id: 'end-brand', align: 'center', bold: 0.03 });
+  rr(510, 680, 60, 5, 3, SAGE);
+  [[SAGE, 330, 'armsUp'], [MUST, 540, 'think'], [TERRA, 750, 'armsUp']].forEach(([c, x, pose], k) => man(x, 1150, 260, c, { pose, face: 'smile', tilt: Math.sin(lt * 2 + k) * 0.04 }));
+  plain(HANDLE, 540, 1260, 40, DIM, { align: 'center', w: 600 });
+}
+
+// ---------- 主播 Paradox（Clawd Bot）：右上角，寫法照 films/elected-dictator ----------
+const svgText = await fetch('./mascot/clawd-bot.svg').then(r => { if (!r.ok) throw new Error('取不到 mascot/clawd-bot.svg'); return r.text(); });
+const host = document.getElementById('mascot'); host.innerHTML = svgText;
+const ROOT = host.querySelector('svg'); if (!ROOT) throw new Error('mascot svg 解析失敗');
+const TRACK = { fps: 30, states: [{ t: 0, state: 'idle' }], looks: CARDS.map((c, i) => ({ t: T0[i], x: -0.5, y: 0.5 })), pokes: [] };
+function poseHost(t) {
+  applyPose(ROOT, poseAt(t, TRACK));
+  // 嘴跟旁白開合；表情維持 idle
+  if (!TL.lines.some(l => t >= l.t0 && t <= l.t1)) return;
+  const a = 0.25 + 0.75 * Math.abs(Math.sin(t * 13.5)) * (0.55 + 0.45 * Math.abs(Math.sin(t * 4.3 + 1)));
+  ROOT.querySelector('#mouth').setAttribute('d', `M-5,8 Q0,${(9 + a * 5).toFixed(2)} 5,8`);
+}
+// 畫框 x 875 起、y 260 起、邊長 224（框右緣的透明留白超出畫面無妨），可見身形約 x 906–1067、y 299–455：
+// IG 主頁格把 9:16 置中裁成 3:4（上下各裁約 240px），整隻要在 y 240 以下；左邊讓開置中大標（最寬到 x 890）。
+const MASCOT = { x: 800, y: 300, s: 260 };   // 放大、左移，整隻在畫面與 IG 網格內
+let mascotTok = 0;
+function finish(t) {
+  caption(t);
+  poseHost(t);
+  // 主播畫進 canvas：DOM SVG 疊層的合成結果會受上一幀影響，尋幀一致過不了
+  const tok = ++mascotTok, img = new Image();
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(ROOT));
+  return img.decode().then(() => {
+    if (tok !== mascotTok) return;   // 已經畫下一幀了，舊圖不能蓋上去
+    g.drawImage(img, MASCOT.x, MASCOT.y, MASCOT.s, MASCOT.s);
+  });
+}
+
+// ---------- 主迴圈 ----------
+// 換卡＝原地交叉淡化 XF 秒：底色一樣，看起來是小人與道具在原地換狀態，不是切鏡頭。
+const XF = 0.5;
+const snap = Object.assign(document.createElement('canvas'), { width: W, height: H });
+function render(t) {
+  t = clamp(t, 0, DUR); TXT = [];
+  if (t >= END0) {
+    const k = E.io(inv(END0, END0 + XF, t));
+    if (k < 1) { drawCard(N - 1, t); snap.getContext('2d').drawImage(g.canvas, 0, 0); TXT = []; }
+    endCard(t);
+    if (k < 1) { g.globalAlpha = 1 - k; g.drawImage(snap, 0, 0); g.globalAlpha = 1; }
+    return finish(t);
+  }
+  const i = cardAt(t), lt = t - T0[i];
+  const k = i && lt < XF ? E.io(lt / XF) : 1;
+  if (k < 1) { drawCard(i - 1, t); snap.getContext('2d').drawImage(g.canvas, 0, 0); TXT = []; }
+  drawCard(i, t);
+  if (k < 1) { g.globalAlpha = 1 - k; g.drawImage(snap, 0, 0); g.globalAlpha = 1; }
+  return finish(t);
+}
+function drawCard(i, t) {
+  const cd = CARDS[i], lt = t - T0[i];
+  g.fillStyle = CREAM; g.fillRect(0, 0, W, H);
+  series();
+  // 只留封面大標（使用者 11-04）：第 0 卡第 0 幀就完整顯示，其他卡不畫大標副標，畫面當主角
+  // 五個字一行：145px、往左讓開右上主播，封面 OCR 才認得到（democracy-noise 的做法），兩行疊放
+  if (i === 0) cd.head.forEach((s, k) => say(s, 440, 470 + k * 160, 145, INK, 1, { id: `head${k + 1}`, align: 'center', bold: 0.05 }));
+  // 插畫以 (540, 880) 為中心縮 0.9：地平線 1270→1231，讓字幕與來源往上收
+  const z = 0.9 + 0.005 * Math.min(lt, 7);   // 緩慢推近，只吃卡內秒數；calm 片型的畫面呼吸
+  g.save(); g.translate(540, 880); g.scale(z, z); g.translate(-540, -880); cd.draw(lt, i); g.restore();
+  g.globalAlpha = 1;
+  plain(`來源｜${cd.hud}`, 540, 1460, 28, DIM, { align: 'center', w: 500 });
+}
+
+// ---------- 對外契約 ----------
+window.DUR = DUR;
+window.render = render;
+window.TEXTS = t => { render(t); return TXT.filter(b => b.screen); };
+window.CUES = PH.map(p => ({ t0: p.t0, t1: p.t1, text: p.text }));
+window.SHAKES = [];
+window.EV = [{ t: 0, type: 'bed', len: DUR }];   // 只留配樂（calm 片型），不加換卡音效
+window.VOICE = TL.lines.map((l, j) => ({ t: l.t0, file: `out/voice/${String(j + 1).padStart(2, '0')}.wav` }));
+
+// 字型：這段程式碼本身就含畫面上所有字，整段拿去預載
+const allText = document.querySelector('script[type=module]').textContent + TL.lines.map(l => l.text).join('') + '0123456789,%';
+await Promise.all([700, 600].map(w => document.fonts.load(ZH(w, 58), allText)));
+await document.fonts.ready;
+for (let i = 0; i < N; i++) render(T0[i] + 0.6);
+render(0);
+window.READY = true;
+</script>
+</body>
+</html>

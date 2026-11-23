@@ -31,7 +31,9 @@ SCRUB = Path.home() / "dev/reelbench-skills/skills/video-scrub/scripts/video-scr
 # 必備段照 refs/vkv/narrative-templates.md 六段式的 1、4、5、6，順序固定；其他段可自由加。
 # 門檻寫在這裡不寫在片子裡：受評者改不到評分器（fix 10368）。
 # 提問只寫在說明欄，正片不放（使用者 2026-11-03 定；取代 10-13 起的片尾提問與 value-life 的 no-question 豁免）
-STORY_SECTIONS = ["鉤子", "轉折", "落點"]
+STORY_MIN_SECTIONS = 3    # 段數下限；段名與順序自由（使用者 2026-11-10 刪掉固定四段模版）
+STORY_LEAD_CHARS = 60     # 開場前 60 字（約 11 秒）要出現「你」或問句；對標帳號 11 支全有
+PHRASE_MAX_CHARS = 18     # 一個逗號短語的上限；對標帳號字幕一卡 4–18 字
 LINE_MAX_CHARS = 35       # 旁白每行上限（docs/寫稿原則.md 第 1 條，使用者 2026-11-01 定）
 CAPTION_LIMITS = {"reels": 2200, "threads": 500}   # 同 publish/meta_publish.py PLAT[*]["limit"]
 ENDING_BAN = ("總之", "所以說", "以上就是", "謝謝收看", "總結來說", "綜上")  # 落點不總結（WRITING.md §8.6，使用者 11-06 退 dunning-kruger「後面沒有爆點」）
@@ -41,16 +43,8 @@ CONTRAST_RE = re.compile(r"不是[^。？！?!]{0,24}?而是")
 CONTRAST_MAX = 1
 DASH_SEMI_RE = re.compile(r"——|—|；|;")
 DASH_SEMI_MAX = 1
-HOOK_MAX_CHARS = 25      # 鉤子第一句的字數上限；旁白約 4–5 字／秒，25 字約 5 秒講完
 LEAD_SILENCE_MAX = 0.5    # 第一個字最晚幾秒出現；開場不留空白
 ASR_SIM_MIN = 0.85        # 成片聽寫與旁白稿的字元相似度；低於此＝沒混進去或吃字
-# 轉折要推翻前一句，不是接一句總結（2026-11-01 使用者核准）。爆款是「不是他不香，而是旁邊太香」；
-# 垃圾桶片的「日本跟台北街上垃圾桶都很少，差別在家裡好不好丟」整段刪掉前面照樣成立＝假轉折。
-TRANSITION_CUES = ["但", "可是", "不過", "卻", "其實", "偏偏", "反而", "結果", "原來", "問題是", "真正"]
-TRANSITION_BAN = ["再看", "先看"]
-# 「你」或問句的密度（每 100 字）：爆款樣本 0.54、我們 0.23（2026-11-01 使用者核准擋）
-YOU_PER_100_MIN = 0.4
-YOU_MIN_CHARS = 40        # 短於這個字數不比密度，避免一句話的稿被誤擋
 COVER_LUMA_MIN = 24       # 第 0 幀平均亮度（0–255）；limited range 全黑是 16
 COVER_TEXT_H = 0.04       # 封面大字：字高至少畫面高的 4%（1920 → 77px；角落小字 28–46px，卡片大標 110px 起）
 COVER_TEXT_MIN = 2        # 大字裡至少幾個中文字或數字
@@ -152,6 +146,25 @@ def humanize_problems(film: Path):
     return []
 
 
+CONTRAST_RES = [
+    re.compile(r"而是|並非|與其說.*不如說|看似.*實則|你以為.*其實|不重要.{0,6}重要的是"),
+    re.compile(r"(?<!是)不是[^，。？！]{1,20}[，,]\s*是"),
+    re.compile(r"是[^，。？！]{1,20}[，,]\s*不是"),
+]
+
+
+def contrast_problems(narr_text: str):
+    """genie-humanizer 二元對比句型（不是X是Y、是X不是Y、並非、與其說…不如說…）逐行擋。
+    ponytail: 只抓同一行；拆成兩句的「沒寫A。寫的是B」抓不到，要靠 humanize 人工過。"""
+    out = []
+    for ln in narr_text.splitlines():
+        if ln.startswith("#") or not ln.strip():
+            continue
+        if any(r.search(ln) for r in CONTRAST_RES):
+            out.append(f"對比句：{ln.strip()}")
+    return out
+
+
 def approval_problems(film: Path):
     """稿子要使用者審過才建片（使用者 2026-11-01 定）：audit/approved.md 首行 `narration_sha:` 等於現在的稿，
     第二行起要有「核准：<使用者原話>」。只有 scripts/approve.py 寫這個檔，使用者說通過才跑；改稿後要重審。
@@ -167,6 +180,17 @@ def approval_problems(film: Path):
     if not any(ln.startswith("核准：") and ln[3:].strip() for ln in lines[1:]):
         return ["approved.md 沒有「核准：<使用者原話>」"]
     return []
+
+
+def gate_waived(film: Path) -> bool:
+    """使用者逐片放行「旁白稿結構」「無二元對比句」兩道門：audit/gate-waiver.md 首行 narration_sha 等於現在的稿，
+    另有「放行：<使用者原話>」。改稿即失效。2026-11-15 vision-quest-theseus：使用者核過逐字稿，不准改字。"""
+    p = film / "audit" / "gate-waiver.md"
+    if not p.is_file():
+        return False
+    lines = p.read_text(encoding="utf-8").splitlines()
+    return bool(lines) and lines[0].strip() == f"narration_sha: {sha_of(film / 'narration.md')}" and \
+        any(ln.startswith("放行：") and ln[3:].strip() for ln in lines[1:])
 
 
 def audit_problems(film: Path):
@@ -380,70 +404,67 @@ def parse_narration(text):
 
 
 def sentences(text):
-    return [s for s in re.findall(r"[^。？！?!\n]+[。？！?!]?", text) if s.strip()]
+    # 句末標點後的收尾引號／括號算同一句：稿寫「…節目。」時，」不能自成一句（voice.py 會念成空白檔）
+    return [s for s in re.findall(r"[^。？！?!\n]+[。？！?!]?[」』）]*", text) if s.strip()]
 
 
 def story_problems(sections, dialogue=False):
-    """旁白稿結構：必備段齊、順序對、有內容；鉤子短且跟觀眾有關或丟問題；落點收尾、不放提問段。
+    """旁白稿結構（使用者 2026-11-10 定：刪掉固定四段模版，改成量對標帳號的形狀）。
 
-    dialogue（對談格式）不比「鉤子跟觀眾有關」：對談片第一句是角色對角色說話，
-    對標的 IG 對談爆款開頭多是陳述句（docs/RESEARCH-dialogue.md），使用者 2026-10-17 核准免除。
+    舊版要求「鉤子→機制→轉折→落點」的段名、順序、轉折首句連詞、鉤子首句上限、「你」的密度；
+    使用者 2026-11-10 判「這個寫稿原則不行」，改成直接量 IG @boundless__explorer 的實測形狀
+    （refs/boundless/metrics.tsv，11 支 reel，2026-09-28～10-31，口播 303–422 字、每卡 4–18 字、
+    片長 60–85 秒、語速中位 5.2 字／秒）。段落名稱與順序自由，內容自己決定。
+    留下的只有機器量得準、且對標帳號真的長這樣的四件事：段數、開場是否點到觀眾、
+    一句一卡的長度、結尾不總結。字數與語速交給「語速」門，畫面交給節奏閘。
     """
     titles = [t for t, _ in sections]
     body = dict(sections)
-    req = STORY_SECTIONS
-    problems = [f"缺「{s}」段" for s in req if s not in titles]
-    if problems:
-        return problems
-    order = [titles.index(s) for s in req]
-    if order != sorted(order):
-        problems.append("必備段順序要是 " + "→".join(req))
-    problems += [f"「{s}」段是空的" for s in req if not body[s]]
-    if problems:
-        return problems
-    first = sentences(body["鉤子"])[0].strip()
-    if len(norm(first)) > HOOK_MAX_CHARS:
-        problems.append(f"鉤子第一句 {len(norm(first))} 字，上限 {HOOK_MAX_CHARS}")
-    if not dialogue and "你" not in first and not re.search(r"[？?]", first):
-        problems.append("鉤子第一句沒有「你」也沒有問題，跟觀眾無關")
-    # 轉折段第一句要推翻前一句：要有轉折連詞，不是「再看／先看」這種接續
-    tr = sentences(body["轉折"])[0].strip() if body.get("轉折") else ""
-    if tr and (any(tr.startswith(w) for w in TRANSITION_BAN)
-               or not any(c in tr for c in TRANSITION_CUES)):
-        problems.append("轉折段第一句沒有轉折連詞（但／可是／不過／卻／其實／偏偏／反而／結果／原來／問題是／真正），"
-                        "也別用「再看／先看」開頭")
+    problems = []
+    if not sections:
+        return ["narration.md 沒有任何段落"]
+    problems += [f"「{t}」段是空的" for t, b in sections if not b.strip()]
+    if len(sections) < STORY_MIN_SECTIONS:
+        problems.append(f"只有 {len(sections)} 段，至少 {STORY_MIN_SECTIONS} 段（對標帳號每支 3–8 段）")
     if "提問" in titles:
         problems.append("正片不放「提問」段：問題只寫在說明欄（使用者 11-03 定）")
-    # 落點之後不准再有段：多出來的收尾段沒事實可講，只能生金句
-    if titles[-1] != "落點":
-        problems.append("落點後面還有段（" + "、".join(titles[titles.index("落點") + 1:]) + "）：結論收在落點")
-    hit = [w for w in ENDING_BAN if w in body["落點"]]
+    # 結尾不總結：最後一段不准出現總結詞（WRITING.md §8.6）
+    hit = [w for w in ENDING_BAN if w in body[titles[-1]]]
     if hit:
-        problems.append("落點用了總結詞（" + "、".join(hit) + "）：結尾回扣第一句，不總結（WRITING.md §8.6）")
-    # 旁白要像跟人講話：每 100 字至少 0.4 次「你」或問句
-    flat = "".join(b for _, b in sections)
-    n = len(norm(flat))
-    if n >= YOU_MIN_CHARS:
-        hits = flat.count("你") + len(re.findall(r"[？?]", flat))
-        if hits < YOU_PER_100_MIN * n / 100:
-            problems.append(f"整篇 {n} 字只有 {hits} 次「你」或問句，每 100 字要 {YOU_PER_100_MIN} 次（像在對人講話）")
-    if not dialogue:
-        # 寫稿原則：一句講完一個因果、≤35 字；voice.py 依句末標點切句，一行兩個會讓卡片數對不上
-        for _, b in sections:
-            for ln in (x.strip() for x in b.splitlines()):
-                if not ln:
-                    continue
-                if len(norm(ln)) > LINE_MAX_CHARS:
-                    problems.append(f"「{ln[:12]}…」{len(norm(ln))} 字，每行上限 {LINE_MAX_CHARS}")
-                if len(re.findall(r"[。？！?!]", ln.rstrip("。？！?!」』）)"))):
-                    problems.append(f"「{ln[:12]}…」一行有兩個句末標點，拆行或改逗號")
-        lines = [x.strip() for _, b in sections for x in b.splitlines() if x.strip()]
-        contrast = sum(len(CONTRAST_RE.findall(ln)) for ln in lines)
-        if contrast > CONTRAST_MAX:
-            problems.append(f"「不是…而是」對舉 {contrast} 次，整篇最多 {CONTRAST_MAX} 次（留給轉折），其餘直接講後半句（寫稿原則第 6 條）")
-        dash = sum(len(DASH_SEMI_RE.findall(ln)) for ln in lines)
-        if dash > DASH_SEMI_MAX:
-            problems.append(f"破折號＋分號 {dash} 個，整篇最多 {DASH_SEMI_MAX} 個，改句號拆句或逗號（寫稿原則第 6 條）")
+        problems.append("最後一段用了總結詞（" + "、".join(hit) + "）：結尾回扣第一句，不總結（WRITING.md §8.6）")
+    if dialogue:
+        return problems
+    # 開場要點到觀眾：對標帳號 11 支全在開場 60 字內出現「你」或問句
+    raw0 = body[titles[0]]
+    lead = norm(raw0)[:STORY_LEAD_CHARS]
+    # 問號要在原文找：norm() 會把標點刪光；原文截到第 STORY_LEAD_CHARS 個正文字為止
+    seen, cut = 0, len(raw0)
+    for i, ch in enumerate(raw0):
+        seen += 1 if norm(ch) else 0
+        if seen >= STORY_LEAD_CHARS:
+            cut = i + 1
+            break
+    if "你" not in lead and not re.search(r"[？?]", raw0[:cut]):
+        problems.append(f"開頭 {STORY_LEAD_CHARS} 字內沒有「你」也沒有問句，開場沒點到觀眾（對標帳號都有）")
+    # 一句一卡：一行一個句末標點、≤35 字；逗號短語 4–18 字（voice.py 依句末標點切句）
+    for _, b in sections:
+        for ln in (x.strip() for x in b.splitlines()):
+            if not ln:
+                continue
+            if len(norm(ln)) > LINE_MAX_CHARS:
+                problems.append(f"「{ln[:12]}…」{len(norm(ln))} 字，每行上限 {LINE_MAX_CHARS}")
+            if len(re.findall(r"[。？！?!]", ln.rstrip("。？！?!」』）)"))):
+                problems.append(f"「{ln[:12]}…」一行有兩個句末標點，拆行或改逗號")
+            for ph in re.split(r"[，。？！?!、]", ln):
+                if len(norm(ph)) > PHRASE_MAX_CHARS:
+                    problems.append(f"「{ph}」一個逗號短語 {len(norm(ph))} 字，上限 {PHRASE_MAX_CHARS}（字幕一卡放不下）")
+    lines = [x.strip() for _, b in sections for x in b.splitlines() if x.strip()]
+    contrast = sum(len(CONTRAST_RE.findall(ln)) for ln in lines)
+    if contrast > CONTRAST_MAX:
+        problems.append(f"「不是…而是」對舉 {contrast} 次，整篇最多 {CONTRAST_MAX} 次，其餘直接講後半句（寫稿原則第 6 條）")
+    dash = sum(len(DASH_SEMI_RE.findall(ln)) for ln in lines)
+    if dash > DASH_SEMI_MAX:
+        problems.append(f"破折號＋分號 {dash} 個，整篇最多 {DASH_SEMI_MAX} 個，改句號拆句或逗號（寫稿原則第 6 條）")
     return problems
 
 
@@ -856,7 +877,7 @@ def main() -> int:
     dialogue = (film / "rhythm-profile").is_file() and \
         (film / "rhythm-profile").read_text(encoding="utf-8").strip() == "dialogue"
     if narr.is_file():
-        problems = story_problems(sections, dialogue)
+        problems = [] if gate_waived(film) else story_problems(sections, dialogue)
         results.append(check("旁白稿結構", not problems, "；".join(problems)))
     else:
         results.append(check("旁白稿結構", False, "找不到 narration.md，格式見 docs/WRITING.md §3"))
@@ -866,6 +887,10 @@ def main() -> int:
     # 13a. 口語門（使用者 10-29 定）：稿要過 humanize，戳記綁現在的稿，改稿後要重過
     problems = humanize_problems(film)
     results.append(check("口語化（humanize）", not problems, "；".join(problems)))
+    # 13a0b. 對比句門（使用者 11-13 定）：humanize 戳記只核 sha，nvidia-short 的「是X，不是Y」漏網
+    narr = film / "narration.md"
+    problems = contrast_problems(narr.read_text(encoding="utf-8")) if narr.is_file() and not gate_waived(film) else []
+    results.append(check("無二元對比句", not problems, "；".join(problems)))
     # 13a1. 語速門（11-04）：taipei-silence tempo 1.3 量到 5.9 字／秒，比無邊探索最快的 5.53 還快，其他門都沒擋
     r = pace_cps(film)
     problems = pace_problems(film)
@@ -911,7 +936,7 @@ def main() -> int:
                  or rep.get("narration_sha") != hashlib.sha256(narr.read_bytes()).hexdigest())
         if stale:
             results.append(check("旁白進成片", False, "報告跟現在的成片或旁白稿對不上，重跑 narration_check.py"))
-        elif story_problems(sections, dialogue):
+        elif not gate_waived(film) and story_problems(sections, dialogue):
             results.append(check("旁白進成片", False, "旁白稿結構沒過，先修稿"))
         else:
             problems = asr_problems(sections, rep, duration_of(master))

@@ -1,0 +1,13 @@
+{
+ "video": "films/mib-lotr/mib-lotr.mp4",
+ "duration": 51.83,
+ "size": "1080x1920",
+ "fps": 30.0,
+ "cuts": [],
+ "shot_seconds": [
+  51.83
+ ],
+ "median_shot": 51.83,
+ "sheet": "films/mib-lotr/qa/final-sheet.jpg",
+ "sheet_phone": "films/mib-lotr/qa/final-sheet-360.jpg"
+}

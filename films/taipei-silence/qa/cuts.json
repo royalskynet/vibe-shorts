@@ -1,0 +1,13 @@
+{
+ "video": "films/taipei-silence/taipei-silence.mp4",
+ "duration": 55.03,
+ "size": "1080x1920",
+ "fps": 30.0,
+ "cuts": [],
+ "shot_seconds": [
+  55.03
+ ],
+ "median_shot": 55.03,
+ "sheet": "films/taipei-silence/qa/final-sheet.jpg",
+ "sheet_phone": "films/taipei-silence/qa/final-sheet-360.jpg"
+}

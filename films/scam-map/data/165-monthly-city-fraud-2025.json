@@ -1,0 +1,1694 @@
+{
+ "2025-01": {
+  "Date": "2024-12-31T16:00:00Z",
+  "Cities": [
+   {
+    "CityId": 2,
+    "Name": "新北市",
+    "Cases": 2068,
+    "Losses": 159405.6
+   },
+   {
+    "CityId": 4,
+    "Name": "臺中市",
+    "Cases": 1568,
+    "Losses": 127683.3
+   },
+   {
+    "CityId": 6,
+    "Name": "高雄市",
+    "Cases": 1471,
+    "Losses": 94298.7
+   },
+   {
+    "CityId": 3,
+    "Name": "桃園市",
+    "Cases": 1394,
+    "Losses": 90596.6
+   },
+   {
+    "CityId": 1,
+    "Name": "臺北市",
+    "Cases": 1213,
+    "Losses": 99564.4
+   },
+   {
+    "CityId": 5,
+    "Name": "臺南市",
+    "Cases": 977,
+    "Losses": 64414.7
+   },
+   {
+    "CityId": 7,
+    "Name": "彰化縣",
+    "Cases": 524,
+    "Losses": 25513.6
+   },
+   {
+    "CityId": 10,
+    "Name": "新竹縣",
+    "Cases": 325,
+    "Losses": 31145.7
+   },
+   {
+    "CityId": 8,
+    "Name": "屏東縣",
+    "Cases": 311,
+    "Losses": 20160.4
+   },
+   {
+    "CityId": 14,
+    "Name": "新竹市",
+    "Cases": 287,
+    "Losses": 24140.7
+   },
+   {
+    "CityId": 9,
+    "Name": "雲林縣",
+    "Cases": 255,
+    "Losses": 13210.0
+   },
+   {
+    "CityId": 11,
+    "Name": "苗栗縣",
+    "Cases": 228,
+    "Losses": 11801.3
+   },
+   {
+    "CityId": 17,
+    "Name": "宜蘭縣",
+    "Cases": 184,
+    "Losses": 15819.4
+   },
+   {
+    "CityId": 12,
+    "Name": "嘉義縣",
+    "Cases": 183,
+    "Losses": 6463.0
+   },
+   {
+    "CityId": 13,
+    "Name": "南投縣",
+    "Cases": 179,
+    "Losses": 10986.6
+   },
+   {
+    "CityId": 15,
+    "Name": "基隆市",
+    "Cases": 163,
+    "Losses": 9986.9
+   },
+   {
+    "CityId": 16,
+    "Name": "嘉義市",
+    "Cases": 130,
+    "Losses": 10678.5
+   },
+   {
+    "CityId": 18,
+    "Name": "花蓮縣",
+    "Cases": 128,
+    "Losses": 5144.0
+   },
+   {
+    "CityId": 19,
+    "Name": "臺東縣",
+    "Cases": 75,
+    "Losses": 7611.9
+   },
+   {
+    "CityId": 20,
+    "Name": "澎湖縣",
+    "Cases": 36,
+    "Losses": 3575.7
+   },
+   {
+    "CityId": 21,
+    "Name": "金門縣",
+    "Cases": 12,
+    "Losses": 215.7
+   },
+   {
+    "CityId": 22,
+    "Name": "連江縣",
+    "Cases": 7,
+    "Losses": 112.1
+   }
+  ],
+  "Total": {
+   "Cases": 11718,
+   "Losses": 832529.0
+  }
+ },
+ "2025-02": {
+  "Date": "2025-01-31T16:00:00Z",
+  "Cities": [
+   {
+    "CityId": 2,
+    "Name": "新北市",
+    "Cases": 1658,
+    "Losses": 86961.2
+   },
+   {
+    "CityId": 4,
+    "Name": "臺中市",
+    "Cases": 1426,
+    "Losses": 61825.0
+   },
+   {
+    "CityId": 6,
+    "Name": "高雄市",
+    "Cases": 1160,
+    "Losses": 60116.0
+   },
+   {
+    "CityId": 3,
+    "Name": "桃園市",
+    "Cases": 1062,
+    "Losses": 54625.6
+   },
+   {
+    "CityId": 1,
+    "Name": "臺北市",
+    "Cases": 1034,
+    "Losses": 80927.7
+   },
+   {
+    "CityId": 5,
+    "Name": "臺南市",
+    "Cases": 719,
+    "Losses": 29646.4
+   },
+   {
+    "CityId": 7,
+    "Name": "彰化縣",
+    "Cases": 399,
+    "Losses": 18857.7
+   },
+   {
+    "CityId": 14,
+    "Name": "新竹市",
+    "Cases": 227,
+    "Losses": 20809.0
+   },
+   {
+    "CityId": 8,
+    "Name": "屏東縣",
+    "Cases": 227,
+    "Losses": 6042.6
+   },
+   {
+    "CityId": 10,
+    "Name": "新竹縣",
+    "Cases": 217,
+    "Losses": 17292.9
+   },
+   {
+    "CityId": 11,
+    "Name": "苗栗縣",
+    "Cases": 178,
+    "Losses": 12795.5
+   },
+   {
+    "CityId": 9,
+    "Name": "雲林縣",
+    "Cases": 177,
+    "Losses": 6410.6
+   },
+   {
+    "CityId": 17,
+    "Name": "宜蘭縣",
+    "Cases": 157,
+    "Losses": 13454.3
+   },
+   {
+    "CityId": 12,
+    "Name": "嘉義縣",
+    "Cases": 149,
+    "Losses": 3268.9
+   },
+   {
+    "CityId": 15,
+    "Name": "基隆市",
+    "Cases": 141,
+    "Losses": 14050.8
+   },
+   {
+    "CityId": 13,
+    "Name": "南投縣",
+    "Cases": 141,
+    "Losses": 4304.1
+   },
+   {
+    "CityId": 18,
+    "Name": "花蓮縣",
+    "Cases": 124,
+    "Losses": 3753.7
+   },
+   {
+    "CityId": 16,
+    "Name": "嘉義市",
+    "Cases": 90,
+    "Losses": 5339.8
+   },
+   {
+    "CityId": 19,
+    "Name": "臺東縣",
+    "Cases": 64,
+    "Losses": 4141.7
+   },
+   {
+    "CityId": 21,
+    "Name": "金門縣",
+    "Cases": 20,
+    "Losses": 1145.3
+   },
+   {
+    "CityId": 20,
+    "Name": "澎湖縣",
+    "Cases": 18,
+    "Losses": 394.7
+   },
+   {
+    "CityId": 22,
+    "Name": "連江縣",
+    "Cases": 2,
+    "Losses": 8.4
+   }
+  ],
+  "Total": {
+   "Cases": 9390,
+   "Losses": 506171.8
+  }
+ },
+ "2025-03": {
+  "Date": "2025-02-28T16:00:00Z",
+  "Cities": [
+   {
+    "CityId": 2,
+    "Name": "新北市",
+    "Cases": 2630,
+    "Losses": 111953.6
+   },
+   {
+    "CityId": 4,
+    "Name": "臺中市",
+    "Cases": 2141,
+    "Losses": 78602.9
+   },
+   {
+    "CityId": 6,
+    "Name": "高雄市",
+    "Cases": 1829,
+    "Losses": 67779.4
+   },
+   {
+    "CityId": 3,
+    "Name": "桃園市",
+    "Cases": 1737,
+    "Losses": 74682.3
+   },
+   {
+    "CityId": 1,
+    "Name": "臺北市",
+    "Cases": 1622,
+    "Losses": 84485.0
+   },
+   {
+    "CityId": 5,
+    "Name": "臺南市",
+    "Cases": 1208,
+    "Losses": 37956.1
+   },
+   {
+    "CityId": 7,
+    "Name": "彰化縣",
+    "Cases": 614,
+    "Losses": 25807.8
+   },
+   {
+    "CityId": 8,
+    "Name": "屏東縣",
+    "Cases": 393,
+    "Losses": 10646.0
+   },
+   {
+    "CityId": 14,
+    "Name": "新竹市",
+    "Cases": 390,
+    "Losses": 11744.7
+   },
+   {
+    "CityId": 9,
+    "Name": "雲林縣",
+    "Cases": 369,
+    "Losses": 12223.7
+   },
+   {
+    "CityId": 10,
+    "Name": "新竹縣",
+    "Cases": 327,
+    "Losses": 17000.7
+   },
+   {
+    "CityId": 11,
+    "Name": "苗栗縣",
+    "Cases": 313,
+    "Losses": 11751.5
+   },
+   {
+    "CityId": 17,
+    "Name": "宜蘭縣",
+    "Cases": 269,
+    "Losses": 8203.1
+   },
+   {
+    "CityId": 12,
+    "Name": "嘉義縣",
+    "Cases": 239,
+    "Losses": 5860.8
+   },
+   {
+    "CityId": 13,
+    "Name": "南投縣",
+    "Cases": 219,
+    "Losses": 7376.3
+   },
+   {
+    "CityId": 15,
+    "Name": "基隆市",
+    "Cases": 197,
+    "Losses": 5786.1
+   },
+   {
+    "CityId": 18,
+    "Name": "花蓮縣",
+    "Cases": 186,
+    "Losses": 24478.4
+   },
+   {
+    "CityId": 16,
+    "Name": "嘉義市",
+    "Cases": 170,
+    "Losses": 3728.9
+   },
+   {
+    "CityId": 19,
+    "Name": "臺東縣",
+    "Cases": 77,
+    "Losses": 641.0
+   },
+   {
+    "CityId": 20,
+    "Name": "澎湖縣",
+    "Cases": 48,
+    "Losses": 5955.8
+   },
+   {
+    "CityId": 21,
+    "Name": "金門縣",
+    "Cases": 21,
+    "Losses": 278.3
+   },
+   {
+    "CityId": 22,
+    "Name": "連江縣",
+    "Cases": 7,
+    "Losses": 39.7
+   }
+  ],
+  "Total": {
+   "Cases": 15006,
+   "Losses": 606982.1
+  }
+ },
+ "2025-04": {
+  "Date": "2025-03-31T16:00:00Z",
+  "Cities": [
+   {
+    "CityId": 2,
+    "Name": "新北市",
+    "Cases": 2377,
+    "Losses": 102901.8
+   },
+   {
+    "CityId": 4,
+    "Name": "臺中市",
+    "Cases": 2043,
+    "Losses": 79208.6
+   },
+   {
+    "CityId": 6,
+    "Name": "高雄市",
+    "Cases": 1763,
+    "Losses": 75154.4
+   },
+   {
+    "CityId": 3,
+    "Name": "桃園市",
+    "Cases": 1636,
+    "Losses": 74445.5
+   },
+   {
+    "CityId": 1,
+    "Name": "臺北市",
+    "Cases": 1519,
+    "Losses": 107608.1
+   },
+   {
+    "CityId": 5,
+    "Name": "臺南市",
+    "Cases": 1108,
+    "Losses": 49268.5
+   },
+   {
+    "CityId": 7,
+    "Name": "彰化縣",
+    "Cases": 636,
+    "Losses": 25347.0
+   },
+   {
+    "CityId": 8,
+    "Name": "屏東縣",
+    "Cases": 395,
+    "Losses": 10733.3
+   },
+   {
+    "CityId": 10,
+    "Name": "新竹縣",
+    "Cases": 380,
+    "Losses": 18189.6
+   },
+   {
+    "CityId": 14,
+    "Name": "新竹市",
+    "Cases": 351,
+    "Losses": 14507.2
+   },
+   {
+    "CityId": 11,
+    "Name": "苗栗縣",
+    "Cases": 310,
+    "Losses": 13022.4
+   },
+   {
+    "CityId": 9,
+    "Name": "雲林縣",
+    "Cases": 275,
+    "Losses": 8317.4
+   },
+   {
+    "CityId": 17,
+    "Name": "宜蘭縣",
+    "Cases": 265,
+    "Losses": 9204.1
+   },
+   {
+    "CityId": 12,
+    "Name": "嘉義縣",
+    "Cases": 212,
+    "Losses": 7877.5
+   },
+   {
+    "CityId": 15,
+    "Name": "基隆市",
+    "Cases": 208,
+    "Losses": 6208.3
+   },
+   {
+    "CityId": 13,
+    "Name": "南投縣",
+    "Cases": 197,
+    "Losses": 6858.4
+   },
+   {
+    "CityId": 18,
+    "Name": "花蓮縣",
+    "Cases": 189,
+    "Losses": 5708.3
+   },
+   {
+    "CityId": 16,
+    "Name": "嘉義市",
+    "Cases": 188,
+    "Losses": 4702.8
+   },
+   {
+    "CityId": 19,
+    "Name": "臺東縣",
+    "Cases": 73,
+    "Losses": 1992.9
+   },
+   {
+    "CityId": 20,
+    "Name": "澎湖縣",
+    "Cases": 34,
+    "Losses": 1296.2
+   },
+   {
+    "CityId": 21,
+    "Name": "金門縣",
+    "Cases": 25,
+    "Losses": 622.9
+   },
+   {
+    "CityId": 22,
+    "Name": "連江縣",
+    "Cases": 3,
+    "Losses": 28.9
+   }
+  ],
+  "Total": {
+   "Cases": 14187,
+   "Losses": 623204.1
+  }
+ },
+ "2025-05": {
+  "Date": "2025-04-30T16:00:00Z",
+  "Cities": [
+   {
+    "CityId": 2,
+    "Name": "新北市",
+    "Cases": 2386,
+    "Losses": 124635.5
+   },
+   {
+    "CityId": 4,
+    "Name": "臺中市",
+    "Cases": 2037,
+    "Losses": 101869.4
+   },
+   {
+    "CityId": 6,
+    "Name": "高雄市",
+    "Cases": 1727,
+    "Losses": 80346.8
+   },
+   {
+    "CityId": 3,
+    "Name": "桃園市",
+    "Cases": 1671,
+    "Losses": 76765.1
+   },
+   {
+    "CityId": 1,
+    "Name": "臺北市",
+    "Cases": 1584,
+    "Losses": 162010.1
+   },
+   {
+    "CityId": 5,
+    "Name": "臺南市",
+    "Cases": 1171,
+    "Losses": 47379.0
+   },
+   {
+    "CityId": 7,
+    "Name": "彰化縣",
+    "Cases": 598,
+    "Losses": 24600.9
+   },
+   {
+    "CityId": 8,
+    "Name": "屏東縣",
+    "Cases": 404,
+    "Losses": 15845.9
+   },
+   {
+    "CityId": 10,
+    "Name": "新竹縣",
+    "Cases": 357,
+    "Losses": 18410.9
+   },
+   {
+    "CityId": 14,
+    "Name": "新竹市",
+    "Cases": 326,
+    "Losses": 16637.9
+   },
+   {
+    "CityId": 9,
+    "Name": "雲林縣",
+    "Cases": 310,
+    "Losses": 8370.5
+   },
+   {
+    "CityId": 11,
+    "Name": "苗栗縣",
+    "Cases": 280,
+    "Losses": 12778.3
+   },
+   {
+    "CityId": 17,
+    "Name": "宜蘭縣",
+    "Cases": 256,
+    "Losses": 7699.7
+   },
+   {
+    "CityId": 12,
+    "Name": "嘉義縣",
+    "Cases": 230,
+    "Losses": 6039.9
+   },
+   {
+    "CityId": 15,
+    "Name": "基隆市",
+    "Cases": 211,
+    "Losses": 7659.7
+   },
+   {
+    "CityId": 13,
+    "Name": "南投縣",
+    "Cases": 210,
+    "Losses": 7461.8
+   },
+   {
+    "CityId": 16,
+    "Name": "嘉義市",
+    "Cases": 174,
+    "Losses": 6430.7
+   },
+   {
+    "CityId": 18,
+    "Name": "花蓮縣",
+    "Cases": 174,
+    "Losses": 6261.9
+   },
+   {
+    "CityId": 19,
+    "Name": "臺東縣",
+    "Cases": 101,
+    "Losses": 2964.2
+   },
+   {
+    "CityId": 20,
+    "Name": "澎湖縣",
+    "Cases": 34,
+    "Losses": 864.1
+   },
+   {
+    "CityId": 21,
+    "Name": "金門縣",
+    "Cases": 21,
+    "Losses": 348.8
+   },
+   {
+    "CityId": 22,
+    "Name": "連江縣",
+    "Cases": 4,
+    "Losses": 149.0
+   }
+  ],
+  "Total": {
+   "Cases": 14266,
+   "Losses": 735530.2
+  }
+ },
+ "2025-06": {
+  "Date": "2025-05-31T16:00:00Z",
+  "Cities": [
+   {
+    "CityId": 2,
+    "Name": "新北市",
+    "Cases": 2475,
+    "Losses": 136010.5
+   },
+   {
+    "CityId": 4,
+    "Name": "臺中市",
+    "Cases": 2113,
+    "Losses": 95209.8
+   },
+   {
+    "CityId": 6,
+    "Name": "高雄市",
+    "Cases": 1763,
+    "Losses": 86805.0
+   },
+   {
+    "CityId": 3,
+    "Name": "桃園市",
+    "Cases": 1715,
+    "Losses": 92676.7
+   },
+   {
+    "CityId": 1,
+    "Name": "臺北市",
+    "Cases": 1600,
+    "Losses": 122915.4
+   },
+   {
+    "CityId": 5,
+    "Name": "臺南市",
+    "Cases": 1209,
+    "Losses": 52156.9
+   },
+   {
+    "CityId": 7,
+    "Name": "彰化縣",
+    "Cases": 600,
+    "Losses": 21918.5
+   },
+   {
+    "CityId": 10,
+    "Name": "新竹縣",
+    "Cases": 383,
+    "Losses": 12709.0
+   },
+   {
+    "CityId": 8,
+    "Name": "屏東縣",
+    "Cases": 374,
+    "Losses": 10294.2
+   },
+   {
+    "CityId": 14,
+    "Name": "新竹市",
+    "Cases": 373,
+    "Losses": 20797.7
+   },
+   {
+    "CityId": 9,
+    "Name": "雲林縣",
+    "Cases": 301,
+    "Losses": 10239.3
+   },
+   {
+    "CityId": 11,
+    "Name": "苗栗縣",
+    "Cases": 300,
+    "Losses": 14623.0
+   },
+   {
+    "CityId": 17,
+    "Name": "宜蘭縣",
+    "Cases": 259,
+    "Losses": 13939.9
+   },
+   {
+    "CityId": 12,
+    "Name": "嘉義縣",
+    "Cases": 234,
+    "Losses": 7503.7
+   },
+   {
+    "CityId": 18,
+    "Name": "花蓮縣",
+    "Cases": 221,
+    "Losses": 11901.8
+   },
+   {
+    "CityId": 13,
+    "Name": "南投縣",
+    "Cases": 195,
+    "Losses": 10412.1
+   },
+   {
+    "CityId": 15,
+    "Name": "基隆市",
+    "Cases": 195,
+    "Losses": 6447.6
+   },
+   {
+    "CityId": 16,
+    "Name": "嘉義市",
+    "Cases": 169,
+    "Losses": 16951.6
+   },
+   {
+    "CityId": 19,
+    "Name": "臺東縣",
+    "Cases": 79,
+    "Losses": 3029.1
+   },
+   {
+    "CityId": 20,
+    "Name": "澎湖縣",
+    "Cases": 32,
+    "Losses": 724.4
+   },
+   {
+    "CityId": 21,
+    "Name": "金門縣",
+    "Cases": 28,
+    "Losses": 633.2
+   },
+   {
+    "CityId": 22,
+    "Name": "連江縣",
+    "Cases": 7,
+    "Losses": 94.1
+   }
+  ],
+  "Total": {
+   "Cases": 14625,
+   "Losses": 747993.3
+  }
+ },
+ "2025-07": {
+  "Date": "2025-06-30T16:00:00Z",
+  "Cities": [
+   {
+    "CityId": 2,
+    "Name": "新北市",
+    "Cases": 2723,
+    "Losses": 141872.8
+   },
+   {
+    "CityId": 4,
+    "Name": "臺中市",
+    "Cases": 1969,
+    "Losses": 95859.0
+   },
+   {
+    "CityId": 6,
+    "Name": "高雄市",
+    "Cases": 1719,
+    "Losses": 74908.1
+   },
+   {
+    "CityId": 3,
+    "Name": "桃園市",
+    "Cases": 1628,
+    "Losses": 106661.6
+   },
+   {
+    "CityId": 1,
+    "Name": "臺北市",
+    "Cases": 1550,
+    "Losses": 85972.0
+   },
+   {
+    "CityId": 5,
+    "Name": "臺南市",
+    "Cases": 1126,
+    "Losses": 55745.3
+   },
+   {
+    "CityId": 7,
+    "Name": "彰化縣",
+    "Cases": 568,
+    "Losses": 21473.8
+   },
+   {
+    "CityId": 14,
+    "Name": "新竹市",
+    "Cases": 415,
+    "Losses": 19430.9
+   },
+   {
+    "CityId": 8,
+    "Name": "屏東縣",
+    "Cases": 415,
+    "Losses": 16837.4
+   },
+   {
+    "CityId": 10,
+    "Name": "新竹縣",
+    "Cases": 390,
+    "Losses": 25264.9
+   },
+   {
+    "CityId": 11,
+    "Name": "苗栗縣",
+    "Cases": 308,
+    "Losses": 13676.8
+   },
+   {
+    "CityId": 9,
+    "Name": "雲林縣",
+    "Cases": 285,
+    "Losses": 10253.4
+   },
+   {
+    "CityId": 17,
+    "Name": "宜蘭縣",
+    "Cases": 275,
+    "Losses": 12380.3
+   },
+   {
+    "CityId": 13,
+    "Name": "南投縣",
+    "Cases": 238,
+    "Losses": 7345.7
+   },
+   {
+    "CityId": 18,
+    "Name": "花蓮縣",
+    "Cases": 219,
+    "Losses": 5388.8
+   },
+   {
+    "CityId": 15,
+    "Name": "基隆市",
+    "Cases": 210,
+    "Losses": 10482.6
+   },
+   {
+    "CityId": 12,
+    "Name": "嘉義縣",
+    "Cases": 206,
+    "Losses": 7472.8
+   },
+   {
+    "CityId": 16,
+    "Name": "嘉義市",
+    "Cases": 160,
+    "Losses": 6778.2
+   },
+   {
+    "CityId": 19,
+    "Name": "臺東縣",
+    "Cases": 99,
+    "Losses": 944.4
+   },
+   {
+    "CityId": 20,
+    "Name": "澎湖縣",
+    "Cases": 36,
+    "Losses": 1877.6
+   },
+   {
+    "CityId": 21,
+    "Name": "金門縣",
+    "Cases": 22,
+    "Losses": 290.0
+   },
+   {
+    "CityId": 22,
+    "Name": "連江縣",
+    "Cases": 4,
+    "Losses": 14.2
+   }
+  ],
+  "Total": {
+   "Cases": 14565,
+   "Losses": 720930.6
+  }
+ },
+ "2025-08": {
+  "Date": "2025-07-31T16:00:00Z",
+  "Cities": [
+   {
+    "CityId": 2,
+    "Name": "新北市",
+    "Cases": 2327,
+    "Losses": 131384.4
+   },
+   {
+    "CityId": 4,
+    "Name": "臺中市",
+    "Cases": 1974,
+    "Losses": 95648.5
+   },
+   {
+    "CityId": 6,
+    "Name": "高雄市",
+    "Cases": 1702,
+    "Losses": 59677.9
+   },
+   {
+    "CityId": 3,
+    "Name": "桃園市",
+    "Cases": 1610,
+    "Losses": 81556.3
+   },
+   {
+    "CityId": 1,
+    "Name": "臺北市",
+    "Cases": 1376,
+    "Losses": 101758.5
+   },
+   {
+    "CityId": 5,
+    "Name": "臺南市",
+    "Cases": 1096,
+    "Losses": 31800.2
+   },
+   {
+    "CityId": 7,
+    "Name": "彰化縣",
+    "Cases": 557,
+    "Losses": 20519.5
+   },
+   {
+    "CityId": 8,
+    "Name": "屏東縣",
+    "Cases": 413,
+    "Losses": 14696.1
+   },
+   {
+    "CityId": 10,
+    "Name": "新竹縣",
+    "Cases": 383,
+    "Losses": 17540.4
+   },
+   {
+    "CityId": 14,
+    "Name": "新竹市",
+    "Cases": 352,
+    "Losses": 13260.7
+   },
+   {
+    "CityId": 9,
+    "Name": "雲林縣",
+    "Cases": 287,
+    "Losses": 9397.0
+   },
+   {
+    "CityId": 11,
+    "Name": "苗栗縣",
+    "Cases": 267,
+    "Losses": 10801.4
+   },
+   {
+    "CityId": 12,
+    "Name": "嘉義縣",
+    "Cases": 239,
+    "Losses": 5755.0
+   },
+   {
+    "CityId": 17,
+    "Name": "宜蘭縣",
+    "Cases": 233,
+    "Losses": 5624.2
+   },
+   {
+    "CityId": 13,
+    "Name": "南投縣",
+    "Cases": 220,
+    "Losses": 11975.8
+   },
+   {
+    "CityId": 15,
+    "Name": "基隆市",
+    "Cases": 187,
+    "Losses": 6474.0
+   },
+   {
+    "CityId": 18,
+    "Name": "花蓮縣",
+    "Cases": 178,
+    "Losses": 4376.9
+   },
+   {
+    "CityId": 16,
+    "Name": "嘉義市",
+    "Cases": 157,
+    "Losses": 6360.2
+   },
+   {
+    "CityId": 19,
+    "Name": "臺東縣",
+    "Cases": 79,
+    "Losses": 2705.0
+   },
+   {
+    "CityId": 21,
+    "Name": "金門縣",
+    "Cases": 28,
+    "Losses": 869.3
+   },
+   {
+    "CityId": 20,
+    "Name": "澎湖縣",
+    "Cases": 28,
+    "Losses": 224.4
+   },
+   {
+    "CityId": 22,
+    "Name": "連江縣",
+    "Cases": 8,
+    "Losses": 291.1
+   }
+  ],
+  "Total": {
+   "Cases": 13701,
+   "Losses": 632696.9
+  }
+ },
+ "2025-09": {
+  "Date": "2025-08-31T16:00:00Z",
+  "Cities": [
+   {
+    "CityId": 2,
+    "Name": "新北市",
+    "Cases": 2111,
+    "Losses": 93362.8
+   },
+   {
+    "CityId": 4,
+    "Name": "臺中市",
+    "Cases": 1779,
+    "Losses": 78328.1
+   },
+   {
+    "CityId": 6,
+    "Name": "高雄市",
+    "Cases": 1509,
+    "Losses": 52887.4
+   },
+   {
+    "CityId": 3,
+    "Name": "桃園市",
+    "Cases": 1438,
+    "Losses": 69279.4
+   },
+   {
+    "CityId": 1,
+    "Name": "臺北市",
+    "Cases": 1304,
+    "Losses": 84305.3
+   },
+   {
+    "CityId": 5,
+    "Name": "臺南市",
+    "Cases": 1040,
+    "Losses": 45820.7
+   },
+   {
+    "CityId": 7,
+    "Name": "彰化縣",
+    "Cases": 518,
+    "Losses": 14121.4
+   },
+   {
+    "CityId": 8,
+    "Name": "屏東縣",
+    "Cases": 374,
+    "Losses": 17518.3
+   },
+   {
+    "CityId": 10,
+    "Name": "新竹縣",
+    "Cases": 327,
+    "Losses": 11613.6
+   },
+   {
+    "CityId": 14,
+    "Name": "新竹市",
+    "Cases": 317,
+    "Losses": 18335.2
+   },
+   {
+    "CityId": 9,
+    "Name": "雲林縣",
+    "Cases": 262,
+    "Losses": 5071.4
+   },
+   {
+    "CityId": 11,
+    "Name": "苗栗縣",
+    "Cases": 257,
+    "Losses": 20490.9
+   },
+   {
+    "CityId": 13,
+    "Name": "南投縣",
+    "Cases": 197,
+    "Losses": 5717.9
+   },
+   {
+    "CityId": 12,
+    "Name": "嘉義縣",
+    "Cases": 193,
+    "Losses": 5221.5
+   },
+   {
+    "CityId": 17,
+    "Name": "宜蘭縣",
+    "Cases": 182,
+    "Losses": 6952.0
+   },
+   {
+    "CityId": 18,
+    "Name": "花蓮縣",
+    "Cases": 170,
+    "Losses": 8541.5
+   },
+   {
+    "CityId": 15,
+    "Name": "基隆市",
+    "Cases": 162,
+    "Losses": 9191.1
+   },
+   {
+    "CityId": 16,
+    "Name": "嘉義市",
+    "Cases": 143,
+    "Losses": 3958.8
+   },
+   {
+    "CityId": 19,
+    "Name": "臺東縣",
+    "Cases": 82,
+    "Losses": 1541.8
+   },
+   {
+    "CityId": 21,
+    "Name": "金門縣",
+    "Cases": 31,
+    "Losses": 973.4
+   },
+   {
+    "CityId": 20,
+    "Name": "澎湖縣",
+    "Cases": 23,
+    "Losses": 315.3
+   },
+   {
+    "CityId": 22,
+    "Name": "連江縣",
+    "Cases": 9,
+    "Losses": 79.1
+   }
+  ],
+  "Total": {
+   "Cases": 12428,
+   "Losses": 553626.9
+  }
+ },
+ "2025-10": {
+  "Date": "2025-09-30T16:00:00Z",
+  "Cities": [
+   {
+    "CityId": 2,
+    "Name": "新北市",
+    "Cases": 2132,
+    "Losses": 124029.9
+   },
+   {
+    "CityId": 4,
+    "Name": "臺中市",
+    "Cases": 1724,
+    "Losses": 61748.6
+   },
+   {
+    "CityId": 6,
+    "Name": "高雄市",
+    "Cases": 1542,
+    "Losses": 44854.1
+   },
+   {
+    "CityId": 3,
+    "Name": "桃園市",
+    "Cases": 1333,
+    "Losses": 52647.7
+   },
+   {
+    "CityId": 1,
+    "Name": "臺北市",
+    "Cases": 1300,
+    "Losses": 77044.1
+   },
+   {
+    "CityId": 5,
+    "Name": "臺南市",
+    "Cases": 989,
+    "Losses": 25106.0
+   },
+   {
+    "CityId": 7,
+    "Name": "彰化縣",
+    "Cases": 464,
+    "Losses": 13786.3
+   },
+   {
+    "CityId": 14,
+    "Name": "新竹市",
+    "Cases": 330,
+    "Losses": 17871.3
+   },
+   {
+    "CityId": 8,
+    "Name": "屏東縣",
+    "Cases": 317,
+    "Losses": 17064.7
+   },
+   {
+    "CityId": 10,
+    "Name": "新竹縣",
+    "Cases": 294,
+    "Losses": 13674.8
+   },
+   {
+    "CityId": 9,
+    "Name": "雲林縣",
+    "Cases": 266,
+    "Losses": 5810.9
+   },
+   {
+    "CityId": 11,
+    "Name": "苗栗縣",
+    "Cases": 250,
+    "Losses": 6870.4
+   },
+   {
+    "CityId": 12,
+    "Name": "嘉義縣",
+    "Cases": 202,
+    "Losses": 2408.9
+   },
+   {
+    "CityId": 17,
+    "Name": "宜蘭縣",
+    "Cases": 186,
+    "Losses": 10113.6
+   },
+   {
+    "CityId": 15,
+    "Name": "基隆市",
+    "Cases": 183,
+    "Losses": 4559.8
+   },
+   {
+    "CityId": 13,
+    "Name": "南投縣",
+    "Cases": 183,
+    "Losses": 3441.5
+   },
+   {
+    "CityId": 18,
+    "Name": "花蓮縣",
+    "Cases": 170,
+    "Losses": 5366.0
+   },
+   {
+    "CityId": 16,
+    "Name": "嘉義市",
+    "Cases": 133,
+    "Losses": 3206.7
+   },
+   {
+    "CityId": 19,
+    "Name": "臺東縣",
+    "Cases": 61,
+    "Losses": 2077.4
+   },
+   {
+    "CityId": 21,
+    "Name": "金門縣",
+    "Cases": 33,
+    "Losses": 949.4
+   },
+   {
+    "CityId": 20,
+    "Name": "澎湖縣",
+    "Cases": 27,
+    "Losses": 905.5
+   },
+   {
+    "CityId": 22,
+    "Name": "連江縣",
+    "Cases": 3,
+    "Losses": 1292.7
+   }
+  ],
+  "Total": {
+   "Cases": 12122,
+   "Losses": 494830.2
+  }
+ },
+ "2025-11": {
+  "Date": "2025-10-31T16:00:00Z",
+  "Cities": [
+   {
+    "CityId": 2,
+    "Name": "新北市",
+    "Cases": 2056,
+    "Losses": 100894.3
+   },
+   {
+    "CityId": 4,
+    "Name": "臺中市",
+    "Cases": 1735,
+    "Losses": 64818.3
+   },
+   {
+    "CityId": 6,
+    "Name": "高雄市",
+    "Cases": 1422,
+    "Losses": 46548.6
+   },
+   {
+    "CityId": 1,
+    "Name": "臺北市",
+    "Cases": 1324,
+    "Losses": 84055.1
+   },
+   {
+    "CityId": 3,
+    "Name": "桃園市",
+    "Cases": 1225,
+    "Losses": 47989.5
+   },
+   {
+    "CityId": 5,
+    "Name": "臺南市",
+    "Cases": 974,
+    "Losses": 37950.3
+   },
+   {
+    "CityId": 7,
+    "Name": "彰化縣",
+    "Cases": 524,
+    "Losses": 24381.1
+   },
+   {
+    "CityId": 8,
+    "Name": "屏東縣",
+    "Cases": 327,
+    "Losses": 11313.3
+   },
+   {
+    "CityId": 14,
+    "Name": "新竹市",
+    "Cases": 326,
+    "Losses": 17218.6
+   },
+   {
+    "CityId": 10,
+    "Name": "新竹縣",
+    "Cases": 292,
+    "Losses": 13406.4
+   },
+   {
+    "CityId": 9,
+    "Name": "雲林縣",
+    "Cases": 269,
+    "Losses": 7399.5
+   },
+   {
+    "CityId": 11,
+    "Name": "苗栗縣",
+    "Cases": 232,
+    "Losses": 10644.3
+   },
+   {
+    "CityId": 17,
+    "Name": "宜蘭縣",
+    "Cases": 207,
+    "Losses": 9244.6
+   },
+   {
+    "CityId": 15,
+    "Name": "基隆市",
+    "Cases": 189,
+    "Losses": 6267.0
+   },
+   {
+    "CityId": 12,
+    "Name": "嘉義縣",
+    "Cases": 187,
+    "Losses": 4521.2
+   },
+   {
+    "CityId": 13,
+    "Name": "南投縣",
+    "Cases": 179,
+    "Losses": 4855.1
+   },
+   {
+    "CityId": 18,
+    "Name": "花蓮縣",
+    "Cases": 154,
+    "Losses": 8738.9
+   },
+   {
+    "CityId": 16,
+    "Name": "嘉義市",
+    "Cases": 134,
+    "Losses": 7179.4
+   },
+   {
+    "CityId": 19,
+    "Name": "臺東縣",
+    "Cases": 65,
+    "Losses": 2914.4
+   },
+   {
+    "CityId": 20,
+    "Name": "澎湖縣",
+    "Cases": 38,
+    "Losses": 1515.9
+   },
+   {
+    "CityId": 21,
+    "Name": "金門縣",
+    "Cases": 21,
+    "Losses": 2280.0
+   },
+   {
+    "CityId": 22,
+    "Name": "連江縣",
+    "Cases": 1,
+    "Losses": 11.4
+   }
+  ],
+  "Total": {
+   "Cases": 11881,
+   "Losses": 514147.2
+  }
+ },
+ "2025-12": {
+  "Date": "2025-11-30T16:00:00Z",
+  "Cities": [
+   {
+    "CityId": 2,
+    "Name": "新北市",
+    "Cases": 2209,
+    "Losses": 105913.7
+   },
+   {
+    "CityId": 4,
+    "Name": "臺中市",
+    "Cases": 1790,
+    "Losses": 66717.9
+   },
+   {
+    "CityId": 6,
+    "Name": "高雄市",
+    "Cases": 1590,
+    "Losses": 66779.9
+   },
+   {
+    "CityId": 3,
+    "Name": "桃園市",
+    "Cases": 1357,
+    "Losses": 76763.4
+   },
+   {
+    "CityId": 1,
+    "Name": "臺北市",
+    "Cases": 1278,
+    "Losses": 68770.7
+   },
+   {
+    "CityId": 5,
+    "Name": "臺南市",
+    "Cases": 1063,
+    "Losses": 60791.0
+   },
+   {
+    "CityId": 7,
+    "Name": "彰化縣",
+    "Cases": 537,
+    "Losses": 19289.4
+   },
+   {
+    "CityId": 8,
+    "Name": "屏東縣",
+    "Cases": 370,
+    "Losses": 17104.6
+   },
+   {
+    "CityId": 14,
+    "Name": "新竹市",
+    "Cases": 321,
+    "Losses": 15526.1
+   },
+   {
+    "CityId": 10,
+    "Name": "新竹縣",
+    "Cases": 294,
+    "Losses": 16925.1
+   },
+   {
+    "CityId": 9,
+    "Name": "雲林縣",
+    "Cases": 257,
+    "Losses": 8819.5
+   },
+   {
+    "CityId": 12,
+    "Name": "嘉義縣",
+    "Cases": 214,
+    "Losses": 7803.9
+   },
+   {
+    "CityId": 11,
+    "Name": "苗栗縣",
+    "Cases": 210,
+    "Losses": 7076.9
+   },
+   {
+    "CityId": 13,
+    "Name": "南投縣",
+    "Cases": 201,
+    "Losses": 8860.7
+   },
+   {
+    "CityId": 17,
+    "Name": "宜蘭縣",
+    "Cases": 188,
+    "Losses": 7943.5
+   },
+   {
+    "CityId": 15,
+    "Name": "基隆市",
+    "Cases": 182,
+    "Losses": 7704.9
+   },
+   {
+    "CityId": 18,
+    "Name": "花蓮縣",
+    "Cases": 180,
+    "Losses": 5576.0
+   },
+   {
+    "CityId": 16,
+    "Name": "嘉義市",
+    "Cases": 137,
+    "Losses": 4974.1
+   },
+   {
+    "CityId": 19,
+    "Name": "臺東縣",
+    "Cases": 71,
+    "Losses": 1635.4
+   },
+   {
+    "CityId": 20,
+    "Name": "澎湖縣",
+    "Cases": 37,
+    "Losses": 1527.6
+   },
+   {
+    "CityId": 21,
+    "Name": "金門縣",
+    "Cases": 29,
+    "Losses": 503.6
+   },
+   {
+    "CityId": 22,
+    "Name": "連江縣",
+    "Cases": 7,
+    "Losses": 757.5
+   }
+  ],
+  "Total": {
+   "Cases": 12522,
+   "Losses": 577765.7
+  }
+ }
+}

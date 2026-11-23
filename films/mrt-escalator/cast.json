@@ -1,0 +1,8 @@
+{
+ "_doc": "單人旁白 m3（repo CLAUDE.md：新片 m3 男聲）。節奏照 taipei-silence：pace.json tempo 1.15、gap_line 0.45、gap_section 0.8、tail 3.5（片尾卡）；字幕一卡一個逗號短語（timeline.js 的 phrases）。",
+ "host": {
+  "ref": "assets/voice/m3-24k.wav",
+  "text": "assets/voice/m-script.txt"
+ },
+ "clawd": []
+}

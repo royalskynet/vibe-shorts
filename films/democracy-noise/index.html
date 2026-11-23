@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>民主國家怎麼總是亂？</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}#mascot{display:none}#mascot svg{width:340px;height:340px}</style>
+<script src="engine.js"></script>
+<script src="timeline.js"></script>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<div id="mascot"></div>
+<script type="module">
+// 選前看懂台北 第 2 集（接 taipei-silence）。畫面、配色、字幕、主播全部沿用第一集；卡片照 narration.md 一句一張。
+// 全片同一張米色底、不硬切；扁平小人＋四色；一句一個畫面狀態（CARDS），字幕一卡一個逗號短語（timeline.js 的 phrases）；
+// 頂部系列標籤，片尾系列卡。藍綠是本片主題，陣營色用灰藍／鼠尾草綠，中間選民芥末黃，不開口的人灰色。
+// 11-04 改版（使用者定）：小人與道具改用共用插畫庫 illust/illust.mjs（正本 assets/illust/，scripts/illust_install.sh 複製進來）；
+// 只留封面大標：第 0 卡有大標，其餘卡只有系列標籤＋畫面＋字幕＋來源，畫面往上放大當主角（precheck「內頁大標」門）。
+// 禁止清單（TREATMENT.md）：不畫政黨標誌、不引 2026 民調、不畫政治人物。
+// 所有動作都是 t 的封閉式（seek_check.mjs 會比亂序算出的同一幀）；循環用取餘數，不累積。
+import { poseAt, applyPose } from './mascot/clawd-bot-shot.mjs';
+import { PALETTE, person, prop } from './illust/illust.mjs';
+const G = window.G, E = G.E, TL = window.TL, W = 1080, H = 1920;
+const g = document.getElementById('c').getContext('2d', { alpha: false });
+const { clamp, inv, lerp, mix } = G;
+
+const CREAM = PALETTE.cream, INK = PALETTE.ink, TERRA = PALETTE.terra, MUST = PALETTE.mustard, COAT = PALETTE.coat;
+// 兩個陣營色：灰藍／鼠尾草綠，沿用第一集；本片講美國研究，不對應台灣政黨
+const SAGE = '#7FA57A', BLUE = '#6F8FB0', MUTE = '#B3A797', SOFT = '#EBE1D2', DIM = '#8C7B6B';
+const BLUE_D = '#4F6F90', SAGE_D = '#557A51', MUST_D = '#9A6F1C';
+const ZH = (w, px) => `${w} ${px}px "PingFang TC"`;
+const SERIES = '選前看懂台北', EP = 2, HANDLE = '@paradoxbar';
+const GY = 1270;   // 畫面地平線：小人腳底；字幕短橫線在 1308
+
+
+// 會出現在畫面上的事實數字集中在這裡，不要在別處重寫一次。每一個都要在 meta/facts.md 有一行附來源。
+const FACTS = {
+  PEW_TWEETS: 97,             // SOURCES #3 Pew：97% 全國政治推文
+  PEW_USERS: 10,              // SOURCES #3 來自 10% 用戶
+  POSTS_N: 2730215,           // SOURCES #5 Rathje 2021 n
+  SHARE_X: 2,                 // SOURCES #5 講對面約兩倍分享
+  FB_WEIGHT: 5,               // SOURCES #6 一個怒＝五個讚
+  GAP_YEAR: 2018,             // SOURCES #11b More in Common 施測年
+  GAP_GUESS: 55,              // SOURCES #11b 猜的極端比例
+  GAP_REAL: 30,               // SOURCES #11b 實際比例
+  VOTE_DATE: '11/28',         // SOURCES #13 投票日
+};
+const fmt = n => n.toLocaleString('en-US');
+
+// ---------- 字 ----------
+let TXT = [];
+function say(s, x, y, px, col, p, o = {}) {
+  g.save(); g.font = ZH(o.w || 700, px); g.textAlign = o.align || 'left'; g.textBaseline = 'alphabetic';
+  const w = g.measureText(s).width;
+  g.globalAlpha *= E.io(p); g.fillStyle = col; g.fillText(s, x, y);
+  // PingFang 最粗只到 Semibold；o.bold 描同色邊加粗，大標在奶油底上才讀得出（封面 OCR）
+  if (o.bold) { g.strokeStyle = col; g.lineWidth = px * o.bold; g.lineJoin = 'round'; g.strokeText(s, x, y); }
+  g.restore();
+  if (o.id) {
+    const x0 = o.align === 'center' ? x - w / 2 : o.align === 'right' ? x - w : x;
+    // 卡片內容會被 drawCard 縮向中間，字框換回螢幕座標，readcheck／藏字檢查才量得準
+    const m = g.getTransform();
+    TXT.push({ id: o.id, text: s, x0: m.a * x0 + m.e, y0: m.d * (y - px) + m.f, x1: m.a * (x0 + w) + m.e, y1: m.d * (y + px * 0.25) + m.f, screen: true });
+  }
+  return w;
+}
+function plain(s, x, y, px, col, o = {}) {
+  g.font = ZH(o.w || 600, px); g.textAlign = o.align || 'left'; g.textBaseline = 'alphabetic';
+  g.fillStyle = col; g.fillText(s, x, y);
+}
+const pop = (lt, a, d = 0.5) => E.o3(inv(a, a + d, lt));
+const loop = (x, n) => ((x % n) + n) % n;
+const rr = (x, y, w, h, r, col) => { g.fillStyle = col; g.beginPath(); g.roundRect(x, y, w, h, r); g.fill(); };
+const man = (x, y, s, body, o = {}) => person(g, { x, y, s, body, ...o });
+// 畫面裡的數字標籤：比字幕大一點、遠小於大標（< precheck HEADLINE_PX），算插畫的一部分
+const fig = (s, x, y, col, p = 1, id) => say(s, x, y, 64, col, p, { id, align: 'center', bold: 0.03 });
+
+// ---------- 40 人方陣：顏色照人數分配，換狀態時逐人換色；姿勢混搭 ----------
+const PERM = (() => { const r = G.rng(11), a = [...Array(40).keys()]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; })();
+const POSE_MIX = (() => { const r = G.rng(23); return Array.from({ length: 40 }, () => { const v = r(); return v < 0.62 ? ['stand', 1] : v < 0.72 ? ['armsUp', 1] : v < 0.82 ? ['point', r() < 0.5 ? 1 : -1] : v < 0.91 ? ['think', 1] : ['shrug', 1]; }); })();
+function cols(spec) { const out = Array(40).fill(SOFT); let k = 0; for (const [c, n] of spec) for (let m = 0; m < n; m++) out[PERM[k++]] = c; return out; }
+function crowd(o) {
+  const s = 120, nc = 8, dx = 116, dy = 146;
+  const x0 = 540 - dx * (nc - 1) / 2 - dx * 0.25, y0 = o.y0;
+  for (let k = 0; k < 40; k++) {
+    const r = Math.floor(k / nc), c = k % nc;
+    const x = x0 + c * dx + (r % 2 ? dx * 0.5 : 0), y = y0 + r * dy;
+    const pk = o.from ? E.io(inv(0.1 + (k / 40) * 0.6, 0.5 + (k / 40) * 0.6, o.lt)) : 1;
+    const col = o.from ? mix(o.from[k], o.to[k], pk) : o.to[k];
+    const silent = o.q && o.to[k] === MUTE;
+    const [pose, dir] = silent ? ['shrug', 1] : POSE_MIX[k];
+    man(x, y, s, col, { pose, dir, face: silent && pk > 0.5 ? 'worried' : 'none' });
+    if (silent) prop(g, 'question', { x: x + 4, y: y - s - 26 + Math.sin(o.lt * 2.5 + k) * 4, s: 26, color: DIM, alpha: pk });
+    if (o.loud && o.to[k] === TERRA) prop(g, 'speech', { x: x + 30, y: y - s - 60 + Math.sin(o.lt * 3 + k) * 6, s: 70 + 14 * Math.sin(o.lt * 3 + k), tail: 'left', stroke: TERRA, color: TERRA });
+  }
+}
+
+// ---------- 長條：rows=[{name, val, col, tc, label}]，x0／w 是長條範圍 ----------
+function bars(o) {
+  const x0 = o.x0 ?? 120, w = o.w ?? 800, gap = o.gap ?? 200, bh = o.bh ?? 100;
+  o.rows.forEach((r, j) => {
+    const y = o.y + j * gap, pk = E.o3(inv(0.15 + j * 0.2, 1.1 + j * 0.2, o.lt));
+    plain(r.name, x0, y - 20, 42, INK, { w: 600 });
+    rr(x0, y, w, bh, 20, SOFT);
+    rr(x0, y, Math.max(16, w * (r.val / o.max) * pk), bh, 20, r.col);
+    g.globalAlpha = inv(0.5, 0.9, pk); plain(r.label, x0 + w, y - 20, 42, r.tc, { align: 'right', w: 800 }); g.globalAlpha = 1;
+  });
+}
+
+
+// ---------- 每張卡的畫面（畫在 y 500–1290；x≥875、y<480 是主播位置） ----------
+function table() {
+  // 長桌（前板擋住腿，看起來是坐著）＋盤子
+  rr(60, 1080, 960, 34, 14, '#A5835D');
+  rr(80, 1106, 920, GY - 1106, 10, '#C7A77F');
+  g.fillStyle = 'rgba(59,47,42,0.08)'; g.fillRect(80, 1106, 920, 18);
+  [300, 510, 720].forEach(x => { g.fillStyle = '#FFFFFF'; g.beginPath(); g.ellipse(x, 1084, 62, 16, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#E7DCCB'; g.beginPath(); g.ellipse(x, 1084, 40, 9, 0, 0, Math.PI * 2); g.fill(); });
+}
+function c4(lt, quiet) {
+  // 午餐桌：三個同事比手畫腳罵人，你（芥末黃）在旁邊；quiet 時你低頭、旁邊冒「……」
+  const poses = [['point', 1], ['shrug', 1], ['armsUp', 1]];
+  [190, 400, 610].forEach((x, k) => {
+    man(x, GY, 380, TERRA, { pose: poses[k][0], aim: -0.2, face: 'worried', tilt: Math.sin(lt * 2.4 + k) * 0.03, shadow: false });
+    prop(g, 'speech', { x: x + 40, y: 790 - k * 18 + Math.sin(lt * 3 + k) * 6, s: 120 + 18 * Math.sin(lt * 3 + k), tail: 'left', stroke: TERRA, color: TERRA });
+  });
+  const down = quiet ? E.io(inv(0.2, 0.9, lt)) : 0;
+  man(870, GY, 380, MUST, { pose: quiet ? 'stand' : 'think', dir: -1, face: 'worried', tilt: -down * 0.16, shadow: false });
+  table();
+  if (!quiet) prop(g, 'question', { x: 880, y: 800 + Math.sin(lt * 2.5) * 6, s: 70, color: DIM });
+  if (quiet) prop(g, 'speech', { x: 900, y: 790, s: 110, tail: 'left', color: DIM, fill: '#F2ECE2', alpha: pop(lt, 0.8) });
+}
+function c5(lt) { c4(lt, true); }
+function c17vote(lt) {
+  // 三種顏色的人走向同一個票箱，投完票笑
+  const bx = 540, top = 1060;
+  g.save(); g.shadowColor = 'rgba(59,47,42,0.2)'; g.shadowBlur = 24; g.shadowOffsetY = 8; rr(bx - 130, top, 260, GY - top, 22, '#5A463C'); g.restore();
+  rr(bx - 142, top - 12, 284, 40, 14, INK); rr(bx - 60, top - 2, 120, 12, 6, CREAM);
+  g.strokeStyle = CREAM; g.lineWidth = 16; g.lineCap = 'round'; g.lineJoin = 'round';
+  g.beginPath(); g.moveTo(bx - 40, top + 110); g.lineTo(bx - 8, top + 140); g.lineTo(bx + 46, top + 80); g.stroke();
+  [[BLUE, 130, 330, 1], [SAGE, 950, 760, -1], [MUST, 1000, 880, -1]].forEach(([c, x0, x1, dir], k) => {
+    const p = E.io(inv(0.1 + k * 0.2, 1.8 + k * 0.2, lt)), x = lerp(x0, x1, p), walking = p > 0 && p < 1;
+    const d = loop(lt - 1.8 - k * 0.5, 1.6);
+    man(x, GY, 230, c, { pose: walking ? 'walk' : lt > 1.8 && d < 0.8 ? 'point' : 'stand', t: lt, dir, aim: -0.5, face: p >= 1 ? 'smile' : 'none' });
+    if (lt > 1.8 && d < 0.8) { const q = d / 0.8; rr(lerp(x, bx - 25, q), lerp(1000, top - 40, q) - Math.sin(q * Math.PI) * 120, 50, 36, 6, CREAM); }
+  });
+}
+const C_MIX = cols([[BLUE, 18], [SAGE, 18], [MUST, 4]]);
+const C_FEW = cols([[TERRA, 4], [MUTE, 36]]);
+const C_QUIET = cols([[BLUE, 12], [SAGE, 12], [MUST, 6], [MUTE, 10]]);
+const C_LOUD = cols([[TERRA, 3], [BLUE, 15], [SAGE, 15], [MUST, 7]]);
+function bubbles(lt, n, seed, x0, x1, y0, y1, col) {
+  const R = G.rng(seed);
+  for (let k = 0; k < n; k++) {
+    const x = x0 + R() * (x1 - x0), y = y0 + R() * (y1 - y0), tl = R() < 0.5 ? 'left' : 'right';
+    const ph = loop(lt * 0.9 + k * 0.37, 1.6);
+    const a = ph < 1.2 ? E.io(inv(0, 0.3, ph)) * (1 - inv(0.9, 1.2, ph)) : 0;
+    if (a > 0) prop(g, 'speech', { x, y, s: 90, tail: tl, stroke: col, color: col, alpha: a });
+  }
+}
+function c01(lt) { crowd({ y0: 690, to: C_MIX, lt }); bubbles(lt, 8, 3, 140, 940, 620, 1040, TERRA); }
+function c02(lt) {
+  const sh = loop(lt, 1.4) < 0.3 ? Math.sin(lt * 30) * 4 : 0;
+  prop(g, 'phone', { x: 360 + sh, y: 900, s: 480, rows: 4, avatars: [BLUE, SAGE, BLUE, SAGE] });
+  for (let k = 0; k < 5; k++) { const ph = loop(lt * 0.8 + k * 0.2, 1); prop(g, 'speech', { x: 360 + (k - 2) * 80, y: 640 - ph * 100, s: 70 + ph * 30, tail: k % 2 ? 'left' : 'right', stroke: TERRA, color: TERRA, alpha: 1 - ph }); }
+  man(830, GY, 380, MUST, { pose: 'think', dir: -1, face: 'worried' });
+}
+function c03(lt) {
+  const p = E.io(inv(0.3, 2.0, lt));
+  prop(g, 'speech', { x: 400, y: 800, s: lerp(480, 190, p), tail: 'right', stroke: TERRA, color: TERRA });
+  [[110, BLUE, 1], [250, SAGE, 1], [420, BLUE, -1], [560, SAGE, -1]].forEach(([x, c, d]) => man(x, GY, 230, c, { pose: p > 0.6 ? 'stand' : 'point', dir: d, aim: -0.4, face: p > 0.6 ? 'smile' : 'worried' }));
+  man(840, GY, 420, MUST, { pose: 'think', dir: -1, face: p > 0.6 ? 'smile' : 'worried' });
+  prop(g, 'question', { x: 840, y: GY - 500 + Math.sin(lt * 2.5) * 6, s: 80, color: DIM, alpha: 1 - p });
+}
+function c04(lt) {
+  prop(g, 'document', { x: 360, y: 740, s: 580, title: '美國推特一年', titlePx: 9, lines: 4 });
+  for (let k = 0; k < 12; k++) { const on = pop(lt, 0.2 + k * 0.12, 0.2); const h = 80 + ((k * 37) % 5) * 26; rr(120 + k * 50, 1215 - h * on, 38, Math.max(4, h * on), 9, k % 2 ? BLUE : SAGE); G.disc(g, 139 + k * 50, 1240, 13, on > 0.5 ? TERRA : SOFT); }
+  man(860, GY, 400, COAT, { pose: 'point', dir: -1, aim: -0.3, face: 'smile' });
+}
+function c05(lt) {
+  for (let k = 0; k < 10; k++) { const loud = k === 0; man(110 + k * 96, 1010, 150, loud ? TERRA : MUTE, { pose: loud ? 'armsUp' : 'stand', face: loud ? 'smile' : 'none' }); }
+  for (let k = 0; k < 6; k++) { const ph = loop(lt * 1.2 + k / 6, 1); prop(g, 'speech', { x: 130 + ph * 160, y: 790 - ph * 200, s: 60, tail: 'left', stroke: TERRA, color: TERRA, alpha: 1 - ph }); }
+  const p = E.o3(inv(0.4, 1.6, lt));
+  rr(110, 1090, 860, 60, 20, SOFT); rr(110, 1090, Math.max(16, 860 * FACTS.PEW_TWEETS / 100 * p), 60, 20, TERRA);
+  fig(`${FACTS.PEW_USERS}% 的人`, 260, 1235, TERRA, inv(0.8, 1.2, lt), 'fig-users');
+  fig(`${FACTS.PEW_TWEETS}% 的推文`, 760, 1235, TERRA, inv(1.4, 1.8, lt), 'fig-tweets');
+}
+function c06(lt) { crowd({ y0: 690, to: C_FEW, lt, loud: true }); }
+function c07(lt) {
+  const R = G.rng(9);
+  for (let k = 0; k < 15; k++) {
+    const x = 150 + R() * 780, y = 600 + R() * 520, a = pop(lt, 0.3 + k * 0.13, 0.4);
+    if (a <= 0) continue;
+    const cx = lerp(540, x, a), cy = lerp(860, y, a);
+    prop(g, 'card', { x: cx, y: cy, w: 210, h: 130, alpha: a });
+    g.globalAlpha = a; rr(cx - 75, cy - 30, 150, 22, 11, TERRA); rr(cx - 75, cy + 6, 100, 16, 8, k % 2 ? BLUE : SAGE); g.globalAlpha = 1;
+  }
+  prop(g, 'card', { x: 540, y: 860, w: 300, h: 200 }); rr(440, 820, 200, 22, 11, TERRA); rr(440, 870, 140, 18, 9, SOFT);
+  man(150, GY, 340, BLUE, { pose: 'armsUp', face: 'worried' }); man(930, GY, 340, SAGE, { pose: 'point', dir: -1, face: 'worried' });
+  bubbles(lt, 4, 7, 120, 960, 1180, 1260, TERRA);
+}
+function c08(lt) {
+  const p = E.o3(inv(0.1, 2.0, lt));
+  for (let k = 0; k < 14; k++) { const a = clamp(p * 14 - k); if (a <= 0) continue; prop(g, 'card', { x: 300 + (k % 2) * 30, y: 1220 - k * 44, w: 440, h: 100, alpha: a }); g.globalAlpha = a; rr(130 + (k % 2) * 30, 1232 - k * 44, 240, 24, 12, k % 2 ? BLUE : SAGE); rr(390 + (k % 2) * 30, 1232 - k * 44, 60, 24, 12, TERRA); g.globalAlpha = 1; }
+  // 跑數字的過程不掛 id（readcheck 會把每幀當一條字幕），停住才掛
+  const pn = E.o3(inv(0.1, 0.9, lt));
+  if (pn < 1) plain(fmt(Math.round(FACTS.POSTS_N * pn)), 770, 700, 64, INK, { align: 'center', w: 700 });
+  else fig(fmt(FACTS.POSTS_N), 770, 700, INK, 1, 'fig-posts');
+  plain('則貼文', 770, 770, 44, DIM, { align: 'center', w: 600 });
+  man(700, GY, 330, COAT, { pose: 'think', dir: -1 }); man(930, GY, 300, MUST, { pose: 'shrug', dir: -1, face: 'worried' });
+}
+function c09(lt) {
+  prop(g, 'card', { x: 540, y: 800, w: 920, h: 440 });
+  bars({ x0: 150, w: 780, y: 700, gap: 190, lt, max: FACTS.SHARE_X, rows: [
+    { name: '講自己人', val: 1, col: MUTE, tc: DIM, label: '基準' },
+    { name: '講對面陣營', val: FACTS.SHARE_X, col: TERRA, tc: TERRA, label: `約 ${FACTS.SHARE_X} 倍` }] });
+  man(300, GY, 230, BLUE, { pose: 'stand', face: 'smile' }); man(780, GY, 230, SAGE, { pose: 'point', dir: -1, aim: -0.3, face: 'worried' });
+}
+function angry(x, y, r) {
+  if (r <= 0) return;
+  G.disc(g, x, y, r, TERRA); g.strokeStyle = INK; g.lineWidth = r * 0.12; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(x - r * 0.5, y - r * 0.35); g.lineTo(x - r * 0.15, y - r * 0.15); g.moveTo(x + r * 0.5, y - r * 0.35); g.lineTo(x + r * 0.15, y - r * 0.15); g.stroke();
+  g.beginPath(); g.arc(x, y + r * 0.6, r * 0.35, Math.PI * 1.2, Math.PI * 1.8); g.stroke();
+}
+function like(x, y, r) {
+  if (r <= 0) return;
+  G.disc(g, x, y, r, BLUE);
+  rr(x - r * 0.55, y - r * 0.05, r * 0.25, r * 0.55, r * 0.06, CREAM); rr(x - r * 0.22, y - r * 0.12, r * 0.7, r * 0.62, r * 0.14, CREAM); rr(x - r * 0.15, y - r * 0.62, r * 0.26, r * 0.55, r * 0.13, CREAM);
+}
+function c10(lt) {
+  const S = 640, k = S / 100, cx = 540, by = GY;
+  const tilt = Math.sin(lt * 4) * 0.04 * (1 - E.o3(inv(0.2, 2.2, lt)));
+  prop(g, 'balance', { x: cx, y: by, s: S, tilt, leftColor: TERRA, rightColor: BLUE });
+  const lx = cx - Math.cos(tilt) * 48 * k, ly = by + (-88 - Math.sin(tilt) * 48 + 34) * k;
+  const rx = cx + Math.cos(tilt) * 48 * k, ry = by + (-88 + Math.sin(tilt) * 48 + 34) * k;
+  angry(lx, ly - 70, 70 * pop(lt, 0.2));
+  for (let j = 0; j < FACTS.FB_WEIGHT; j++) like(rx + ((j % 3) - 1) * 72 + (j > 2 ? 36 : 0), ry - 45 - (j > 2 ? 90 : 0), 38 * pop(lt, 0.6 + j * 0.2, 0.3));
+  fig(`一個怒＝${FACTS.FB_WEIGHT} 個讚`, 540, 620, TERRA, inv(1.6, 2.0, lt), 'fig-weight');
+}
+function c11(lt) {
+  prop(g, 'house', { x: 540, y: 1000, s: 400 });
+  const side = loop(lt, 2.4) < 1.2 ? 0 : 1;
+  [[160, BLUE, 1], [290, BLUE, 1], [790, SAGE, -1], [920, SAGE, -1]].forEach(([x, c, d], k) => {
+    const sp = (k < 2 ? 0 : 1) === side;
+    man(x, GY, 260, c, { pose: sp ? 'point' : 'stand', dir: d, aim: -0.2 });
+  });
+  prop(g, 'speech', { x: side ? 820 : 260, y: 800, s: 140, tail: side ? 'right' : 'left', stroke: side ? SAGE : BLUE, color: side ? SAGE_D : BLUE_D });
+}
+function c12(lt) {
+  [['選舉', 220], ['議會', 540], ['媒體', 860]].forEach(([s, x], j) => {
+    const a = pop(lt, 0.1 + j * 0.35);
+    prop(g, 'card', { x, y: 830, w: 290, h: 400, alpha: a });
+    g.save(); g.globalAlpha *= a;
+    rr(x - 145, 630, 290, 110, 22, [BLUE, MUST, SAGE][j]);
+    plain(s, x, 710, 52, CREAM, { align: 'center', w: 700 });
+    if (j === 0) { rr(x - 95, 820, 190, 160, 16, '#5A463C'); rr(x - 55, 834, 110, 16, 8, CREAM); }
+    if (j === 1) prop(g, 'house', { x, y: 990, s: 230, shadow: false });
+    if (j === 2) prop(g, 'document', { x, y: 900, s: 230, lines: 4 });
+    g.restore();
+    man(x, GY, 240, [BLUE, MUST, SAGE][j], { pose: 'point', aim: -0.6, face: 'smile' });
+  });
+}
+function c14(lt) { crowd({ y0: 690, from: C_MIX, to: C_QUIET, lt, q: true }); }
+function c15(lt) {
+  man(300, GY, 440, BLUE, { pose: 'point', aim: -0.1, face: 'worried', tilt: Math.sin(lt * 3) * 0.02 });
+  man(780, GY, 440, SAGE, { pose: 'point', dir: -1, aim: -0.1, face: 'worried', tilt: Math.sin(lt * 3 + 1) * 0.02 });
+  prop(g, 'speech', { x: 330, y: 640 + Math.sin(lt * 3) * 6, s: 130, tail: 'left', stroke: BLUE, color: BLUE_D });
+  prop(g, 'speech', { x: 750, y: 620 + Math.sin(lt * 3 + 1) * 6, s: 130, tail: 'right', stroke: SAGE, color: SAGE_D });
+}
+function c16(lt) {
+  prop(g, 'document', { x: 540, y: 780, s: 480, title: '猜猜對面', titlePx: 9, lines: 4 });
+  man(180, GY, 420, BLUE, { pose: 'think', face: 'worried' }); man(900, GY, 420, SAGE, { pose: 'think', dir: -1, face: 'worried' });
+  for (let k = 0; k < 5; k++) { man(330 + k * 105, GY, 170, k % 2 ? SAGE : BLUE, { pose: 'stand', face: 'none' }); }
+  prop(g, 'question', { x: 180, y: GY - 500 + Math.sin(lt * 2.5) * 6, s: 80, color: BLUE_D, alpha: pop(lt, 0.4) });
+  prop(g, 'question', { x: 900, y: GY - 500 + Math.sin(lt * 2.5 + 1) * 6, s: 80, color: SAGE_D, alpha: pop(lt, 0.7) });
+  plain(`${FACTS.GAP_YEAR} 年調查`, 540, 1050, 44, DIM, { align: 'center', w: 700 });
+}
+function c17(lt) {
+  prop(g, 'card', { x: 540, y: 800, w: 920, h: 440 });
+  bars({ x0: 150, w: 780, y: 700, gap: 190, lt, max: 60, rows: [
+    { name: '猜對面有多少人很極端', val: FACTS.GAP_GUESS, col: TERRA, tc: TERRA, label: `${FACTS.GAP_GUESS}%` },
+    { name: '實際', val: FACTS.GAP_REAL, col: MUTE, tc: DIM, label: `${FACTS.GAP_REAL}%` }] });
+  man(260, GY, 230, BLUE, { pose: 'shrug', face: 'worried' }); man(820, GY, 230, SAGE, { pose: 'shrug', dir: -1, face: 'worried' });
+}
+function c18(lt) {
+  man(200, GY, 360, BLUE, { pose: 'think', face: 'worried' });
+  const p = pop(lt, 0.2, 0.6);
+  g.globalAlpha = p;
+  [[290, 1010, 24], [350, 930, 38]].forEach(([x, y, r]) => G.disc(g, x, y, r, SOFT));
+  G.disc(g, 560, 760, 220, SOFT); G.disc(g, 420, 800, 150, SOFT); G.disc(g, 700, 800, 150, SOFT);
+  man(560, 920, 300, TERRA, { pose: 'armsUp', face: 'worried', tilt: Math.sin(lt * 6) * 0.05, shadow: false });
+  man(420, 900, 200, TERRA, { pose: 'point', face: 'worried', tilt: Math.sin(lt * 6 + 1) * 0.05, shadow: false });
+  man(700, 900, 200, TERRA, { pose: 'armsUp', dir: -1, face: 'worried', tilt: Math.sin(lt * 6 + 2) * 0.05, shadow: false });
+  g.globalAlpha = 1;
+  man(900, GY, 320, SAGE, { pose: 'stand', dir: -1, face: 'smile' }); man(740, GY, 260, SAGE, { pose: 'stand', dir: -1, face: 'smile' });
+}
+function c19(lt) {
+  const p = E.io(inv(0.4, 2.4, lt)), gap = lerp(300, 60, p);
+  for (let k = 0; k < 6; k++) {
+    const r = Math.floor(k / 3), c = k % 3;
+    man(540 - gap / 2 - 60 - c * 110 - (r ? 55 : 0), 1060 + r * 200, 170, BLUE, { pose: POSE_MIX[k][0] });
+    man(540 + gap / 2 + 60 + c * 110 + (r ? 55 : 0), 1060 + r * 200, 170, SAGE, { pose: POSE_MIX[k + 6][0], dir: -1 });
+  }
+  g.strokeStyle = TERRA; g.lineWidth = lerp(26, 8, p); g.lineCap = 'round'; g.setLineDash([30, 24]);
+  g.beginPath(); g.moveTo(540, 640); g.lineTo(540, 1280); g.stroke(); g.setLineDash([]);
+  prop(g, 'megaphone', { x: 540, y: 570, s: 120, t: lt, alpha: 1 - p });
+}
+function c20(lt) {
+  prop(g, 'phone', { x: 320, y: 880, s: 380, rows: 3, avatars: [BLUE, SAGE, TERRA] });
+  man(790, GY, 420, MUST, { pose: 'think', dir: -1 });
+  prop(g, 'bulb', { x: 790, y: 700, s: 170, on: pop(lt, 0.8, 0.6), t: lt });
+}
+function c21(lt) { crowd({ y0: 690, to: C_LOUD, lt, loud: true }); }
+function c22(lt) {
+  c17vote(lt);
+  fig(FACTS.VOTE_DATE, 540, 640, TERRA, inv(0.6, 1.0, lt), 'fig-date');
+}
+
+// head：卡名。只有封面（第 0 卡）畫成大標，其他卡不畫（使用者 11-04：只留封面大標，precheck「內頁大標」門）。
+const PEW = 'Pew Research Center 2019', RATHJE = 'Rathje 等 2021, PNAS', MIC = 'More in Common 2019';
+const CARDS = [
+  { head: '民主好亂？', hud: '示意圖', hl: ['這麼亂'], draw: c01 },
+  { head: '都在吵架', hud: '示意圖', hl: ['吵架'], draw: c02 },
+  { head: '比感覺的小', hud: '示意圖', hl: ['感覺到的小'], draw: c03 },
+  { head: '美國推特', hud: PEW, hl: ['一年'], draw: c04 },
+  { head: '一小群人', hud: PEW, hl: ['百分之九十七', '百分之十'], draw: c05 },
+  { head: '一小群人', hud: PEW, hl: ['一小群人'], draw: c06 },
+  { head: '容易被轉傳', hud: RATHJE, hl: ['轉傳'], draw: c07 },
+  { head: '兩百七十萬則', hud: RATHJE, hl: ['兩百七十多萬則'], draw: c08 },
+  { head: '兩倍', hud: RATHJE, hl: ['兩倍'], draw: c09 },
+  { head: '怒算五個讚', hud: 'Washington Post 2021-10-26', hl: ['五個讚'], draw: c10 },
+  { head: '民主會吵', hud: '示意圖', hl: ['運作的一部分'], draw: c11 },
+  { head: '公開比', hud: '示意圖', hl: ['公開比'], draw: c12 },
+  { head: '乾脆不講', hud: '示意圖（第一集）', hl: ['乾脆不講'], draw: c5 },
+  { head: '看起來安靜', hud: '示意圖', hl: ['意見一致'], draw: c14 },
+  { head: '對立是真的', hud: '示意圖', hl: ['真的'], draw: c15 },
+  { head: '猜對面', hud: MIC, hl: ['立場極端'], draw: c16 },
+  { head: '猜多一倍', hud: MIC, hl: ['將近一倍'], draw: c17 },
+  { head: '心裡的對面', hud: MIC, hl: ['極端得多'], draw: c18 },
+  { head: '被放大', hud: '示意圖', hl: ['被放大'], draw: c19 },
+  { head: '先想想', hud: '示意圖', hl: ['先想想'], draw: c20 },
+  { head: '最大聲的', hud: '示意圖', hl: ['最大聲'], draw: c21 },
+  { head: '一起投票', hud: '中選會', hl: ['同一個家鄉'], draw: c22 },
+];
+const N = CARDS.length;
+if (TL.lines.length !== N) throw new Error(`timeline.js 有 ${TL.lines.length} 句，卡片 ${N} 張，對不上`);
+const DUR = TL.dur;
+const T0 = TL.lines.map((l, i) => i === 0 ? 0 : l.t0 - 0.2);
+const END0 = TL.lines[N - 1].t1 + 0.3;   // 片尾系列卡
+const cardAt = t => { let i = 0; while (i + 1 < N && t >= T0[i + 1]) i++; return i; };
+const PH = TL.lines.flatMap((l, i) => (l.phrases || [{ text: l.text, t0: l.t0, t1: l.t1 }]).map(p => ({ ...p, card: i })));
+
+// ---------- 頂部系列標籤 ----------
+function series() {
+  // 上下往中間收（使用者 11-05）：IG 網格 3:4 上下各裁約 240px，Shorts 底部有說明欄
+  plain(`${SERIES}｜系列`, 540, 290, 34, DIM, { align: 'center', w: 600 });
+  rr(510, 312, 60, 5, 3, TERRA);
+}
+
+// ---------- 字幕：一卡一個逗號短語，關鍵詞陶土紅，上方一條短橫線 ----------
+function caption(t) {
+  const j = PH.findIndex((p, k) => t >= p.t0 - 0.05 && t < Math.min(p.t1 + 0.25, PH[k + 1] ? PH[k + 1].t0 - 0.05 : Infinity));
+  if (j < 0 || t >= END0) return;
+  const p = PH[j], hl = CARDS[p.card].hl || [];
+  const px = 58, maxW = 900;
+  g.font = ZH(700, px);
+  const rows = g.measureText(p.text).width <= maxW ? [p.text] : [p.text.slice(0, Math.ceil(p.text.length / 2)), p.text.slice(Math.ceil(p.text.length / 2))];
+  const y0 = rows.length > 1 ? 1330 : 1340;
+  rr(510, y0 - 80, 60, 6, 3, INK);
+  rows.forEach((r, k) => rich(r, 540, y0 + k * 74, px, hl));
+}
+function rich(s, cx, y, px, hl) {
+  const mark = Array(s.length).fill(false);
+  for (const w of hl) { let i = s.indexOf(w); while (i >= 0) { for (let k = 0; k < w.length; k++) mark[i + k] = true; i = s.indexOf(w, i + 1); } }
+  g.font = ZH(700, px); g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+  let x = cx - g.measureText(s).width / 2;
+  for (let k = 0; k < s.length; k++) { g.fillStyle = mark[k] ? TERRA : INK; g.fillText(s[k], x, y); x += g.measureText(s[k]).width; }
+}
+
+// ---------- 片尾系列卡 ----------
+function endCard(t) {
+  g.fillStyle = CREAM; g.fillRect(0, 0, W, H);
+  const lt = t - END0;
+  // 系列名比照參考帳號片尾：中等字級（< precheck HEADLINE_PX），三個小人是主角
+  say(SERIES, 540, 640, 68, INK, 1, { id: 'end-series', align: 'center', bold: 0.03 });
+  say(`第 ${EP} 集`, 540, 720, 44, TERRA, 1, { id: 'end-ep', align: 'center' });
+  rr(510, 752, 60, 5, 3, SAGE);
+  [[BLUE, 330, 'armsUp'], [MUST, 540, 'stand'], [SAGE, 750, 'armsUp']].forEach(([c, x, pose], k) => man(x, 1150, 260, c, { pose, face: 'smile', tilt: Math.sin(lt * 2 + k) * 0.04 }));
+  plain(HANDLE, 540, 1260, 40, DIM, { align: 'center', w: 600 });
+}
+
+// ---------- 主播 Paradox（Clawd Bot）：右上角，寫法照 films/elected-dictator ----------
+const svgText = await fetch('./mascot/clawd-bot.svg').then(r => { if (!r.ok) throw new Error('取不到 mascot/clawd-bot.svg'); return r.text(); });
+const host = document.getElementById('mascot'); host.innerHTML = svgText;
+const ROOT = host.querySelector('svg'); if (!ROOT) throw new Error('mascot svg 解析失敗');
+const TRACK = { fps: 30, states: [{ t: 0, state: 'idle' }], looks: CARDS.map((c, i) => ({ t: T0[i], x: -0.5, y: 0.5 })), pokes: [] };
+function poseHost(t) {
+  applyPose(ROOT, poseAt(t, TRACK));
+  // 嘴跟旁白開合；表情維持 idle
+  if (!TL.lines.some(l => t >= l.t0 && t <= l.t1)) return;
+  const a = 0.25 + 0.75 * Math.abs(Math.sin(t * 13.5)) * (0.55 + 0.45 * Math.abs(Math.sin(t * 4.3 + 1)));
+  ROOT.querySelector('#mouth').setAttribute('d', `M-5,8 Q0,${(9 + a * 5).toFixed(2)} 5,8`);
+}
+// 畫框 x 875 起、y 260 起、邊長 224（框右緣的透明留白超出畫面無妨），可見身形約 x 906–1067、y 299–455：
+// IG 主頁格把 9:16 置中裁成 3:4（上下各裁約 240px），整隻要在 y 240 以下；左邊讓開置中大標（最寬到 x 890）。
+const MASCOT = { x: 800, y: 300, s: 260 };   // 放大、左移，整隻在畫面與 IG 網格內
+let mascotTok = 0;
+function finish(t) {
+  caption(t);
+  poseHost(t);
+  // 主播畫進 canvas：DOM SVG 疊層的合成結果會受上一幀影響，尋幀一致過不了
+  const tok = ++mascotTok, img = new Image();
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(ROOT));
+  return img.decode().then(() => {
+    if (tok !== mascotTok) return;   // 已經畫下一幀了，舊圖不能蓋上去
+    g.drawImage(img, MASCOT.x, MASCOT.y, MASCOT.s, MASCOT.s);
+  });
+}
+
+// ---------- 主迴圈 ----------
+// 換卡＝原地交叉淡化 XF 秒：底色一樣，看起來是小人與道具在原地換狀態，不是切鏡頭。
+const XF = 0.5;
+const snap = Object.assign(document.createElement('canvas'), { width: W, height: H });
+function render(t) {
+  t = clamp(t, 0, DUR); TXT = [];
+  if (t >= END0) {
+    const k = E.io(inv(END0, END0 + XF, t));
+    if (k < 1) { drawCard(N - 1, t); snap.getContext('2d').drawImage(g.canvas, 0, 0); TXT = []; }
+    endCard(t);
+    if (k < 1) { g.globalAlpha = 1 - k; g.drawImage(snap, 0, 0); g.globalAlpha = 1; }
+    return finish(t);
+  }
+  const i = cardAt(t), lt = t - T0[i];
+  const k = i && lt < XF ? E.io(lt / XF) : 1;
+  if (k < 1) { drawCard(i - 1, t); snap.getContext('2d').drawImage(g.canvas, 0, 0); TXT = []; }
+  drawCard(i, t);
+  if (k < 1) { g.globalAlpha = 1 - k; g.drawImage(snap, 0, 0); g.globalAlpha = 1; }
+  return finish(t);
+}
+function drawCard(i, t) {
+  const cd = CARDS[i], lt = t - T0[i];
+  g.fillStyle = CREAM; g.fillRect(0, 0, W, H);
+  series();
+  // 只留封面大標（使用者 11-04）：第 0 卡第 0 幀就完整顯示，其他卡不畫大標副標，畫面當主角
+  // 五個字 170px 會壓到右上主播，封面 OCR 認不出大標；縮到 145px、往左讓開
+  if (i === 0) say(cd.head, 440, 480, 145, INK, 1, { id: 'head1', align: 'center', bold: 0.05 });
+  // 插畫以 (540, 880) 為中心縮 0.9：地平線 1270→1231，讓字幕與來源往上收
+  g.save(); g.translate(540, 880); g.scale(0.9, 0.9); g.translate(-540, -880); cd.draw(lt); g.restore();
+  g.globalAlpha = 1;
+  plain(`來源｜${cd.hud}`, 540, 1460, 28, DIM, { align: 'center', w: 500 });
+}
+
+// ---------- 對外契約 ----------
+window.DUR = DUR;
+window.render = render;
+window.TEXTS = t => { render(t); return TXT.filter(b => b.screen); };
+window.CUES = PH.map(p => ({ t0: p.t0, t1: p.t1, text: p.text }));
+window.SHAKES = [];
+window.EV = [{ t: 0, type: 'bed', len: DUR }];   // 只留配樂（calm 片型），不加換卡音效
+window.VOICE = TL.lines.map((l, j) => ({ t: l.t0, file: `out/voice/${String(j + 1).padStart(2, '0')}.wav` }));
+
+// 字型：這段程式碼本身就含畫面上所有字，整段拿去預載
+const allText = document.querySelector('script[type=module]').textContent + TL.lines.map(l => l.text).join('') + '0123456789,%';
+await Promise.all([700, 600].map(w => document.fonts.load(ZH(w, 58), allText)));
+await document.fonts.ready;
+for (let i = 0; i < N; i++) render(T0[i] + 0.6);
+render(0);
+window.READY = true;
+</script>
+</body>
+</html>

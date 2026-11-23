@@ -55,16 +55,32 @@ dur = rep["words"][-1]["t1"] + 2
 # 好稿全過
 check("好稿結構過", pc.story_problems(good) == [])
 check("好稿聽寫過", pc.asr_problems(good, rep, dur) == [])
+# 句末標點後收尾引號併同一句（free-speech-line 11-15：稿寫「…節目。」，」被切成獨立一句，voice.py 念空白檔）
+check("句末引號不成為獨立一句", pc.sentences("梁文傑回他：「節目。」") == ["梁文傑回他：「節目。」"])
+check("引號句結構過", pc.story_problems(secs(
+    GOOD.replace("被重複算了很多次。", "他說：「被重複算了很多次。」"))) == [])
 
-# 結構：缺段、順序、空段、鉤子太長、鉤子跟觀眾無關
+# 結構（使用者 2026-11-10：刪掉固定四段模版，改成量對標帳號的形狀；段名、順序自由）
 check("單行超過 35 字擋", pc.story_problems(secs(GOOD.replace("## 機制\n", "## 機制\n" + "一" * 36 + "。\n"))) != [])
 check("一行兩個句號擋", pc.story_problems(secs(GOOD.replace("## 機制\n", "## 機制\n好笑嗎？他當年也沒靠政變。\n"))) != [])
-TAIL = GOOD + "## 收尾\n不是有選舉就叫民主，是我們一起守住規則，它才算數。\n"
-check("落點後面多一段收尾擋", pc.story_problems(secs(TAIL)) != [])
-check("轉折沒有連詞擋", pc.story_problems(secs(GOOD.replace("但問題是，", "這件事，"))) != [])
-check("落點總結詞擋", any("總結詞" in x for x in pc.story_problems(secs(GOOD.replace("## 落點\n", "## 落點\n總之，這件事很重要。\n")))))
+FREE = ("# 旁白稿\n## 開場\n你是不是也覺得大家都在比你好？\n"
+        "## 中段\n人緣好的人被重複算了很多次。\n## 收尾\n你看到的別人，是被挑過的樣本。\n")
+check("段名自由（不必叫鉤子／機制／轉折／落點）", pc.story_problems(secs(FREE)) == [])
+check("順序自由", pc.story_problems(secs(
+    "# 旁白稿\n## 一\n你看到的別人，是被挑過的樣本。\n## 二\n人緣好的人被重複算了很多次。\n"
+    "## 三\n你是不是也覺得大家都在比你好？\n")) == [])
+check("只有兩段擋", pc.story_problems(secs("## A\n你是不是也覺得大家都在比你好？\n## B\n人緣好的人被重複算了很多次。\n")) != [])
+check("開頭 60 字沒有你或問句擋", pc.story_problems(secs(GOOD.replace(
+    "滑 IG 的時候，你是不是總覺得大家都過得比你好？", "先講一件二〇一八年的事。"))) != [])
+check("開頭是問句仍過", pc.story_problems(secs(GOOD.replace(
+    "滑 IG 的時候，你是不是總覺得大家都過得比你好？", "大家是不是都過得比你好？"))) == [])
+check("逗號短語超過 18 字擋", pc.story_problems(secs(GOOD.replace(
+    "被重複算了很多次。", "被重複算了很多次而且是那種沒有人會去一一確認的重複計算。\n"))) != [])
+check("最後一段總結詞擋", any("總結詞" in x for x in pc.story_problems(secs(
+    GOOD.replace("## 落點\n", "## 落點\n總之，這件事很重要。\n")))))
+check("空段擋", pc.story_problems(secs(GOOD.replace("你看到的別人，是被人多的地方挑過的樣本。", ""))) != [])
 ONE_CONTRAST = GOOD.replace("但問題是，", "但問題不是你，而是")
-check("「不是…而是」一次留給轉折仍過", pc.story_problems(secs(ONE_CONTRAST)) == [])
+check("「不是…而是」一次仍過", pc.story_problems(secs(ONE_CONTRAST)) == [])
 TWO_CONTRAST = ONE_CONTRAST.replace("被重複算了很多次。", "不是他特別紅，而是被重複算了很多次。")
 check("「不是…而是」兩次擋", any("對舉" in x for x in pc.story_problems(secs(TWO_CONTRAST))))
 check("跨句的「不是」「而是」不算", pc.story_problems(secs(ONE_CONTRAST.replace(
@@ -73,22 +89,7 @@ check("一個分號仍過", pc.story_problems(secs(GOOD.replace("被重複算了
 check("破折號加分號兩個擋", any("破折號" in x for x in pc.story_problems(secs(GOOD.replace(
     "被重複算了很多次。", "被重複算了——很多次；真的。")))))
 check("對談格式不比對舉", pc.story_problems(secs(TWO_CONTRAST), dialogue=True) == [])
-check("轉折用「再看」開頭擋", pc.story_problems(secs(GOOD.replace("但問題是，", "再看，"))) != [])
 check("整篇沒有「你」也沒有問句擋", pc.story_problems(secs(GOOD.replace("你", "大家").replace("？", "。"))) != [])
-check("缺落點擋", pc.story_problems(secs(GOOD.replace("## 落點", "## 其他"))) != [])
-swapped = GOOD.replace("## 轉折", "## X").replace("## 落點", "## 轉折").replace("## X", "## 落點")
-check("段落順序錯擋", pc.story_problems(secs(swapped)) != [])
-check("空段擋", pc.story_problems(secs(GOOD.replace("你看到的別人，是被人多的地方挑過的樣本。", ""))) != [])
-check("鉤子太長擋", pc.story_problems(secs(GOOD.replace(
-    "滑 IG 的時候，你是不是總覺得大家都過得比你好？",
-    "在這支影片裡我們要用一個很長很長很長很長的開場來介紹今天的主題。"))) != [])
-check("鉤子無關擋", pc.story_problems(secs(GOOD.replace(
-    "滑 IG 的時候，你是不是總覺得大家都過得比你好？", "1637 年的一個夏天。"))) != [])
-check("對談格式免鉤子觀眾門", pc.story_problems(secs(GOOD.replace(
-    "滑 IG 的時候，你是不是總覺得大家都過得比你好？", "1637 年的一個夏天。")), dialogue=True) == [])
-check("對談格式鉤子太長仍擋", pc.story_problems(secs(GOOD.replace(
-    "滑 IG 的時候，你是不是總覺得大家都過得比你好？",
-    "在這支影片裡我們要用一個很長很長很長很長的開場來介紹今天的主題。")), dialogue=True) != [])
 
 # 聽寫：沒旁白、吃字、開場空白
 check("沒旁白擋", pc.asr_problems(good, {"words": []}, dur) != [])
@@ -128,8 +129,7 @@ check("不到10萬擋", pc.viral_problems(V.replace("56.3萬", "5萬")) != [])
 import re as _re, tempfile as _tf
 from pathlib import Path as _P
 check("正片有提問段擋", any("說明欄" in x for x in pc.story_problems(secs(GOOD + "## 提問\n你在哪裡看到的？\n"))))
-check("落點後多一段收尾擋", pc.story_problems(secs(GOOD + "## 收尾\n真正算數的是那一票。\n")) != [])
-check("缺落點擋", pc.story_problems(secs(GOOD.replace("## 落點", "## 其他"))) != [])
+check("多一段收尾但沒有總結詞仍過（段數自由）", pc.story_problems(secs(GOOD + "## 收尾\n真正算數的是那一票。\n")) == [])
 
 # 稿子核准門（11-01）
 import hashlib as _h, subprocess as _sp
@@ -145,6 +145,11 @@ with _tf.TemporaryDirectory() as d:
     check("沒寫使用者原話擋", pc.approval_problems(f) != [])
     r = _sp.run([sys.executable, str(_P(__file__).resolve().parent.parent / "scripts" / "approve.py"), d, "  "], capture_output=True)
     check("approve.py 空原話拒絕", r.returncode != 0)
+    # 結構門不過的稿不准蓋核准戳（fix 12159）
+    (f / "audit" / "approved.md").unlink()
+    (f / "narration.md").write_text("## 鉤子\n另一份開頭。\n", encoding="utf-8")
+    r = _sp.run([sys.executable, str(_P(__file__).resolve().parent.parent / "scripts" / "approve.py"), d, "稿子通過"], capture_output=True)
+    check("approve.py 結構門不過拒絕", r.returncode != 0 and not (f / "audit" / "approved.md").exists())
 
 if fails:
     print("FAIL\n  " + "\n  ".join(fails))

@@ -1,0 +1,650 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>在台北送小孩上公托，為什麼像在抽樂透？</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}#mascot{display:none}#mascot svg{width:340px;height:340px}</style>
+<script src="engine.js"></script>
+<script src="timeline.js"></script>
+</head>
+<body>
+<div id="stage" style="position:relative;width:1080px;height:1920px">
+<canvas id="c" width="1080" height="1920" style="position:absolute;left:0;top:0"></canvas>
+<div id="mascot"></div>
+</div>
+<script type="module">
+// 單人旁白科普：一句一卡（TREATMENT.md 分鏡表），Clawd Bot 當主播站右上。版面、換卡、字幕照 films/pedestrian-hell 第三版。
+// 主角是兩個圖示：嬰兒床（位子）與托育人員（人）。虛線人形＝還沒找到的人，同一個 ghost() 畫機制、兩種主張的代價。
+// 兩種主張同色同尺寸、同樣的標籤樣式與同一張「代價是人」畫面，不用配色暗示立場（TREATMENT.md 禁止清單）。
+// 所有動作都是 t 的封閉式（seek_check.mjs 會比亂序算出的同一幀）；循環用取餘數，不累積。
+import { poseAt, applyPose } from './mascot/clawd-bot-shot.mjs';
+const G = window.G, E = G.E, TL = window.TL, W = 1080, H = 1920;
+const g = document.getElementById('c').getContext('2d', { alpha: false });
+const { clamp, inv, lerp, mix, rgba } = G;
+
+const BG = '#1d1b19', BG2 = '#262320', CREAM = '#f5efe6', DIM = '#a39a8e', OR = '#d97757', ORL = '#f29172', GOLD = '#f6b966', RED = '#ff8577', GREEN = '#68e399', BLUE = '#7fa7d9';
+const ZH = (w, px) => `${w} ${px}px "PingFang TC"`, MONO = (px, w = 500) => `${w} ${px}px Menlo, "PingFang TC"`;
+const fmt = n => Math.round(n).toLocaleString('en-US');
+
+// 會出現在畫面上的事實數字集中在這裡，不要在別處重寫一次。每一個都要在 meta/facts.md 有一行附來源。
+const FACTS = {
+  TPE_PUBLIC_SLOTS: 2008,      // 台北 92 間公托收托量（自由 2026-04-14）
+  TPE_WAITLIST: 3854,          // 候補人數（同上）
+  RATIO_LOW: 3,                // 社區公共托育家園 1:3
+  RATIO_HIGH: 4,               // 公辦民營托嬰中心 1:4
+  BABY_AGE_MAX: 2,             // 托嬰中心收未滿 2 歲
+  PAY_START_TWD: 38011,        // 公設民營托嬰中心托育人員起薪
+  PAY_YEAR: 2025,              // 114 年起
+  JP_PLAN_START: 2013,         // 待機兒童解消加速化計畫 2013–2015 年度
+  JP_PLAN_YEARS: 3,
+  JP_SLOTS_ADDED: 314000,      // 3 年約 31.4 萬人份
+  JP_PAY_RAISE_PCT: 10,        // 保育士處遇改善合計 10%
+  JP_WAIT_PEAK_YEAR: 2017,
+  JP_WAITLIST_2017: 26081,
+  JP_WAITLIST_YEAR: 2025,
+  JP_WAITLIST_2025: 2254,
+  TPE_NEW_CENTERS: 16,         // 今年再開 16 處
+  TPE_NEW_SLOTS: 620,          // 多 620 個位子
+  TPE_CENTERS_NOW: 92,
+  TPE_EXTRA_STAFF: 155,        // 620 ÷ 4 推算下限
+  SECOND_CHILD: 2,
+  RESPITE_HOURS: 4,            // 每週 4 小時免費臨托
+  RESPITE_AGE_MIN_MONTHS: 6,
+  RESPITE_AGE_MAX: 7,
+  RESPITE_KIDS: 100000,        // 近 10 萬個小孩
+  RESPITE_NEED_HOURS: 410000,  // 市府估每週需 41 萬小時
+  RESPITE_NOW_HOURS: 130000,   // 現在約 13 萬小時
+};
+
+// ---------- 字 ----------
+let TXT = [], NOW = 0;
+function say(s, x, y, px, col, p, o = {}) {
+  const font = o.mono ? MONO(px) : ZH(o.w || 600, px);
+  // 原地淡入，不往上滑（使用者 10-30：頻繁滑入眼睛不舒服；對標 @boundless__explorer DemDuhNk1ZR 全片無滑入）
+  g.save(); g.font = font; g.letterSpacing = o.ls || '0px'; g.textAlign = o.align || 'left'; g.textBaseline = 'alphabetic';
+  const w = g.measureText(s).width;
+  g.globalAlpha *= E.io(p); g.fillStyle = col; g.fillText(s, x, y); g.restore();
+  if (o.id) {
+    const x0 = o.align === 'center' ? x - w / 2 : o.align === 'right' ? x - w : x;
+    TXT.push({ id: o.id, text: s, x0, y0: y - px, x1: x0 + w, y1: y + px * 0.25, screen: true });
+  }
+  return w;
+}
+function plain(s, x, y, px, col, o = {}) {
+  g.font = o.mono ? MONO(px, o.w || 500) : ZH(o.w || 600, px); g.textAlign = o.align || 'left'; g.textBaseline = 'alphabetic';
+  g.letterSpacing = o.ls || '0px'; g.fillStyle = col; g.fillText(s, x, y); g.letterSpacing = '0px';
+}
+const pop = (lt, a, d = 0.5) => E.o3(inv(a, a + d, lt));   // 不用回彈（語氣溫和）
+const loop = (x, n) => ((x % n) + n) % n;
+function fade(a, fn) { if (a <= 0) return; g.save(); g.globalAlpha *= clamp(a); fn(); g.restore(); }
+
+// ---------- 舞台：y 800–1630 的圓角框，框內畫什麼都裁在裡面 ----------
+const ST = { x: 60, y: 800, w: 960, h: 830 };
+function stage(fn) {
+  g.save(); g.beginPath(); g.roundRect(ST.x, ST.y, ST.w, ST.h, 28); g.clip();
+  g.fillStyle = BG2; g.fillRect(ST.x, ST.y, ST.w, ST.h);
+  fn(); g.restore();
+  g.strokeStyle = rgba(CREAM, 0.16); g.lineWidth = 2; g.beginPath(); g.roundRect(ST.x, ST.y, ST.w, ST.h, 28); g.stroke();
+}
+function cam(px, py, k, fn) { g.save(); g.translate(px, py); g.scale(k, k); g.translate(-px, -py); fn(); g.restore(); }
+const FLOOR = 1520;
+function floor() { g.fillStyle = '#2c2926'; g.fillRect(ST.x, FLOOR, ST.w, ST.y + ST.h - FLOOR); }
+
+// ---------- 圖示 ----------
+function baby(x, y, s, col = GOLD) {   // 包巾寶寶：原點＝中心，s＝身長
+  g.fillStyle = col; g.beginPath(); g.roundRect(x - s * 0.2, y - s * 0.18, s * 0.62, s * 0.36, s * 0.18); g.fill();
+  G.disc(g, x - s * 0.3, y, s * 0.2, mix(col, CREAM, 0.45));
+}
+function crib(x, y, s, col = CREAM, full = 0, a = 1) {   // 嬰兒床：原點＝床腳中央，s＝床寬；full 0–1 寶寶出現
+  g.save(); g.globalAlpha *= a;
+  const h = s * 0.6;
+  if (full > 0) { g.save(); g.globalAlpha *= clamp(full); baby(x - s * 0.04, y - h * 0.42, s * 0.62); g.restore(); }
+  g.strokeStyle = col; g.lineCap = 'round'; g.lineWidth = Math.max(2, s * 0.055);
+  g.beginPath();
+  g.moveTo(x - s / 2, y); g.lineTo(x - s / 2, y - h); g.moveTo(x + s / 2, y); g.lineTo(x + s / 2, y - h);
+  g.moveTo(x - s / 2, y - h * 0.18); g.lineTo(x + s / 2, y - h * 0.18); g.moveTo(x - s / 2, y - h * 0.82); g.lineTo(x + s / 2, y - h * 0.82);
+  g.stroke();
+  g.lineWidth = Math.max(1.5, s * 0.03); g.beginPath();
+  for (let k = 1; k < 6; k++) { const xx = x - s / 2 + s * k / 6; g.moveTo(xx, y - h * 0.18); g.lineTo(xx, y - h * 0.82); }
+  g.stroke(); g.restore();
+}
+function person(x, y, s, col, o = {}) {   // 側視人形：原點＝腳底，s＝身高；o.cane 拐杖、o.bag 包包、o.ph 走路相位、o.still 站著
+  const ph = o.still ? 0 : (o.ph ?? (NOW * 3 + x * 0.01));
+  y -= o.still ? 0 : s * 0.012 * Math.abs(Math.sin(ph));
+  g.save(); g.translate(x, y); g.rotate(o.cane ? 0.12 : 0);
+  g.strokeStyle = col; g.lineCap = 'round'; g.lineWidth = s * 0.1;
+  const sw = o.still ? 0.12 : Math.sin(ph) * 0.35;
+  g.beginPath(); g.moveTo(0, -s * 0.42); g.lineTo(Math.sin(sw) * s * 0.42, 0); g.moveTo(0, -s * 0.42); g.lineTo(-Math.sin(sw) * s * 0.42, 0); g.stroke();
+  g.fillStyle = col; g.beginPath(); g.roundRect(-s * 0.15, -s * 0.78, s * 0.3, s * 0.42, s * 0.1); g.fill();
+  G.disc(g, 0, -s * 0.88, s * 0.11, col);
+  if (o.bag) { g.fillStyle = o.bag; g.beginPath(); g.roundRect(-s * 0.3, -s * 0.74, s * 0.17, s * 0.28, s * 0.05); g.fill(); }
+  g.restore();
+  if (o.cane) G.seg(g, [x + s * 0.24, y - s * 0.5], [x + s * 0.3, y], s * 0.035, GOLD);
+}
+function ghost(x, y, s, a = 1, col = CREAM) {   // 還沒找到的人：虛線人形，原點＝腳底
+  g.save(); g.globalAlpha *= a; g.setLineDash([s * 0.055, s * 0.045]); g.strokeStyle = rgba(col, 0.75); g.lineWidth = Math.max(2, s * 0.025);
+  g.beginPath(); g.roundRect(x - s * 0.17, y - s * 0.78, s * 0.34, s * 0.78, s * 0.12); g.stroke();
+  g.beginPath(); g.arc(x, y - s * 0.9, s * 0.11, 0, Math.PI * 2); g.stroke();
+  g.setLineDash([]); g.restore();
+}
+function carer(x, y, s, k) {   // 虛線人形 → 實心托育人員（k 0–1）
+  if (k < 1) ghost(x, y, s, 1 - k);
+  if (k > 0) fade(k, () => person(x, y, s, GOLD, { still: true }));
+}
+function mini(x, y, s, col) {   // 小人頭像：格子計數用
+  G.disc(g, x, y - s * 0.28, s * 0.2, col);
+  g.fillStyle = col; g.beginPath(); g.roundRect(x - s * 0.28, y - s * 0.04, s * 0.56, s * 0.4, s * 0.18); g.fill();
+}
+function house(x, y, s, col = CREAM, door = BG) {   // 公托：屋頂＋門，原點＝底中央
+  g.fillStyle = col; g.fillRect(x - s / 2, y - s * 0.5, s, s * 0.5);
+  G.poly(g, [[x - s * 0.6, y - s * 0.48], [x, y - s * 0.92], [x + s * 0.6, y - s * 0.48]], col);
+  g.fillStyle = door; g.fillRect(x - s * 0.1, y - s * 0.3, s * 0.2, s * 0.3);
+}
+function stroller(x, y, s, col = CREAM) {   // 嬰兒車：原點＝後輪著地
+  g.strokeStyle = col; g.lineWidth = s * 0.06; g.lineCap = 'round';
+  g.beginPath(); g.arc(x + s * 0.35, y - s * 0.55, s * 0.32, Math.PI, 0); g.closePath(); g.stroke();
+  G.seg(g, [x, y - s * 0.55], [x - s * 0.18, y - s * 0.95], s * 0.06, col);
+  G.ring(g, x + s * 0.08, y - s * 0.08, s * 0.08, s * 0.05, col); G.ring(g, x + s * 0.62, y - s * 0.08, s * 0.08, s * 0.05, col);
+}
+function chip(x, y, s, p = 1) {   // 兩種主張共用的標籤樣式（同色同大小）
+  if (p <= 0) return;
+  g.save(); g.globalAlpha *= clamp(p * 2);
+  g.font = ZH(700, 46); const w = g.measureText(s).width + 56;
+  g.fillStyle = rgba(BG, 0.82); g.strokeStyle = GOLD; g.lineWidth = 4;
+  g.beginPath(); g.roundRect(x - w / 2, y - 50, w, 76, 38); g.fill(); g.stroke();
+  plain(s, x, y + 2, 46, GOLD, { align: 'center', w: 700 });
+  g.restore();
+}
+function counter(s, x, y, px = 72, col = CREAM, align = 'center') {
+  plain(s, x, y, px, col, { mono: true, align, w: 700 });
+}
+function dots(x, y, w, cols, n, p, col, r, shown0 = 0) {   // n 個點逐一出現（p 0–1）
+  const s = w / cols; r = r || s * 0.36;
+  const shown = Math.max(shown0, Math.floor(n * clamp(p)));
+  for (let i = 0; i < shown; i++) G.disc(g, x + (i % cols) * s + s / 2, y + Math.floor(i / cols) * s + s / 2, r, col);
+  return Math.ceil(n / cols) * s;
+}
+function timeline(x, y, w, n, p, labels, col = GOLD) {   // n 格的時間軸，p 0–1 填滿
+  g.fillStyle = rgba(CREAM, 0.14); g.beginPath(); g.roundRect(x, y, w, 46, 23); g.fill();
+  if (p > 0) { g.fillStyle = col; g.beginPath(); g.roundRect(x, y, Math.max(46, w * p), 46, 23); g.fill(); }
+  for (let k = 0; k <= n; k++) {
+    const xx = x + w * k / n; g.fillStyle = rgba(BG, 0.6); if (k && k < n) g.fillRect(xx - 2, y, 4, 46);
+    if (labels && labels[k] != null) plain(String(labels[k]), xx, y + 100, 34, k / n <= p + 1e-6 ? CREAM : DIM, { mono: true, align: 'center' });
+  }
+}
+
+// ---------- 地圖（手描示意，誤差約 10–30 公里；要精確改抓 Natural Earth 再投影） ----------
+const TW = [[121.56,25.29],[121.93,25.02],[121.83,24.6],[121.62,24.05],[121.48,23.45],[121.3,22.95],[121.0,22.6],[120.86,22.08],[120.84,21.9],[120.72,21.98],[120.62,22.3],[120.3,22.55],[120.17,22.9],[120.1,23.3],[120.12,23.7],[120.3,24.1],[120.6,24.5],[120.85,24.83],[121.05,25.05],[121.3,25.15]];
+const JP = [
+  [[141.2,45.4],[142.0,45.5],[143.5,44.2],[145.3,43.4],[145.5,43.2],[143.3,42.0],[141.8,42.6],[140.4,41.4],[139.9,42.2],[140.3,43.3],[141.4,43.4]],
+  [[140.9,41.5],[141.5,40.5],[142.0,39.5],[141.0,38.3],[141.0,37.0],[140.6,35.7],[140.0,35.0],[139.2,35.2],[138.5,34.6],[137.0,34.6],[136.8,34.3],[135.8,33.5],[135.1,34.3],[134.0,34.6],[132.5,34.2],[130.9,33.9],[131.4,34.4],[132.6,35.5],[134.5,35.6],[136.0,35.7],[136.7,37.2],[137.3,36.9],[138.5,37.4],[139.5,38.3],[139.9,39.8],[140.1,40.8]],
+  [[130.9,33.9],[131.6,33.2],[131.5,32.2],[131.0,31.3],[130.2,31.3],[130.3,32.5],[129.7,33.1],[130.4,33.6]],
+  [[132.6,33.9],[133.5,34.3],[134.6,34.2],[134.7,33.8],[133.5,33.4],[132.5,32.8]],
+];
+function land(poly, cx, cy, k, lo0, la0, fill = '#34302c') {
+  g.beginPath();
+  poly.forEach(([lo, la], i) => { const x = cx + (lo - lo0) * k * Math.cos(la0 * G.D2R), y = cy - (la - la0) * k; i ? g.lineTo(x, y) : g.moveTo(x, y); });
+  g.closePath(); g.fillStyle = fill; g.fill(); g.lineWidth = 5; g.strokeStyle = rgba(CREAM, 0.6); g.stroke();
+}
+const lonlat = (lo, la, cx, cy, k, lo0, la0) => [cx + (lo - lo0) * k * Math.cos(la0 * G.D2R), cy - (la - la0) * k];
+function taiwan(cx, cy, k, fill) { land(TW, cx, cy, k, 121, 23.7, fill); }
+
+// ---------- 每張卡的舞台 ----------
+// —— 鉤子 ——
+function lottery(lt, R = 250, cx = 540, cy = 1130) {   // 搖獎機：滾筒轉、裡面是寶寶球，每 3 秒掉出一顆
+  const rot = lt * 1.3;
+  g.fillStyle = rgba(CREAM, 0.06); g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.fill();
+  G.ring(g, cx, cy, R, 8, rgba(CREAM, 0.7));
+  for (let k = 0; k < 6; k++) { const a = rot + k * Math.PI / 3; G.seg(g, [cx, cy], [cx + Math.cos(a) * R, cy + Math.sin(a) * R], 3, rgba(CREAM, 0.25)); }
+  for (let i = 0; i < 14; i++) {   // 每顆球繞自己的半徑轉，角速度不同
+    const rr = R * (0.3 + 0.55 * ((i * 0.37) % 1)), a = rot * (1 + (i % 3) * 0.35) + i * 2.1;
+    const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr * 0.9;
+    G.disc(g, x, y, 30, i % 4 ? CREAM : GOLD); G.disc(g, x - 6, y - 4, 5, BG); G.disc(g, x + 8, y - 4, 5, BG);
+  }
+  g.fillStyle = CREAM; g.fillRect(cx - 40, cy + R - 6, 80, 70);   // 出球口
+  const u = loop(lt, 3), d = E.io(inv(0.6, 1.6, u));
+  if (u > 0.6) { const by = cy + R + 60 + d * 160; G.disc(g, cx, by, 34, GOLD); G.disc(g, cx - 7, by - 5, 5, BG); G.disc(g, cx + 9, by - 5, 5, BG); }
+  G.seg(g, [cx - 120, FLOOR + 60], [cx + 120, FLOOR + 60], 6, rgba(CREAM, 0.3));
+}
+function hook(lt) { stage(() => lottery(lt)); }
+function fewSlots(lt) {   // 4 張床都滿了，一張虛線床慢慢長出來；左邊一排寶寶在等
+  stage(() => {
+    floor();
+    for (let j = 0; j < 4; j++) crib(170 + j * 170, 1180, 140, CREAM, 1);
+    const p = 0.15 + 0.25 * E.io(inv(0.3, 3.0, lt));   // 進度條爬得很慢
+    g.save(); g.setLineDash([12, 10]); crib(850, 1180, 140, rgba(CREAM, 0.5), 0); g.restore();
+    g.fillStyle = rgba(CREAM, 0.14); g.fillRect(780, 1215, 140, 16); g.fillStyle = GOLD; g.fillRect(780, 1215, 140 * p, 16);
+    for (let j = 0; j < 9; j++) { const x = 140 + j * 92 + 6 * Math.sin(lt * 2 + j); baby(x, 1440, 80, j % 3 ? CREAM : GOLD); }
+    plain('在等', 120, 1570, 34, DIM);
+  });
+}
+const PER = 20;   // 排隊方陣每點 20 人
+function queue(lt, ph) {   // 左：位子方陣；右：排隊方陣（ph 1 才長）
+  stage(() => {
+    const nS = Math.round(FACTS.TPE_PUBLIC_SLOTS / PER), nW = Math.round(FACTS.TPE_WAITLIST / PER);
+    const pS = ph ? 1 : E.o2(inv(0.2, 2.2, lt)), pW = ph ? E.o2(inv(0.2, 1.6, lt)) : 0;
+    plain('位子', 300, 880, 40, CREAM, { align: 'center' }); plain('排隊', 760, 880, 40, ph ? GOLD : DIM, { align: 'center' });
+    dots(110, 910, 380, 12, nS, pS, CREAM);
+    if (ph) dots(570, 910, 380, 12, nW, pW, GOLD);
+    counter(fmt(FACTS.TPE_PUBLIC_SLOTS * pS), 300, 1590, 60);
+    if (ph) counter(fmt(FACTS.TPE_WAITLIST * pW), 760, 1590, 60, GOLD);
+    plain(`每點 ${PER} 人`, 960, 1460, 28, DIM, { mono: true, align: 'right' });
+  });
+}
+// —— 機制 ——
+function placePeople(lt) {   // 地方＋人：左邊公托蓋起來，右邊人形從虛線填滿
+  stage(() => {
+    floor();
+    const a = pop(lt, 0.2, 0.7), b = E.io(inv(1.2, 2.2, lt));
+    fade(a, () => { cam(300, FLOOR, lerp(0.85, 1, a), () => house(300, FLOOR, 300, CREAM)); });
+    plain('＋', 540, 1360, 90, DIM, { align: 'center' });
+    carer(780, FLOOR, 380, b);
+    fade(a, () => plain('地方', 300, 1600, 40, CREAM, { align: 'center' }));
+    fade(b, () => plain('人', 780, 1600, 40, GOLD, { align: 'center' }));
+  });
+}
+function ratio(lt) {   // 一個托育人員，床一張張排上去：先 3 張，再第 4 張
+  stage(() => {
+    floor();
+    person(230, FLOOR, 400, GOLD, { still: true });
+    const pos = [[540, 1270], [790, 1270], [540, 1500], [790, 1500]];
+    pos.forEach(([x, y], j) => { const k = pop(lt, 0.3 + j * 0.45, 0.4); if (k > 0) crib(x, y, 190, j < 3 ? CREAM : GOLD, k, k); });
+    const n = lt < 0.3 + 3 * 0.45 ? FACTS.RATIO_LOW : FACTS.RATIO_HIGH;
+    counter(`1 : ${n}`, 665, 920, 64, GOLD);
+  });
+}
+function pay(lt) {   // 起薪長條長到 3.8 萬；底下 3–4 張床跟著亮
+  stage(() => {
+    const k = E.o3(inv(0.2, 1.4, lt)), max = 50000, w = 820 * FACTS.PAY_START_TWD / max * k;
+    g.fillStyle = rgba(CREAM, 0.12); g.fillRect(130, 980, 820, 90);
+    g.fillStyle = GOLD; g.fillRect(130, 980, w, 90);
+    counter(fmt(FACTS.PAY_START_TWD * k), 130, 940, 60, CREAM, 'left'); plain('元／月', 470, 940, 34, DIM);
+    for (let j = 0; j < 4; j++) { const q = pop(lt, 1.4 + j * 0.3, 0.4); crib(220 + j * 210, 1440, 170, j < 3 ? CREAM : GOLD, q, Math.max(0.25, q)); }
+    plain(`未滿 ${FACTS.BABY_AGE_MAX} 歲`, 540, 1560, 36, DIM, { align: 'center' });
+  });
+}
+function fillPeople(lt) {   // 四個虛線人形一個個填實，旁邊的空床跟著有寶寶
+  stage(() => {
+    floor();
+    for (let j = 0; j < 4; j++) {
+      const k = E.io(inv(0.3 + j * 0.45, 0.8 + j * 0.45, lt)), x = 170 + j * 230;
+      carer(x - 40, FLOOR, 250, k);
+      crib(x + 60, FLOOR - 10, 110, CREAM, k);
+      crib(x + 60, FLOOR - 110, 110, CREAM, k);
+    }
+  });
+}
+// —— 日本 ——
+function japanMap(lt) {
+  const z = lerp(0.9, 1.08, E.io(inv(0, 3, lt)));
+  stage(() => cam(540, 1215, z, () => {
+    JP.forEach(p => land(p, 560, 1180, 58, 137.5, 37.5));
+    const [x, y] = lonlat(139.7, 35.7, 560, 1180, 58, 137.5, 37.5), k = pop(lt, 0.4);
+    if (k > 0) { g.globalAlpha = 0.35; G.disc(g, x, y, 60 * k + 10 * Math.sin(lt * 3), OR); g.globalAlpha = 1; G.disc(g, x, y, 18 * k, OR); plain('東京', x + 30, y + 70, 44, CREAM, { w: 700 }); }
+  }));
+}
+function jpSlots(lt) {   // 三年三欄，床一層層疊上去；計數跳到 31.4 萬
+  stage(() => {
+    const n = FACTS.JP_PLAN_YEARS, per = 6, p = E.o2(inv(0.2, 2.6, lt));
+    for (let c = 0; c < n; c++) for (let r = 0; r < per; r++) {
+      const idx = c * per + r, q = clamp(p * n * per - idx);
+      if (q > 0) crib(250 + c * 290, 1470 - r * 82, 120, CREAM, q, q);
+    }
+    timeline(160, 1500, 760, n, p, null);
+    for (let c = 0; c < n; c++) plain(String(FACTS.JP_PLAN_START + c), 250 + c * 290, 1590, 32, DIM, { mono: true, align: 'center' });
+    counter(`+${(FACTS.JP_SLOTS_ADDED * p / 1e4).toFixed(1)} 萬`, 540, 920, 72, GOLD);
+  });
+}
+function jpPay(lt) {   // 薪水長條往上長一成
+  stage(() => {
+    const k = E.io(inv(0.4, 1.8, lt)), base = 1540, u = 520;
+    g.fillStyle = DIM; g.fillRect(250, base - u, 220, u);
+    g.fillStyle = GOLD; g.fillRect(610, base - u * (1 + FACTS.JP_PAY_RAISE_PCT / 100 * k), 220, u * (1 + FACTS.JP_PAY_RAISE_PCT / 100 * k));
+    G.seg(g, [200, base - u], [880, base - u], 3, rgba(CREAM, 0.5));
+    plain('以前', 360, base + 60, 36, DIM, { align: 'center' }); plain('加薪後', 720, base + 60, 36, CREAM, { align: 'center' });
+    const q = pop(lt, 1.6); fade(q, () => counter(`+${FACTS.JP_PAY_RAISE_PCT}%`, 720, base - u * 1.1 - 40, 72, GOLD));
+    person(140, base, 180, CREAM, { still: true });
+  });
+}
+const JPER = 100;   // 日本等位子方陣每點 100 人
+function jpWait(lt, ph) {   // ph 0：方陣長到 26,081；ph 1：縮到 2,254
+  stage(() => {
+    const n0 = Math.round(FACTS.JP_WAITLIST_2017 / JPER), n1 = Math.round(FACTS.JP_WAITLIST_2025 / JPER);
+    const p = ph ? 1 - E.io(inv(0.3, 2.4, lt)) : E.o2(inv(0.2, 2.4, lt));
+    const n = ph ? Math.round(n1 + (n0 - n1) * p) : Math.floor(n0 * p);
+    const s = 860 / 20;
+    for (let i = 0; i < n0; i++) { const x = 110 + (i % 20) * s + s / 2, y = 860 + Math.floor(i / 20) * s + s / 2; if (i < n) G.disc(g, x, y, s * 0.34, i < n1 ? GOLD : CREAM); else if (ph) G.disc(g, x, y, s * 0.12, rgba(CREAM, 0.15)); }
+    const v = ph ? FACTS.JP_WAITLIST_2025 + (FACTS.JP_WAITLIST_2017 - FACTS.JP_WAITLIST_2025) * p : FACTS.JP_WAITLIST_2017 * p;
+    counter(fmt(v), 960, 1590, 64, ph ? GOLD : CREAM, 'right');
+    plain(String(ph ? FACTS.JP_WAITLIST_YEAR : FACTS.JP_WAIT_PEAK_YEAR), 110, 1590, 44, DIM, { mono: true });
+    plain(`每點 ${JPER} 人`, 110, 1530, 28, DIM, { mono: true });
+  });
+}
+function twoCauses(lt) {   // 左：床越疊越多；右：寶寶一個個淡掉
+  stage(() => {
+    const k = E.io(inv(0.3, 2.4, lt));
+    for (let r = 0; r < 5; r++) { const q = clamp(k * 5 - r + 1); if (q > 0) crib(300, 1490 - r * 110, 150, CREAM, 1, q); }
+    for (let r = 0; r < 5; r++) { const a = 1 - clamp(k * 5 - (4 - r)); fade(0.18 + 0.82 * a, () => baby(760, 1440 - r * 110, 130, a > 0.5 ? GOLD : DIM)); }
+    G.poly(g, [[300, 900], [260, 960], [340, 960]], GREEN); G.poly(g, [[760, 980], [720, 920], [800, 920]], ORL);
+    plain('位子', 300, 1600, 40, CREAM, { align: 'center' }); plain('小孩', 760, 1600, 40, CREAM, { align: 'center' });
+  });
+}
+// —— 台北：兩種主張 ——
+const POLICY_A = '先加公托位子', POLICY_B = '先讓爸媽喘口氣';
+function twoChips(lt) {   // 台灣輪廓、台北亮起，兩個同樣式標籤一起出現
+  stage(() => {
+    taiwan(540, 1170, 150);
+    const [x, y] = lonlat(121.53, 25.04, 540, 1170, 150, 121, 23.7), k = pop(lt, 0.2);
+    if (k > 0) { g.globalAlpha = 0.35; G.disc(g, x, y, 46 * k + 8 * Math.sin(lt * 3), OR); g.globalAlpha = 1; G.disc(g, x, y, 14 * k, OR); }
+    const q = pop(lt, 0.9, 0.6);
+    chip(275, 1560, POLICY_A, q); chip(765, 1560, POLICY_B, q);
+  });
+}
+function centersGrid(lt, grow) {   // 現有公托（暗）＋新開 16 處（亮）
+  const n0 = FACTS.TPE_CENTERS_NOW, n1 = FACTS.TPE_NEW_CENTERS, cols = 12, s = 72;
+  for (let i = 0; i < n0 + n1; i++) {
+    const x = 145 + (i % cols) * s, y = 880 + Math.floor(i / cols) * s + 50;
+    if (i < n0) house(x, y, 40, rgba(CREAM, 0.35), BG2);
+    else { const q = clamp(grow * n1 - (i - n0)); if (q > 0) fade(q, () => house(x, y - 8 * (1 - q), 40, GOLD, BG2)); }
+  }
+}
+function policyA(lt) { stage(() => { centersGrid(lt, 0); chip(540, 1600, POLICY_A, pop(lt, 0.2)); }); }
+function newSlots(lt) {
+  stage(() => {
+    const p = E.o2(inv(0.3, 2.4, lt));
+    centersGrid(lt, p);
+    counter(fmt(FACTS.TPE_PUBLIC_SLOTS + FACTS.TPE_NEW_SLOTS * p), 540, 1600, 72, GOLD);
+  });
+}
+function secondChild(lt) {   // 兩個寶寶：第二個的價格牌翻成 0
+  stage(() => {
+    floor();
+    [[330, '第 1 胎'], [750, `第 ${FACTS.SECOND_CHILD} 胎`]].forEach(([x, lab], j) => {
+      crib(x, FLOOR - 40, 240, CREAM, 1);
+      plain(lab, x, FLOOR + 70, 40, CREAM, { align: 'center' });
+      const k = j ? E.io(inv(0.8, 1.6, lt)) : 0;
+      g.fillStyle = j ? mix(rgba(CREAM, 0.15), GOLD, k) : rgba(CREAM, 0.15); g.beginPath(); g.roundRect(x - 110, 950, 220, 140, 20); g.fill();
+      plain(j && k > 0.5 ? '0 元' : '自付', x, 1045, 60, j && k > 0.5 ? BG : CREAM, { align: 'center', w: 700 });
+    });
+    plain('公托 · 合作保母', 540, 1200, 34, DIM, { align: 'center' });
+  });
+}
+function costPeople(lt, which) {   // 兩種主張共用的「代價是人」：中間是做法的圖示，周圍一圈虛線人形浮出來
+  stage(() => {
+    const cx = 540, cy = 1230;
+    if (which === 0) { house(cx, cy + 90, 220, rgba(CREAM, 0.6), BG2); }
+    else { weekGrid(cx - 170, cy - 130, 340, 260, 1, 2); }
+    for (let j = 0; j < 8; j++) {
+      const a = -Math.PI / 2 + j * Math.PI / 4, x = cx + Math.cos(a) * 330, y = cy + Math.sin(a) * 300 + 90;
+      ghost(x, y, 150, pop(lt, 0.2 + j * 0.12, 0.4) * (0.75 + 0.25 * Math.sin(lt * 2.5 + j)));
+    }
+    fade(pop(lt, 1.3), () => plain('？', cx, cy - 170, 90, GOLD, { align: 'center', w: 800 }));
+    plain('代價是人', cx, cy + 190, 52, GOLD, { align: 'center', w: 700 });
+  });
+}
+function staffGrid(lt) {   // 155 個小人一格格亮起
+  stage(() => {
+    const n = FACTS.TPE_EXTRA_STAFF, cols = 16, s = 54, p = E.o2(inv(0.2, 1.6, lt));
+    for (let i = 0; i < n; i++) mini(124 + (i % cols) * s, 900 + Math.floor(i / cols) * s + 20, s * 0.9, i < n * p ? GOLD : rgba(CREAM, 0.2));
+    plain(`${FACTS.TPE_NEW_SLOTS} 個位子 ÷ ${FACTS.RATIO_HIGH} ＝ 至少`, 110, 1590, 34, DIM);
+    counter(`${Math.floor(n * p)} 人`, 960, 1600, 64, GOLD, 'right');
+  });
+}
+function weekGrid(x, y, w, h, p, hot = -1) {   // 週曆：7 天 × 12 小時；hot 那天填 4 小時
+  const cw = w / 7, rh = h / 12;
+  for (let d = 0; d <= 7; d++) G.seg(g, [x + d * cw, y], [x + d * cw, y + h], 2, rgba(CREAM, 0.25));
+  for (let r = 0; r <= 12; r += 3) G.seg(g, [x, y + r * rh], [x + w, y + r * rh], 2, rgba(CREAM, 0.15));
+  if (hot >= 0 && p > 0) { g.fillStyle = GOLD; g.beginPath(); g.roundRect(x + hot * cw + 4, y + 2 * rh, cw - 8, FACTS.RESPITE_HOURS * rh * clamp(p), 8); g.fill(); }
+}
+function policyB(lt) {   // 爸媽人形呼吸：圈圈從身上往外擴
+  stage(() => {
+    floor();
+    for (let j = 0; j < 3; j++) { const u = loop(lt * 0.5 + j / 3, 1); g.globalAlpha = (1 - u) * 0.5; G.ring(g, 540, 1260, 80 + u * 260, 6, GREEN); g.globalAlpha = 1; }
+    person(540, FLOOR, 380, CREAM, { still: true, bag: GOLD });
+    stroller(720, FLOOR, 150, rgba(CREAM, 0.6));
+    chip(540, 920, POLICY_B, pop(lt, 0.2));
+  });
+}
+function respite(lt) {   // 週曆一格填 4 小時；年齡帶 6 個月 → 7 歲
+  stage(() => {
+    weekGrid(140, 900, 800, 480, E.io(inv(0.3, 1.8, lt)), 2);
+    ['一', '二', '三', '四', '五', '六', '日'].forEach((d, j) => plain(d, 140 + (j + 0.5) * 800 / 7, 880, 30, j === 2 ? GOLD : DIM, { align: 'center' }));
+    const k = E.io(inv(0.8, 2.4, lt));
+    g.fillStyle = rgba(CREAM, 0.12); g.beginPath(); g.roundRect(140, 1460, 800, 36, 18); g.fill();
+    g.fillStyle = GOLD; g.beginPath(); g.roundRect(140, 1460, Math.max(36, 800 * k), 36, 18); g.fill();
+    plain(`${FACTS.RESPITE_AGE_MIN_MONTHS} 個月`, 140, 1560, 32, CREAM, { mono: true }); plain(`${FACTS.RESPITE_AGE_MAX} 歲`, 940, 1560, 32, k > 0.95 ? CREAM : DIM, { mono: true, align: 'right' });
+  });
+}
+function kidsDots(lt) {   // 100 個小人，每個 1,000 個小孩
+  stage(() => {
+    const n = FACTS.RESPITE_KIDS / 1000, p = E.o2(inv(0.2, 1.5, lt));
+    for (let i = 0; i < n; i++) { const q = clamp(p * n - i); mini(150 + (i % 10) * 86, 900 + Math.floor(i / 10) * 60 + 20, 52, q > 0 ? GOLD : rgba(CREAM, 0.15)); }
+    plain('每個 1,000 人', 960, 1600, 28, DIM, { mono: true, align: 'right' });
+    counter(`近 ${fmt(FACTS.RESPITE_KIDS * p)}`, 110, 1600, 56, GOLD, 'left');
+  });
+}
+function hours(lt, ph) {   // 長條：每週要的臨托小時（外框）vs 現在排得出的（實心）
+  stage(() => {
+    const base = 1530, u = 620 / (FACTS.RESPITE_NEED_HOURS / 1e4), kN = ph ? 1 : E.o3(inv(0.2, 1.6, lt)), kH = ph ? E.o3(inv(0.2, 1.6, lt)) : 0;
+    const hN = u * FACTS.RESPITE_NEED_HOURS / 1e4 * kN, hH = u * FACTS.RESPITE_NOW_HOURS / 1e4 * kH;
+    g.fillStyle = rgba(GOLD, 0.18); g.fillRect(300, base - hN, 480, hN); g.strokeStyle = GOLD; g.lineWidth = 5; g.strokeRect(300, base - hN, 480, hN);
+    if (kH > 0) { g.fillStyle = GOLD; g.fillRect(300, base - hH, 480, hH); }
+    counter(`${Math.round(FACTS.RESPITE_NEED_HOURS / 1e4 * kN)} 萬`, 540, base - hN - 20, 56, CREAM);
+    if (ph) counter(`${Math.round(FACTS.RESPITE_NOW_HOURS / 1e4 * kH)} 萬`, 540, base - hH + 70, 56, BG);
+    plain('小時／週', 540, base + 60, 32, DIM, { align: 'center' });
+  });
+}
+// —— 落點、提問、收尾 ——
+function commute(lt) {   // 爸媽提包往右走去上班；寶寶床邊一個人從虛線填實
+  stage(() => {
+    floor();
+    const x = 560 + loop(lt * 80, 500);
+    person(x, FLOOR, 300, CREAM, { bag: GOLD, ph: lt * 3 });
+    crib(250, FLOOR, 220, CREAM, 1);
+    carer(120, FLOOR, 280, E.io(inv(1.0, 2.2, lt)));
+  });
+}
+function waiting(lt) {   // 一排推嬰兒車的家庭慢慢往前挪，前面是搖獎機
+  stage(() => {
+    floor();
+    cam(760, 1150, 0.62, () => lottery(lt, 250, 760, 1150));
+    for (let j = 0; j < 4; j++) {
+      const x = 130 + j * 130 + 10 * Math.sin(lt * 1.5 + j);
+      person(x, FLOOR, 220, j % 2 ? CREAM : ORL, { ph: lt * 1.5 + j });
+      stroller(x + 30, FLOOR, 90, rgba(CREAM, 0.7));
+    }
+  });
+}
+function question(lt) {   // 阿嬤、保母、托嬰中心三個剪影並排，問號落下
+  stage(() => {
+    floor();
+    const items = [[230, '阿嬤'], [540, '保母'], [850, '托嬰中心']];
+    items.forEach(([x, lab], j) => fade(pop(lt, 0.1 + j * 0.3), () => {
+      if (j === 0) person(x, FLOOR, 300, CREAM, { cane: true, still: true });
+      else if (j === 1) { person(x - 40, FLOOR, 320, ORL, { still: true }); baby(x + 70, FLOOR - 190, 90, GOLD); }
+      else house(x, FLOOR, 220, CREAM, BG2);
+      plain(lab, x, FLOOR + 70, 38, CREAM, { align: 'center' });
+    }));
+    const k = pop(lt, 1.1, 0.6); if (k > 0) plain('？', 540, lerp(820, 1060, E.o3(k)), 200, GOLD, { align: 'center', w: 800 });
+  });
+}
+function everyone(lt) {   // 小孩在中間，一圈大人站在旁邊
+  stage(() => {
+    floor();
+    const crowd = [[150, CREAM, { cane: true }, 250], [290, ORL, {}, 290], [420, GOLD, { bag: BLUE }, 270], [660, BLUE, {}, 280], [790, CREAM, { bag: GOLD }, 260], [920, ORL, { cane: true }, 240]];
+    crowd.forEach(([x, col, o, s], j) => person(x, FLOOR, s, col, { ...o, ph: lt * 2 + j }));
+    person(540, FLOOR, 150 + 10 * E.io(inv(0, 3, lt)), GOLD, { ph: lt * 2.4 });
+    G.disc(g, 540, 1000, 50 + 6 * Math.sin(lt * 2), rgba(GOLD, 0.4));
+  });
+}
+function twGlow(lt) {   // 台灣輪廓上一戶戶亮起
+  stage(() => {
+    taiwan(540, 1200, 190);
+    const pts = [[121.53, 25.04], [121.3, 24.95], [120.97, 24.8], [120.68, 24.15], [120.45, 23.48], [120.2, 23.0], [120.3, 22.62], [121.6, 23.97], [121.15, 22.75], [120.95, 24.6], [120.55, 23.7]];
+    pts.forEach(([lo, la], j) => { const [x, y] = lonlat(lo, la, 540, 1200, 190, 121, 23.7), k = pop(lt, 0.2 + j * 0.18); if (k > 0) { g.globalAlpha = 0.3 * k; G.disc(g, x, y, 34 + 6 * Math.sin(lt * 3 + j), GOLD); g.globalAlpha = 1; G.disc(g, x, y, 11 * k, GOLD); } });
+  });
+}
+
+// ---------- 卡 ----------
+// 一張卡對一句旁白（timeline.js 第 i 句）；卡的起點＝那句開口前 0.25 秒。hud＝數字的出處；ch＝章名序號。
+const CH = ['', '一、位子為什麼加不快', '二、日本怎麼做', '三、台北兩種主張', '四、誰來顧'];
+const CARDS = [
+  { ch: 0, head: '抽公托', sub: '為什麼像在抽樂透？', hud: 'TVBS · 示意圖', draw: hook },
+  { ch: 0, head: '抽公托', sub: '位子太少 · 很難加快', hud: '示意圖', draw: fewSlots },
+  { ch: 0, head: '位子 vs 排隊', sub: `${fmt(FACTS.TPE_PUBLIC_SLOTS)} 個位子`, hud: '自由時報 2026-04', draw: lt => queue(lt, 0) },
+  { ch: 0, head: '位子 vs 排隊', hud: '自由時報 2026-04', draw: lt => queue(lt, 1) },
+  { ch: 1, head: '地方＋人', hud: '台北市政府 · 示意圖', draw: placePeople },
+  { ch: 1, head: '一個顧幾個', sub: `1 : ${FACTS.RATIO_LOW}–${FACTS.RATIO_HIGH}`, hud: '台北市社會局', draw: ratio },
+  { ch: 1, head: '一個顧幾個', sub: `起薪 ${(FACTS.PAY_START_TWD / 1e4).toFixed(1)} 萬`, tag: `${FACTS.PAY_YEAR} 年起`, hud: '衛福部', draw: pay },
+  { ch: 1, head: '先找到人', hud: '示意圖', draw: fillPeople },
+  { ch: 2, head: '日本', hud: '示意地圖', draw: japanMap },
+  { ch: 2, head: '日本', sub: `${FACTS.JP_PLAN_YEARS} 年 +${FACTS.JP_SLOTS_ADDED / 1e4} 萬個位子`, tag: `${FACTS.JP_PLAN_START} 年度起`, hud: '厚生勞動省', draw: jpSlots },
+  { ch: 2, head: '日本', sub: `加薪 ${FACTS.JP_PAY_RAISE_PCT}%`, hud: '厚生勞動省', draw: jpPay },
+  { ch: 2, head: '等位子的小孩', sub: `${FACTS.JP_WAIT_PEAK_YEAR} · ${fmt(FACTS.JP_WAITLIST_2017)} 個`, hud: 'こども家庭庁（經 nippon.com）', draw: lt => jpWait(lt, 0) },
+  { ch: 2, head: '等位子的小孩', sub: `${FACTS.JP_WAITLIST_YEAR} · ${fmt(FACTS.JP_WAITLIST_2025)} 個`, tag: '官方統計', hud: 'こども家庭庁', draw: lt => jpWait(lt, 1) },
+  { ch: 2, head: '等位子的小孩', sub: '位子變多 · 小孩變少', hud: 'こども家庭庁 地方調查', draw: twoCauses },
+  { ch: 3, head: '回到台北', sub: '兩種主張', hud: 'Newtalk · NOWnews', draw: twoChips },
+  { ch: 3, head: POLICY_A, hud: 'Newtalk · 自由時報', draw: policyA },
+  { ch: 3, head: POLICY_A, sub: `+${FACTS.TPE_NEW_CENTERS} 處 · +${FACTS.TPE_NEW_SLOTS} 個位子`, hud: 'Newtalk · 自由時報', draw: newSlots },
+  { ch: 3, head: POLICY_A, sub: '第二胎免費', tag: '公托 · 合作保母', hud: '台北市社會局', draw: secondChild },
+  { ch: 3, head: POLICY_A, hud: '做法本身', draw: lt => costPeople(lt, 0) },
+  { ch: 3, head: POLICY_A, hud: '推算（1:4）', draw: staffGrid },
+  { ch: 3, head: POLICY_B, hud: 'NOWnews', draw: policyB },
+  { ch: 3, head: POLICY_B, sub: `每週 ${FACTS.RESPITE_HOURS} 小時免費臨托`, tag: `${FACTS.RESPITE_AGE_MIN_MONTHS} 個月到 ${FACTS.RESPITE_AGE_MAX} 歲`, hud: 'NOWnews', draw: respite },
+  { ch: 3, head: POLICY_B, hud: 'NOWnews', draw: kidsDots },
+  { ch: 3, head: POLICY_B, hud: '做法本身', draw: lt => costPeople(lt, 1) },
+  { ch: 3, head: POLICY_B, sub: `每週要 ${FACTS.RESPITE_NEED_HOURS / 1e4} 萬小時`, tag: '市府估計', hud: '自由時報', draw: lt => hours(lt, 0) },
+  { ch: 3, head: POLICY_B, sub: `現在 ${FACTS.RESPITE_NOW_HOURS / 1e4} 萬小時`, tag: '市府估計', hud: '自由時報', draw: lt => hours(lt, 1) },
+  { ch: 4, head: '誰來顧', sub: '爸媽要上班', hud: '示意圖', draw: commute },
+  { ch: 4, head: '誰來顧', sub: '還在等抽籤', hud: '示意圖', draw: waiting },
+  { ch: 4, head: '你小時候呢？', sub: '誰在幫忙顧你？', hud: '示意圖', draw: question },
+  { ch: 4, head: '誰來顧', sub: '跟每個人都有關', hud: '示意圖', draw: everyone },
+  { ch: 4, head: '誰來顧', sub: '一起多關心', hud: '示意圖', draw: twGlow },
+];
+const N = CARDS.length;
+if (TL.lines.length !== N) throw new Error(`timeline.js 有 ${TL.lines.length} 句，卡片 ${N} 張，對不上`);
+const DUR = TL.dur;
+const T0 = TL.lines.map((l, i) => i === 0 ? 0 : l.t0 - 0.25);
+const cardAt = t => { let i = 0; while (i + 1 < N && t >= T0[i + 1]) i++; return i; };
+
+// ---------- 背景：上方斜紋帶等速慢捲，讓每張卡都有連續動態 ----------
+function band(t) {
+  g.save(); g.beginPath(); g.rect(0, 0, W, 120); g.clip();
+  g.fillStyle = BG2; g.fillRect(0, 0, W, 120);
+  const off = (t * 40) % 80;
+  for (let x = -160; x < W + 160; x += 80) G.poly(g, [[x + off, 0], [x + off + 40, 0], [x + off - 80, 120], [x + off - 120, 120]], rgba(OR, 0.35));
+  g.restore();
+}
+
+// ---------- 字幕 ----------
+function caption(t) {
+  const L = TL.lines.find(l => t >= l.t0 - 0.1 && t < l.t1 + 0.2);
+  if (!L) return;
+  const s = L.text.replace(/[。！]$/, ''), px = 42, maxW = 1000;
+  g.font = ZH(500, px);
+  const fits = r => g.measureText(r).width <= maxW;
+  // 在標點後斷行，貪婪裝滿一行；單段本身太長才逐字斷
+  const segs = s.match(/[^，、；：]+[，、；：]?/g), rows = [];
+  let cur = '';
+  for (const sg of segs) {
+    if (fits(cur + sg)) { cur += sg; continue; }
+    if (cur) rows.push(cur);
+    cur = '';
+    for (const ch of sg) { if (!fits(cur + ch)) { rows.push(cur); cur = ''; } cur += ch; }
+  }
+  if (cur) rows.push(cur);
+  const h = 50 + rows.length * 58;
+  g.fillStyle = '#0f0e0d'; g.fillRect(0, 1880 - h, W, h);
+  rows.forEach((r, j) => plain(r, W / 2, 1880 - h + 66 + j * 58, px, CREAM, { align: 'center', w: 500 }));
+}
+
+// ---------- 主持人 ----------
+const svgText = await fetch('./mascot/clawd-bot.svg').then(r => { if (!r.ok) throw new Error('取不到 mascot/clawd-bot.svg'); return r.text(); });
+const host = document.getElementById('mascot'); host.innerHTML = svgText;
+const ROOT = host.querySelector('svg'); if (!ROOT) throw new Error('mascot svg 解析失敗');
+const TRACK = { fps: 30, states: [{ t: 0, state: 'idle' }], looks: CARDS.map((c, i) => ({ t: T0[i], x: -0.5, y: 0.5 })), pokes: [] };
+function poseHost(t) {
+  applyPose(ROOT, poseAt(t, TRACK));
+  // 嘴跟旁白開合；表情維持 idle
+  if (!TL.lines.some(l => t >= l.t0 && t <= l.t1)) return;
+  const a = 0.25 + 0.75 * Math.abs(Math.sin(t * 13.5)) * (0.55 + 0.45 * Math.abs(Math.sin(t * 4.3 + 1)));
+  ROOT.querySelector('#mouth').setAttribute('d', `M-5,8 Q0,${(9 + a * 5).toFixed(2)} 5,8`);
+}
+
+// ---------- 主迴圈 ----------
+// 換卡＝原地交叉淡化 XF 秒：先畫上一張、存起來，再畫這一張，把上一張以漸弱透明度疊回去。
+// 不滑入、不換底色、不插章名全屏卡（使用者 10-30；對標 DemDuhNk1ZR 66.9 秒 0 次硬切）。
+const XF = 0.6;
+const snap = Object.assign(document.createElement('canvas'), { width: W, height: H });
+function render(t) {
+  t = clamp(t, 0, DUR); TXT = []; NOW = t;
+  const i = cardAt(t), lt = t - T0[i];
+  const k = i && lt < XF ? E.io(lt / XF) : 1;
+  if (k < 1) { drawCard(i - 1, t); snap.getContext('2d').drawImage(g.canvas, 0, 0); TXT = []; }
+  drawCard(i, t);
+  if (k < 1) { g.globalAlpha = 1 - k; g.drawImage(snap, 0, 0); g.globalAlpha = 1; }
+  return finish(t);
+}
+function drawCard(i, t) {
+  const cd = CARDS[i], lt = t - T0[i];
+  g.fillStyle = BG; g.fillRect(0, 0, W, H);
+  band(t);
+  plain('台北托育懶人包', 60, 186, 30, DIM, { mono: true, ls: '4px' });
+  const ch = CH[cd.ch]; if (ch === undefined) throw new Error(`卡 ${i + 1} 沒有章名`);
+  if (ch) plain(ch, 60, 246, 44, CREAM, { w: 600 });
+  // 進度條按章分組，章與章之間空一格
+  let gx = 60;
+  for (let j = 0; j < N; j++) {
+    if (j && CARDS[j].ch !== CARDS[j - 1].ch) gx += 14;
+    g.fillStyle = j <= i ? OR : rgba(CREAM, 0.2); g.fillRect(gx, 276, 14, j === i ? 10 : 5); gx += 20;
+  }
+  // 大標＝這一段的主題，同主題連續幾張卡共用、不重播動畫（短句卡也讀得完）；副標＝這張卡的關鍵詞。
+  // 第 0 卡第 0 幀就完整顯示（封面）。
+  let gi = i; while (gi > 0 && CARDS[gi - 1].head === cd.head) gi--;
+  const glt = t - T0[gi];
+  const pin = i === 0 ? () => 1 : (a, b) => inv(a, b, lt);
+  const big = cd.head.length > 6 ? 120 : cd.head.length > 4 ? 150 : 180, hy = 330 + big * 0.86 + 60;
+  say(cd.head, 60, hy, big, CREAM, i === 0 ? 1 : inv(0.05, 0.6, glt), { id: 'head' + (gi + 1) });
+  if (cd.sub) say(cd.sub, 64, hy + 110, 68, ORL, pin(0.15, 0.7), { id: 'sub' + (i + 1) });
+  if (cd.tag) say(cd.tag, 64, hy + 190, 46, GOLD, pin(0.3, 0.85), { id: 'tag' + (i + 1) });
+  plain(`來源｜${cd.hud}`, 60, 1690, 30, DIM, { mono: true });
+  cd.draw(lt);
+}
+function finish(t) {
+  caption(t);
+  poseHost(t);
+  const fade = t > DUR - 0.6 ? inv(DUR - 0.6, DUR, t) : 0;
+  if (fade) { g.globalAlpha = fade; g.fillStyle = '#000'; g.fillRect(0, 0, W, H); g.globalAlpha = 1; }
+  // 主播畫進 canvas：DOM SVG 疊層的合成結果會受上一幀影響，尋幀一致過不了
+  const tok = ++mascotTok, img = new Image();
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(ROOT));
+  return img.decode().then(() => {
+    if (tok !== mascotTok) return;   // 已經畫下一幀了，舊圖不能蓋上去
+    g.globalAlpha = 1 - fade; g.drawImage(img, 730, 60, 340, 340); g.globalAlpha = 1;
+  });
+}
+let mascotTok = 0;
+
+// ---------- 對外契約 ----------
+window.DUR = DUR;
+window.render = render;
+window.TEXTS = t => { render(t); return TXT.filter(b => b.screen); };
+window.CUES = TL.lines.map(l => ({ t0: l.t0, t1: l.t1, text: l.text }));
+window.SHAKES = [];
+window.EV = (() => {
+  const e = [{ t: 0, type: 'bed', len: DUR }];
+  // 不加任何音效：換卡「登」一聲使用者 10-30 嫌吵拿掉，只留配樂
+  return e.sort((a, b) => a.t - b.t);
+})();
+window.VOICE = TL.lines.map((l, j) => ({ t: l.t0, file: `out/voice/${String(j + 1).padStart(2, '0')}.wav` }));
+
+// 字型：這段程式碼本身就含畫面上所有字（卡片、標籤、圖表字），整段拿去預載
+const allText = document.querySelector('script[type=module]').textContent + TL.lines.map(l => l.text).join('') + '0123456789';
+await Promise.all([document.fonts.load(ZH(600, 180), allText), document.fonts.load(ZH(500, 42), allText), document.fonts.load(ZH(700, 46), allText), document.fonts.load(MONO(30), allText)]);
+await document.fonts.ready;
+for (let i = 0; i < N; i++) render(T0[i] + 0.6);
+render(0);
+window.READY = true;
+</script>
+</body>
+</html>

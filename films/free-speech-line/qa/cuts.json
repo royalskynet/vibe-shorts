@@ -1,0 +1,13 @@
+{
+ "video": "films/free-speech-line/free-speech-line.mp4",
+ "duration": 85.43,
+ "size": "1080x1920",
+ "fps": 30.0,
+ "cuts": [],
+ "shot_seconds": [
+  85.43
+ ],
+ "median_shot": 85.43,
+ "sheet": "films/free-speech-line/qa/final-sheet.jpg",
+ "sheet_phone": "films/free-speech-line/qa/final-sheet-360.jpg"
+}

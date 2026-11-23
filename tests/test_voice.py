@@ -73,3 +73,9 @@ try:
     raise AssertionError("缺聲紋範本應該 SystemExit")
 except SystemExit as e:
     assert "cast.json" in str(e) and "24kHz" in str(e), str(e)
+
+# pause_after：第 1 句念完多留 2.75 秒，只影響它後面的句子
+tl4, d4 = v.layout([("鉤子", "a", 2.0), ("鉤子", "b", 1.0), ("鉤子", "c", 1.0)], 0.5, 1.0, 0.0, {"1": 2.75})
+assert abs(tl4[1]["t0"] - (tl4[0]["t1"] + 0.5 + 2.75)) < 1e-6, tl4
+assert abs(tl4[2]["t0"] - (tl4[1]["t1"] + 0.5)) < 1e-6, tl4
+print("pause_after OK")

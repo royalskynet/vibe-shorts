@@ -1,0 +1,103 @@
+{
+  "source": "pedestrian-hell.mp4",
+  "title": "",
+  "lang": "zh",
+  "meta": {
+    "durationSeconds": 124.47,
+    "fps": 30,
+    "width": 1080,
+    "height": 1920,
+    "aspect": "9:16",
+    "codec": "h264",
+    "hasAudio": true
+  },
+  "params": {
+    "sceneThreshold": 0.3,
+    "minShotSeconds": 0.3
+  },
+  "seedCuts": [
+    14.3,
+    44.6,
+    87.43,
+    108.27
+  ],
+  "manualCuts": [],
+  "cast": [],
+  "shots": [
+    {
+      "id": "S01",
+      "start": 0,
+      "end": 14.3,
+      "seconds": 14.3,
+      "motion": 0.4,
+      "size": "",
+      "category": "",
+      "camera": "",
+      "transitionIn": "cut",
+      "subjects": [],
+      "frame": "",
+      "onscreenText": "",
+      "audio": ""
+    },
+    {
+      "id": "S02",
+      "start": 14.3,
+      "end": 44.6,
+      "seconds": 30.3,
+      "motion": 0.9,
+      "size": "",
+      "category": "",
+      "camera": "",
+      "transitionIn": "cut",
+      "subjects": [],
+      "frame": "",
+      "onscreenText": "",
+      "audio": ""
+    },
+    {
+      "id": "S03",
+      "start": 44.6,
+      "end": 87.43,
+      "seconds": 42.83,
+      "motion": 0.6,
+      "size": "",
+      "category": "",
+      "camera": "",
+      "transitionIn": "cut",
+      "subjects": [],
+      "frame": "",
+      "onscreenText": "",
+      "audio": ""
+    },
+    {
+      "id": "S04",
+      "start": 87.43,
+      "end": 108.27,
+      "seconds": 20.84,
+      "motion": 0.4,
+      "size": "",
+      "category": "",
+      "camera": "",
+      "transitionIn": "cut",
+      "subjects": [],
+      "frame": "",
+      "onscreenText": "",
+      "audio": ""
+    },
+    {
+      "id": "S05",
+      "start": 108.27,
+      "end": 124.47,
+      "seconds": 16.2,
+      "motion": 1.6,
+      "size": "",
+      "category": "",
+      "camera": "",
+      "transitionIn": "cut",
+      "subjects": [],
+      "frame": "",
+      "onscreenText": "",
+      "audio": ""
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "source": "ref.mp4",
+  "title": "",
+  "lang": "zh",
+  "meta": {
+    "durationSeconds": 50.39,
+    "fps": 30,
+    "width": 1080,
+    "height": 1920,
+    "aspect": "9:16",
+    "codec": "vp9",
+    "hasAudio": true
+  },
+  "params": {
+    "sceneThreshold": 0.3,
+    "minShotSeconds": 0.3
+  },
+  "seedCuts": [
+    11.83,
+    28.6
+  ],
+  "manualCuts": [],
+  "cast": [],
+  "shots": [
+    {
+      "id": "S01",
+      "start": 0,
+      "end": 11.83,
+      "seconds": 11.83,
+      "motion": 0.6,
+      "size": "",
+      "category": "",
+      "camera": "",
+      "transitionIn": "cut",
+      "subjects": [],
+      "frame": "",
+      "onscreenText": "",
+      "audio": ""
+    },
+    {
+      "id": "S02",
+      "start": 11.83,
+      "end": 28.6,
+      "seconds": 16.77,
+      "motion": 1.5,
+      "size": "",
+      "category": "",
+      "camera": "",
+      "transitionIn": "cut",
+      "subjects": [],
+      "frame": "",
+      "onscreenText": "",
+      "audio": ""
+    },
+    {
+      "id": "S03",
+      "start": 28.6,
+      "end": 50.39,
+      "seconds": 21.79,
+      "motion": 0.1,
+      "size": "",
+      "category": "",
+      "camera": "",
+      "transitionIn": "cut",
+      "subjects": [],
+      "frame": "",
+      "onscreenText": "",
+      "audio": ""
+    }
+  ]
+}

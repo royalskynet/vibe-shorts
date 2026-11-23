@@ -24,4 +24,12 @@ voice.TEMPO = 1.2
 assert not reusable({"sim": 0.95, "who": "host:m24k"}, "乙", set(), host="host:m24k")
 assert reusable({"sim": 0.95, "who": "host:m24k@1.2"}, "乙", set(), host="host:m24k")
 voice.TEMPO = 1.0
+# 念法替換（cast.json say）：換了念法的句子要重念；沒受影響的句子照舊沿用
+voice.SAY.update({"忒修斯": "特修斯"})
+assert voice.spoken("叫做忒修斯之船。") == "叫做特修斯之船。"
+assert not reusable({"sim": 0.95, "who": "host"}, "叫做忒修斯之船。", set())          # 舊檔照原句念的
+assert reusable({"sim": 0.95, "who": "host", "said": "叫做特修斯之船。"}, "叫做忒修斯之船。", set())
+assert reusable({"sim": 0.95, "who": "host"}, "人其實很有趣。", set())
+voice.SAY.clear()
+assert not reusable({"sim": 0.95, "who": "host", "said": "叫做特修斯之船。"}, "叫做忒修斯之船。", set())  # 拿掉替換也要重念
 print("ok")

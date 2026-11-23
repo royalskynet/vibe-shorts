@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>你覺得台灣人單身，是因為沒錢嗎？</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}</style>
+<script src="engine.js"></script>
+<script src="timeline.js"></script>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+(() => {
+// pictogram-motion 文法（lemo-opuscar/styles/pictogram-motion/STYLE.md），9:16。
+// 人形改成極簡 ISOTYPE 式（圓頭＋圓肩身塊，不畫四肢）：使用者 2026-10-14 看樣張後定。
+const G = window.G, E = G.E, TL = window.TL, W = 1080, H = 1920;
+const g = document.getElementById('c').getContext('2d', { alpha: false });
+
+// 會出現在畫面上的事實數字集中在這裡，不要在別處重寫一次。每一個都要在 meta/facts.md 有一行附來源。
+const FACTS = {
+  Y_TAIPEI: 2013,          // 臺北市婦女婚育與就業調查年度
+  Y_PAY: 2024,             // yes123 七夕調查年度
+  Y_SINGLE: 2025,          // yes123 情人節調查年度
+  AGE_TP_LO: 25, AGE_TP_HI: 49,     // 臺北調查對象年齡
+  AGE_YES_LO: 20, AGE_YES_HI: 39,   // yes123 調查對象年齡
+  NOT_MET_PCT: 60,         // 2013 尚未遇到適婚對象 60.18%
+  ECON_PCT: 10,            // 2013 經濟因素 10.25%
+  SMALL_CIRCLE_PCT: 73,    // 2025 交友範圍狹隘 73.1%
+  LOW_INCOME_PCT: 51,      // 2025 覺得自己的收入不夠好 50.6%
+  ONE_PAYS_PCT: 82,        // 2024 曾經固定由一方出全額 81.5%
+  AA_PCT: 40,              // 2024 曾經 AA 40.3%
+};
+
+const BPM = 120, BEAT = 60 / BPM;          // mix.py 用同一個 BPM
+const CREAM = G.CREAM, GOLD = '#f2b33d';
+G.PAL.rose = { t: ['#7a2340', '#93304f', '#b4466a', '#c8668a', '#dc8ea9'], fg: CREAM, dim: '#f3c9d7', deep: '#5a1730' };
+G.PAL.plum = { t: ['#3a1f5c', '#4a2a73', '#62408c', '#7a5aa3', '#9a7fbd'], fg: CREAM, dim: '#d8c9ec', deep: '#26123f' };
+G.PAL.teal = { t: ['#0f4d55', '#155f68', '#1f7a84', '#3a9199', '#69b0b4'], fg: CREAM, dim: '#c4e6e6', deep: '#0a353b' };
+const ZH = (w, px) => `${w} ${px}px "PingFang TC"`, MONO = (px) => `500 ${px}px Menlo, "PingFang TC"`;
+const { clamp, inv, mix, rgba } = G;
+const pct = n => `${n}%`;
+
+// ---------- 卡 ----------
+// 一張卡對一句旁白（timeline.js 第 i 句）。卡的起點＝那句開口前 0.25 秒。
+const CARDS = [
+  { head: '沒錢？', sub: '單身的原因', tag: '', pal: 'rose', hud: '台灣 · 單身', draw: hook },
+  { head: `${FACTS.Y_TAIPEI}`, sub: '主計總處 婦女婚育與就業調查', tag: `臺北市 ${FACTS.AGE_TP_LO}–${FACTS.AGE_TP_HI} 歲 · 未婚女性`, pal: 'rose', hud: `${FACTS.Y_TAIPEI} · 主計總處`, draw: surveyTP },
+  { head: '六成', sub: '還沒遇到適合的人', tag: '一成 · 經濟因素', pal: 'rose', hud: `${FACTS.Y_TAIPEI} · 主計總處`, draw: tenPeople },
+  { head: '第一名', sub: '穩定的工作和收入', tag: '同一份調查 · 什麼會讓人更想結婚', pal: 'rose', hud: `${FACTS.Y_TAIPEI} · 主計總處`, draw: podium },
+  { head: `${FACTS.Y_SINGLE}`, sub: 'yes123 人力銀行調查', tag: `${FACTS.AGE_YES_LO}–${FACTS.AGE_YES_HI} 歲 · 沒有男女朋友的上班族`, pal: 'plum', hud: `${FACTS.Y_SINGLE} · yes123`, draw: surveyYes },
+  { head: '七成三', sub: '交友範圍太小', tag: '五成 · 覺得自己收入不夠好', pal: 'plum', hud: `${FACTS.Y_SINGLE} · yes123 · 可複選`, draw: singleBars },
+  { head: '怎麼付？', sub: `yes123 ${FACTS.Y_PAY} 七夕調查`, tag: `${FACTS.AGE_YES_LO}–${FACTS.AGE_YES_HI} 歲 · 有男女朋友、還沒結婚`, pal: 'teal', hud: `${FACTS.Y_PAY} · yes123`, draw: table },
+  { head: '八成', sub: '曾經固定由其中一人付', tag: '四成 · 曾經 AA', pal: 'teal', hud: `${FACTS.Y_PAY} · yes123 · 可複選`, draw: payBars },
+  { head: '兩個第一名', sub: '不結婚：遇不到人', tag: '更想結婚：穩定的工作和收入', pal: 'teal', hud: `${FACTS.Y_TAIPEI} · 主計總處`, draw: contrast },
+  { head: '為什麼？', sub: '現代年輕人結婚率低', tag: '真正的原因是什麼', pal: 'ink', hud: '留言告訴我們', draw: ask },
+];
+const N = CARDS.length;
+if (TL.lines.length !== N) throw new Error(`timeline.js 有 ${TL.lines.length} 句，卡片 ${N} 張，對不上`);
+const DUR = TL.dur;
+const T0 = TL.lines.map((l, i) => i === 0 ? 0 : l.t0 - 0.25);
+const T1 = i => i + 1 < N ? T0[i + 1] : DUR;
+const cardAt = t => { let i = 0; while (i + 1 < N && t >= T0[i + 1]) i++; return i; };
+
+// ---------- 字 ----------
+let TXT = [], NOW = 0;
+// 由下往上滑出遮罩的字；同時記下外框給 TEXTS。
+function say(s, x, y, px, col, p, o = {}) {
+  const font = o.mono ? MONO(px) : ZH(o.w || 600, px);
+  const w = G.maskText(g, s, x, y, font, col, p, { align: o.align, ls: o.ls });
+  if (o.id) {
+    const x0 = o.align === 'center' ? x - w / 2 : o.align === 'right' ? x - w : x;
+    TXT.push({ id: o.id, text: s, x0, y0: y - px, x1: x0 + w, y1: y + px * 0.25, screen: true });
+  }
+  return w;
+}
+function plain(s, x, y, px, col, o = {}) {
+  g.font = o.mono ? MONO(px) : ZH(o.w || 600, px); g.textAlign = o.align || 'left'; g.textBaseline = 'alphabetic';
+  g.letterSpacing = o.ls || '0px'; g.fillStyle = col; g.fillText(s, x, y); g.letterSpacing = '0px';
+}
+
+// ---------- 圖形 ----------
+// 極簡人形：原點＝髖部，s≈身高像素。
+// 人形緩慢上下浮動（約 3 秒一循環，相位依 x 錯開）。隨拍跳動使用者看了像抽搐，10-14 改掉。
+function figure(x, y, s, col) {
+  y -= s * 0.015 * Math.sin(NOW * 2.1 + x * 0.004);
+  g.save(); g.translate(x, y); g.scale(s / 260, s / 260); g.fillStyle = col;
+  g.beginPath(); g.arc(0, -108, 30, 0, Math.PI * 2); g.fill();
+  g.beginPath(); g.roundRect(-48, -66, 96, 183, [48, 48, 12, 12]); g.fill();
+  g.restore();
+}
+function coin(x, y, r, col = GOLD) {   // 金幣持續繞直軸轉
+  g.save(); g.translate(x, y); g.scale(Math.max(0.12, Math.abs(Math.cos(NOW * 1.1 + x * 0.01))), 1);
+  G.disc(g, 0, 0, r, col); G.ring(g, 0, 0, r * 0.66, r * 0.14, mix(col, '#000000', 0.25));
+  g.restore();
+}
+function sheet(x, y, w, h, col, lines, k = 1, ink = '#00000033') {   // 問卷：圓角紙＋勾選格與橫線
+  g.fillStyle = col; g.beginPath(); g.roundRect(x - w / 2, y - h / 2, w, h, 24); g.fill();
+  const n = Math.round(lines * clamp(k));
+  for (let j = 0; j < n; j++) {
+    const yy = y - h / 2 + 70 + j * ((h - 110) / Math.max(1, lines - 1));
+    g.fillStyle = ink; g.fillRect(x - w / 2 + 50, yy - 18, 36, 36);
+    g.fillRect(x - w / 2 + 110, yy - 7, (w - 170) * (0.55 + 0.4 * ((j * 37) % 10) / 10), 14);
+  }
+}
+function stamp(x, y, s, col, p) {   // 年份章：落下時放大縮回
+  if (p <= 0) return;
+  const k = 1 + 0.6 * (1 - E.oExp(p));
+  g.save(); g.translate(x, y); g.scale(k, k); g.rotate(-0.18); g.globalAlpha = clamp(p * 4);
+  G.ring(g, 0, 0, 110, 14, col); G.ring(g, 0, 0, 86, 4, col);
+  plain(s, 0, 20, 58, col, { align: 'center', mono: true });
+  g.restore(); g.globalAlpha = 1;
+}
+function hbar(x, y, w, h, frac, col, track) {   // 橫條：track 底、col 依 frac 長出
+  g.fillStyle = track; g.beginPath(); g.roundRect(x, y, w, h, h / 2); g.fill();
+  if (frac > 0) { g.fillStyle = col; g.beginPath(); g.roundRect(x, y, Math.max(h, w * frac), h, h / 2); g.fill(); }
+}
+function vbar(x, y, w, h, frac, col, track) {   // 直條：底邊在 y
+  g.fillStyle = track; g.beginPath(); g.roundRect(x, y - h, w, h, w / 2); g.fill();
+  if (frac > 0) { const hh = Math.max(w, h * frac); g.fillStyle = col; g.beginPath(); g.roundRect(x, y - hh, w, hh, w / 2); g.fill(); }
+}
+const pop = (lt, a, d = 0.35) => E.oBack(inv(a, a + d, lt));
+const beatPulse = t => 0.5 - 0.5 * Math.cos(t * Math.PI / (2 * BEAT));   // 緩慢呼吸 0..1，2 秒一循環（原本每拍衰減脈衝，看起來閃）
+
+// ---------- 每張卡的舞台（y 950–1620）----------
+// 參數：lt 卡內秒數，P 色系，t 全片秒數
+function hook(lt, P, t) {
+  const b = Math.sin(t * Math.PI / BEAT) * 8;
+  figure(330, 1360 + b, 560, CREAM);
+  for (let j = 0; j < 5; j++) {                 // 金幣一拍一枚落下疊起
+    const a = 0.3 + j * BEAT, k = E.oExp(inv(a, a + 0.3, lt));
+    if (k <= 0) continue;
+    coin(760, lerp(700, 1560 - j * 52, k), 92);
+  }
+  const q = pop(lt, 2.2);
+  if (q > 0) { g.save(); g.translate(760, 1000); g.scale(q, q); plain('？', 0, 60, 240, GOLD, { align: 'center' }); g.restore(); }
+}
+const lerp = G.lerp;
+function surveyTP(lt, P, t) {
+  const k = E.oExp(inv(0, 0.5, lt));
+  figure(260, 1380, 420, CREAM);
+  sheet(700, lerp(1900, 1300, k), 440, 560, CREAM, 6, inv(0.4, 1.8, lt), rgba(P.t[0], 0.55));
+  stamp(820, 1100, `${FACTS.Y_TAIPEI}`, GOLD, inv(1.4, 1.8, lt));
+}
+function tenPeople(lt, P, t) {
+  for (let i = 0; i < 10; i++) {
+    const cx = 150 + (i % 5) * 195, cy = 1120 + Math.floor(i / 5) * 330;
+    const k = E.oExp(inv(0.1 + i * 0.12, 0.5 + i * 0.12, lt));
+    if (k <= 0) continue;
+    const col = i < FACTS.NOT_MET_PCT / 10 ? CREAM : i < (FACTS.NOT_MET_PCT + FACTS.ECON_PCT) / 10 ? GOLD : mix(CREAM, P.t[1], 0.6);
+    const bob = i < 6 ? -14 * beatPulse(t) : 0;
+    figure(cx, cy + (1 - k) * 60 + bob, 260, col);
+  }
+}
+function surveyYes(lt, P, t) {
+  const k = E.oExp(inv(0, 0.5, lt));
+  sheet(lerp(540, 300, k), 1300, 400, 520, mix(CREAM, P.t[1], 0.45), 6, 1, rgba(P.t[0], 0.4));
+  plain(`${FACTS.Y_TAIPEI}`, lerp(540, 300, k), 1620, 40, P.dim, { align: 'center', mono: true });
+  sheet(lerp(1400, 780, k), 1300, 400, 520, CREAM, 6, inv(0.4, 1.8, lt), rgba(P.t[0], 0.55));
+  stamp(880, 1080, `${FACTS.Y_SINGLE}`, GOLD, inv(1.4, 1.8, lt));
+}
+function barsCard(lt, P, t, rows) {
+  rows.forEach((r, j) => {
+    const y = 1080 + j * 250, k = E.o3(inv(0.3 + j * 0.5, 1.3 + j * 0.5, lt));
+    figure(140, y + 80, 200, r.col);
+    hbar(250, y + 20, 740, 96, k * r.v / 100, r.col, rgba(CREAM, 0.16));
+    plain(pct(Math.round(r.v * k)), 980, y - 20, 60, r.col, { align: 'right', mono: true });
+    plain(r.label, 250, y - 20, 40, rgba(CREAM, 0.85));
+  });
+}
+function singleBars(lt, P, t) {
+  barsCard(lt, P, t, [
+    { v: FACTS.SMALL_CIRCLE_PCT, col: CREAM, label: '交友範圍太小' },
+    { v: FACTS.LOW_INCOME_PCT, col: GOLD, label: '覺得自己收入不夠好' },
+  ]);
+  plain('可複選', 60, 1620, 30, P.dim, { mono: true, ls: '4px' });
+}
+function podium(lt, P, t) {
+  const blocks = [[300, 2, 220], [540, 1, 340], [780, 3, 150]];
+  blocks.forEach(([x, n, h], j) => {
+    const k = E.oExp(inv(0.1 + j * 0.15, 0.6 + j * 0.15, lt));
+    g.fillStyle = n === 1 ? CREAM : mix(CREAM, P.t[1], 0.55);
+    g.fillRect(x - 110, 1620 - h * k, 220, h * k);
+    if (k > 0.6) plain(String(n), x, 1620 - h * k + 90, 80, P.t[0], { align: 'center', mono: true });
+  });
+  const k = E.oExp(inv(0.8, 1.2, lt)), y = 1620 - 340 - 117 * 300 / 260 - (1 - k) * 400;
+  if (k > 0) {
+    figure(540, y, 300, CREAM);
+    const by = y + 20 - 10 * beatPulse(t);       // 公事包
+    g.fillStyle = GOLD; g.beginPath(); g.roundRect(600, by, 150, 110, 14); g.fill();
+    G.ring(g, 675, by, 30, 12, GOLD);
+  }
+}
+function table(lt, P, t) {
+  const k = E.oExp(inv(0, 0.5, lt));
+  g.fillStyle = mix(CREAM, P.t[1], 0.3); g.fillRect(180, lerp(1900, 1400, k), 720, 40);
+  figure(220, lerp(1900, 1420, k), 380, CREAM);
+  figure(860, lerp(1900, 1420, k), 380, mix(CREAM, P.t[3], 0.35));
+  const f = inv(0.6, 1.4, lt);                    // 帳單落下翻面
+  if (f > 0) {
+    const y = lerp(900, 1310, E.oExp(f)), sx = Math.cos(Math.PI * 2 * clamp(f * 1.2)) ;
+    g.save(); g.translate(540, y); g.scale(sx, 1); g.rotate(0.06 * Math.sin(t * 3));
+    g.fillStyle = CREAM; g.beginPath(); g.roundRect(-80, -110, 160, 200, 12); g.fill();
+    g.fillStyle = rgba(P.t[0], 0.6); for (let j = 0; j < 4; j++) g.fillRect(-50, -70 + j * 40, j === 3 ? 60 : 100, 12);
+    g.restore();
+  }
+}
+function payBars(lt, P, t) {
+  barsCard(lt, P, t, [
+    { v: FACTS.ONE_PAYS_PCT, col: CREAM, label: '曾經固定由其中一人付' },
+    { v: FACTS.AA_PCT, col: GOLD, label: '曾經 AA' },
+  ]);
+  plain('可複選', 60, 1620, 30, P.dim, { mono: true, ls: '4px' });
+}
+function contrast(lt, P, t) {   // 左：一個人旁邊空著一格（遇不到人）；右：站上第一名台、拿著金色公事包（工作和收入）
+  const k1 = E.oExp(inv(0.1, 0.6, lt)), k2 = E.oExp(inv(0.6, 1.1, lt));
+  if (k1 > 0) {
+    figure(220, 1420 + (1 - k1) * 300, 300, CREAM);
+    g.save(); g.setLineDash([18, 14]); g.lineWidth = 6; g.strokeStyle = rgba(CREAM, 0.5 * k1);
+    g.beginPath(); g.arc(400, 1420 - 108 * 300 / 260, 30 * 300 / 260, 0, Math.PI * 2); g.stroke();
+    g.beginPath(); g.roundRect(400 - 55, 1420 - 76, 110, 210, [55, 55, 14, 14]); g.stroke(); g.restore();
+    plain('遇不到人', 310, 1040, 44, CREAM, { align: 'center' });
+  }
+  if (k2 > 0) {
+    g.fillStyle = CREAM; g.fillRect(680, 1620 - 200 * k2, 220, 200 * k2);
+    if (k2 > 0.6) plain('1', 790, 1620 - 200 * k2 + 90, 80, P.t[0], { align: 'center', mono: true });
+    const y = 1620 - 200 - 117 * 300 / 260 - (1 - k2) * 400;
+    figure(790, y, 300, CREAM);
+    const by = y + 20 - 10 * beatPulse(t);
+    g.fillStyle = GOLD; g.beginPath(); g.roundRect(850, by, 150, 110, 14); g.fill();
+    G.ring(g, 925, by, 30, 12, GOLD);
+    plain('工作和收入', 790, 1040, 44, GOLD, { align: 'center' });
+  }
+}
+function ask(lt, P, t) {
+  const k = E.oExp(inv(0, 0.5, lt));
+  figure(lerp(-200, 260, k), 1380, 460, CREAM);
+  figure(lerp(1280, 820, k), 1380, 460, GOLD);
+  coin(lerp(1400, 990, k), 1400, 70, CREAM);
+  const q = 1 + 0.12 * beatPulse(t);
+  g.save(); g.translate(540, 1260); g.scale(q, q); plain('？', 0, 80, 260, GOLD, { align: 'center' }); g.restore();
+}
+
+// ---------- 背景：上方圖案帶，列整排錯位；每拍跳四分之一格 ----------
+function band(P, pal, t) {
+  const pat = G.pattern(pal, 3, { spread: 0.6, density: 0.5, cell: 180 });
+  const step = r => (t * 60 * (r % 2 ? 1 : -1)) % 180;   // 等速慢捲；每拍一推看起來像抽搐，10-14 拿掉
+  g.save(); g.beginPath(); g.rect(0, 0, W, 360); g.clip();
+  G.drawPattern(g, pat, step, { cell: 180 });
+  g.restore();
+}
+
+// ---------- 轉場：直接切，新卡元素各自進場。圖案蓋滿＋刷聲使用者覺得太快太吵，10-14 拿掉 ----------
+// ---------- 字幕 ----------
+function caption(t, P) {
+  const L = TL.lines.find(l => t >= l.t0 - 0.1 && t < l.t1 + 0.2);
+  if (!L) return;
+  const s = L.text.replace(/[。！]$/, ''), px = 44, maxW = 980;
+  g.font = ZH(500, px);
+  // 兩行：優先在兩半都放得下、最接近中間的逗號斷；沒有就在中間硬斷
+  const fits = r => g.measureText(r).width <= maxW;
+  let rows = [s];
+  if (!fits(s)) {
+    const cuts = [...s.matchAll(/[，、]/g)].map(m => m.index + 1).filter(c => fits(s.slice(0, c)) && fits(s.slice(c)));
+    const cut = cuts.length ? cuts.reduce((a, c) => Math.abs(c - s.length / 2) < Math.abs(a - s.length / 2) ? c : a) : Math.ceil(s.length / 2);
+    rows = [s.slice(0, cut), s.slice(cut)];
+  }
+  const h = 60 + rows.length * 62;
+  g.fillStyle = P.deep || P.t[0]; g.fillRect(0, 1860 - h, W, h);
+  rows.forEach((r, j) => plain(r, W / 2, 1860 - h + 74 + j * 62, px, CREAM, { align: 'center', w: 500 }));
+}
+
+// ---------- 主迴圈 ----------
+function render(t) {
+  t = clamp(t, 0, DUR); TXT = []; NOW = t;
+  const i = cardAt(t), cd = CARDS[i], P = G.PAL[cd.pal], lt = t - T0[i];
+  g.fillStyle = P.t[1 + (i % 2)]; g.fillRect(0, 0, W, H);   // 相鄰卡底色深淺交替：同色系換卡也看得出、切點偵測抓得到
+  band(P, cd.pal, t);
+  // HUD：卡號、右上年份地點、進度刻度
+  plain(`${String(i + 1).padStart(2, '0')} / ${N}`, 60, 420, 24, CREAM, { mono: true, ls: '4px' });
+  plain(cd.hud, W - 60, 420, 24, CREAM, { mono: true, align: 'right', ls: '4px' });
+  for (let j = 0; j < N; j++) { g.fillStyle = j <= i ? CREAM : rgba(CREAM, 0.25); g.fillRect(60 + j * 30, 440, 20, j === i ? 14 : 6); }
+  // 標題三層：大標 → 副標 → 金色標籤，依序遮罩滑出
+  const big = cd.head.length > 3 ? 190 : 250;
+  say(cd.head, 60, 520 + big * 0.86, big, CREAM, inv(0.05, 0.6, lt), { id: 'head' + (i + 1) });
+  say(cd.sub, 66, 520 + big * 0.86 + 100, 62, P.dim, inv(0.2, 0.75, lt), { id: 'sub' + (i + 1) });
+  if (cd.tag) say(cd.tag, 66, 520 + big * 0.86 + 185, 46, GOLD, inv(0.35, 0.9, lt), { id: 'tag' + (i + 1) });
+  cd.draw(lt, P, t);
+  caption(t, P);
+  const fade = t > DUR - 0.5 ? inv(DUR - 0.5, DUR, t) : 0;
+  if (fade) { g.globalAlpha = fade; g.fillStyle = '#000'; g.fillRect(0, 0, W, H); g.globalAlpha = 1; }
+}
+
+// ---------- 對外契約 ----------
+window.DUR = DUR;
+window.render = render;
+window.TEXTS = t => { render(t); return TXT.filter(b => b.screen); };
+window.CUES = TL.lines.map(l => ({ t0: l.t0, t1: l.t1, text: l.text }));
+window.SHAKES = [];
+window.EV = (() => {
+  const e = [{ t: 0, type: 'bed', len: DUR }];
+  for (let i = 1; i < N; i++) e.push({ t: T0[i], type: 'turn' });
+  // 每張卡的衝擊事件，對 TREATMENT.md 分鏡表
+  const hit = [['pop', 2.2], ['stamp', 1.4], ['ticks', 0.1, 1.3], ['pop', 0.8], ['stamp', 1.4],
+    ['stamp', 1.3], ['swish', 0.6, 0.8], ['ticks', 0.3, 1.0], ['pop', 0.8], ['bell', 0.2]];
+  hit.forEach(([type, dt, len], i) => {
+    e.push(len ? { t: T0[i] + dt, type, len } : { t: T0[i] + dt, type });
+  });
+  return e.sort((a, b) => a.t - b.t);
+})();
+window.VOICE = TL.lines.map((l, j) => ({ t: l.t0, file: `out/voice/${String(j + 1).padStart(2, '0')}.wav` }));
+
+const allText = CARDS.map(c => c.head + c.sub + c.tag + c.hud).join('') + TL.lines.map(l => l.text).join('') + '？遇不到人工作和收入1可複選0123456789%·–/';
+Promise.all([
+  document.fonts.load(ZH(600, 250), allText), document.fonts.load(ZH(500, 44), allText), document.fonts.load(MONO(24), allText),
+]).then(() => document.fonts.ready).then(() => {
+  // 每張卡先畫一次：圖案快取與後備字形在冷啟動 worker 首幀就要跟接續畫的一樣
+  for (let i = 0; i < N; i++) { render(T0[i] + 0.6); G.pattern(CARDS[i].pal, 7, { spread: 1, density: 0.6, cell: 180 }); }
+  render(0);
+  window.READY = true;
+});
+})();
+</script>
+</body>
+</html>

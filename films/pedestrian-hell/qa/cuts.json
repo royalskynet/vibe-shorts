@@ -1,0 +1,13 @@
+{
+ "video": "films/pedestrian-hell/pedestrian-hell.mp4",
+ "duration": 122.4,
+ "size": "1080x1920",
+ "fps": 30.0,
+ "cuts": [],
+ "shot_seconds": [
+  122.4
+ ],
+ "median_shot": 122.4,
+ "sheet": "films/pedestrian-hell/qa/final-sheet.jpg",
+ "sheet_phone": "films/pedestrian-hell/qa/final-sheet-360.jpg"
+}

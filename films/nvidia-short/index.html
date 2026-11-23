@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>黃仁勳下台前半年，有人在放空輝達</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}#mascot{display:none}#mascot svg{width:340px;height:340px}</style>
+<script src="engine.js"></script>
+<script src="timeline.js"></script>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<div id="mascot"></div>
+<script type="module">
+// 單人旁白科普，米色插畫風（範本 films/taipei-silence）：全片同一張底、不硬切，一句一個畫面狀態，只有封面有大標。
+// 禁止清單（TREATMENT.md）：不畫真人臉、不放公司 logo、不放報告截圖；黃仁勳、黃樂用扁平小人。間諜只寫「懷疑」。
+// 所有動作都是 t 的封閉式（seek_check.mjs 會比亂序算出的同一幀）；循環用取餘數，不累積。
+import { poseAt, applyPose } from './mascot/clawd-bot-shot.mjs';
+import { PALETTE, person, prop } from './illust/illust.mjs';
+const G = window.G, E = G.E, TL = window.TL, W = 1080, H = 1920;
+const g = document.getElementById('c').getContext('2d', { alpha: false });
+const { clamp, inv, lerp, mix } = G;
+
+const CREAM = PALETTE.cream, INK = PALETTE.ink, TERRA = PALETTE.terra, MUST = PALETTE.mustard, COAT = PALETTE.coat;
+// 角色色：黃仁勳＝深色皮衣、拉馬可＝芥末黃、黃樂＝梅紫；輝達長條用鼠尾草綠（不是 logo 綠）
+const JACKET = '#2F2723', PLUM = '#9A6A8C', SAGE = '#7FA57A', SAGE_D = '#557A51', MUTE = '#B3A797', SOFT = '#EBE1D2', DIM = '#8C7B6B';
+const MUST_D = '#9A6F1C', TERRA_D = '#9E4A33', WOOD = '#A5835D';
+const ZH = (w, px) => `${w} ${px}px "PingFang TC"`;
+const SERIES = '新聞背後的帳', EP = 1, HANDLE = '@paradoxbar';
+const GY = 1270;   // 畫面地平線：小人腳底；字幕短橫線在 1308
+
+// 會出現在畫面上的事實數字集中在這裡，不要在別處重寫一次。每一個都要在 meta/facts.md 有一行附來源。
+const FACTS = {
+  AGE: 31,                // F2 Lamarco 年齡
+  PAGES: 40,              // F3 報告頁數
+  STAFF: 3,               // F2 Culper 人數
+  H20_CN: 0,              // F11 Q2 FY2026 H20 賣給中國客戶
+  SG_US_PCT: 99,          // F12 開票新加坡的受管制運算營收，美國客戶占比（超過）
+  Y2023: 2023,            // F6
+  Y2024: 2024,            // F6
+  ASSET_2023_WAN: 3300,   // F6 Megaspeed 2023 年底資產（萬美元）
+  ASSET_2024_YI: 30,      // F6 2024 年底資產（億美元）
+  MULT: 90,               // F6 30 億 ÷ 3,300 萬 ≈ 90.9
+  CN_SHARE: 20,           // F5 Culper 估算 FY2026 運算營收中國占比（超過）
+};
+const fmt = n => n.toLocaleString('en-US');
+
+// ---------- 字 ----------
+let TXT = [];
+function say(s, x, y, px, col, p, o = {}) {
+  g.save(); g.font = ZH(o.w || 700, px); g.textAlign = o.align || 'left'; g.textBaseline = 'alphabetic';
+  const w = g.measureText(s).width;
+  g.globalAlpha *= E.io(p); g.fillStyle = col; g.fillText(s, x, y);
+  if (o.bold) { g.strokeStyle = col; g.lineWidth = px * o.bold; g.lineJoin = 'round'; g.strokeText(s, x, y); }
+  g.restore();
+  if (o.id) {
+    const x0 = o.align === 'center' ? x - w / 2 : o.align === 'right' ? x - w : x;
+    TXT.push({ id: o.id, text: s, x0, y0: y - px, x1: x0 + w, y1: y + px * 0.25, screen: true });
+  }
+  return w;
+}
+function plain(s, x, y, px, col, o = {}) {
+  g.font = ZH(o.w || 600, px); g.textAlign = o.align || 'left'; g.textBaseline = 'alphabetic';
+  g.fillStyle = col; g.fillText(s, x, y);
+}
+const pop = (lt, a, d = 0.5) => E.o3(inv(a, a + d, lt));
+const loop = (x, n) => ((x % n) + n) % n;
+const rr = (x, y, w, h, r, col) => { g.fillStyle = col; g.beginPath(); g.roundRect(x, y, w, h, r); g.fill(); };
+const man = (x, y, s, body, o = {}) => person(g, { x, y, s, body, ...o });
+const fig = (s, x, y, col, p = 1, id) => say(s, x, y, 64, col, p, { id, align: 'center', bold: 0.03 });
+
+// 白卡片放在米色底上，藏字檢查算不到畫面；要用卡片就加一圈有色外框
+function framed(cx, cy, w, h, col, a = 1) {
+  g.save(); g.globalAlpha *= a; rr(cx - w / 2 - 18, cy - h / 2 - 18, w + 36, h + 36, 34, col); g.restore();
+  prop(g, 'card', { x: cx, y: cy, w, h, alpha: a });
+}
+
+// ---------- 小道具 ----------
+// 文件用淺黃紙色：白紙在米色底上藏字檢查算不到畫面
+const doc = o => prop(g, 'document', { fill: '#E3BE78', lineColor: '#9A7646', ...o });
+function chart(x0, y0, w, h, pts, col, p) {
+  // pts 是 0–1 的 y 值（1＝頂），p 控制畫到哪
+  const n = pts.length - 1, upto = p * n;
+  g.strokeStyle = col; g.lineWidth = 16; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath();
+  for (let k = 0; k <= Math.floor(upto); k++) { const x = x0 + w * k / n, y = y0 + h * (1 - pts[k]); k ? g.lineTo(x, y) : g.moveTo(x, y); }
+  const k0 = Math.floor(upto), f = upto - k0;
+  if (k0 < n) g.lineTo(x0 + w * (k0 + f) / n, y0 + h * (1 - lerp(pts[k0], pts[k0 + 1], f)));
+  g.stroke();
+}
+function arrow(x, y, len, dir, col, w = 30) {
+  // dir 1＝往下、-1＝往上
+  g.strokeStyle = col; g.fillStyle = col; g.lineWidth = w; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + dir * (len - w)); g.stroke();
+  g.beginPath(); g.moveTo(x - w * 1.6, y + dir * (len - w * 1.8)); g.lineTo(x + w * 1.6, y + dir * (len - w * 1.8)); g.lineTo(x, y + dir * (len + w * 0.4)); g.closePath(); g.fill();
+}
+function pie(cx, cy, r, frac, col, bg = '#D2BC9A') {
+  G.disc(g, cx, cy, r, bg);
+  if (frac <= 0) return;
+  g.fillStyle = col; g.beginPath(); g.moveTo(cx, cy); g.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * frac); g.closePath(); g.fill();
+}
+function bag(cx, by, s, col) {
+  // 錢袋：s 是直徑，by 是袋底
+  const r = s / 2, cy = by - r;
+  g.save(); g.shadowColor = 'rgba(59,47,42,0.18)'; g.shadowBlur = 20; g.shadowOffsetY = 8; G.disc(g, cx, cy, r, col); g.restore();
+  g.fillStyle = col; g.beginPath(); g.moveTo(cx - r * 0.35, cy - r * 0.8); g.lineTo(cx - r * 0.55, cy - r * 1.25); g.lineTo(cx + r * 0.55, cy - r * 1.25); g.lineTo(cx + r * 0.35, cy - r * 0.8); g.closePath(); g.fill();
+  rr(cx - r * 0.42, cy - r * 0.92, r * 0.84, r * 0.16, r * 0.08, INK);
+  plain('$', cx, cy + r * 0.3, r * 0.9, CREAM, { align: 'center', w: 700 });
+}
+function lens(x, y, r) {
+  g.strokeStyle = INK; g.lineWidth = r * 0.22; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(x + r * 0.7, y + r * 0.7); g.lineTo(x + r * 1.6, y + r * 1.6); g.stroke();
+  g.fillStyle = 'rgba(255,250,242,0.55)'; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  g.lineWidth = r * 0.16; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.stroke();
+}
+function bldg(cx, w, h, col, name) {
+  g.save(); g.shadowColor = 'rgba(59,47,42,0.18)'; g.shadowBlur = 24; g.shadowOffsetY = 8; rr(cx - w / 2, GY - h, w, h, 18, col); g.restore();
+  const cols = 3, rows = Math.floor((h - 80) / 90);
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) rr(cx - w / 2 + 30 + c * (w - 60) / cols, GY - h + 40 + r * 90, (w - 60) / cols - 24, 52, 8, SOFT);
+  plain(name, cx, GY - h - 30, 42, INK, { align: 'center', w: 700 });
+}
+function table() {
+  rr(60, 1080, 960, 34, 14, WOOD);
+  rr(80, 1106, 920, GY - 1106, 10, '#C7A77F');
+  g.fillStyle = 'rgba(59,47,42,0.08)'; g.fillRect(80, 1106, 920, 18);
+}
+function hbar(name, x0, y, w, frac, col, label, tc) {
+  plain(name, x0, y - 22, 42, INK, { w: 600 });
+  rr(x0, y, w, 96, 20, SOFT);
+  rr(x0, y, Math.max(16, w * frac), 96, 20, col);
+  plain(label, x0 + w, y - 22, 44, tc, { align: 'right', w: 800 });
+}
+
+// ---------- 每張卡的畫面（畫在 y 500–1290；x≥875、y<480 是主播位置） ----------
+function c1(lt) {
+  // 封面：皮衣小人走向門口；左邊拉馬可拿著往下的箭頭
+  rr(780, 760, 220, GY - 760, 18, WOOD); rr(800, 780, 180, GY - 800, 12, '#C7A77F'); G.disc(g, 952, 1030, 12, INK);
+  const p = E.io(inv(0.3, 3.0, lt));
+  man(lerp(560, 700, p), GY, 380, JACKET, { pose: p > 0 && p < 1 ? 'walk' : 'stand', t: lt, face: 'worried' });
+  man(230, GY, 380, MUST, { pose: 'point', aim: -0.3, face: 'smile' });
+  arrow(230, 640, 200, 1, TERRA, 34);
+}
+function c2(lt) {
+  // 四十頁報告落在桌上，拉馬可在旁邊
+  [2, 1, 0].forEach(k => doc({ x: 380 + k * 22, y: lerp(560, 920, E.o3(inv(0.1 + k * 0.2, 0.8 + k * 0.2, lt))) + k * 16, s: 460, title: k ? '' : '中國問題', titlePx: 9, lines: 6 }));
+  fig(`${FACTS.PAGES} 頁`, 400, 610, TERRA, pop(lt, 0.9), 'fig-pages');
+  man(820, GY, 400, MUST, { pose: 'point', dir: -1, aim: -0.2, face: 'smile' });
+  plain(`${FACTS.AGE} 歲`, 820, GY - 440, 44, MUST_D, { align: 'center', w: 800 });
+}
+function c3(lt) {
+  // 股價線一路往上；旁邊三個人笑他
+  framed(540, 720, 860, 320, SAGE);
+  chart(150, 600, 780, 240, [0.1, 0.25, 0.3, 0.5, 0.55, 0.75, 0.95], SAGE_D, E.io(inv(0, 2.2, lt)));
+  [[190, 'armsUp'], [380, 'point'], [570, 'armsUp']].forEach(([x, pose], k) => {
+    man(x, GY, 260, TERRA, { pose, aim: 0.1, face: 'smile', tilt: Math.sin(lt * 6 + k) * 0.05 });
+    prop(g, 'speech', { x: x + 20, y: GY - 320 + Math.sin(lt * 4 + k) * 6, s: 100, tail: 'left', stroke: TERRA, color: TERRA });
+  });
+  man(860, GY, 260, MUST, { pose: 'stand', dir: -1, face: 'worried' });
+}
+function c4(lt) {
+  // 布魯克林的小公寓：窗內三個人對著螢幕
+  rr(200, 560, 680, GY - 560, 24, '#B9826A');
+  rr(270, 640, 540, 420, 18, '#F7E7C6');
+  g.strokeStyle = '#B9826A'; g.lineWidth = 18; g.beginPath(); g.moveTo(540, 640); g.lineTo(540, 1060); g.stroke();
+  [[360, MUST], [470, COAT], [640, COAT]].forEach(([x, c], k) => man(x, 1040, 230, c, { pose: k ? 'stand' : 'think', face: 'none', shadow: false, tilt: Math.sin(lt * 2 + k) * 0.03 }));
+  rr(690, 900, 110, 70, 10, INK); rr(700, 910, 90, 50, 6, loop(lt, 1) < 0.5 ? SAGE : '#9CC096');
+  fig(`${FACTS.STAFF} 個人`, 540, 1200, CREAM, pop(lt, 0.5), 'fig-staff');
+}
+function c5(lt) {
+  // 放空：股價往下，他反而開心
+  framed(540, 720, 860, 320, TERRA);
+  chart(150, 600, 780, 240, [0.9, 0.85, 0.6, 0.65, 0.4, 0.2], TERRA, E.io(inv(0, 2.0, lt)));
+  man(540, GY, 360, MUST, { pose: 'armsUp', face: 'smile' });
+  for (let k = 0; k < 4; k++) { const q = loop(lt * 0.8 + k * 0.25, 1); g.globalAlpha = 1 - q; G.disc(g, 380 + k * 110, lerp(920, 1180, q), 26, MUST); g.globalAlpha = 1; }
+}
+function c6(lt) {
+  // 禁令後那一季：特規晶片賣給中國客戶＝0
+  framed(540, 800, 900, 440, SAGE);
+  plain('禁令後那一季', 540, 660, 40, DIM, { align: 'center', w: 600 });
+  hbar('H20 賣給中國客戶', 150, 780, 780, lerp(0.8, 0, E.io(inv(0.3, 1.6, lt))), SAGE, `${lerp(1, FACTS.H20_CN, E.io(inv(0.3, 1.6, lt))) < 0.5 ? FACTS.H20_CN : '…'} 片`, SAGE_D);
+  man(860, GY, 260, COAT, { pose: 'point', dir: -1, aim: -0.5, face: 'none' });
+}
+function c7(lt) {
+  // 同一段時間東南亞的帳往上衝，拉馬可皺眉
+  framed(540, 800, 900, 440, MUST);
+  hbar('中國客戶', 150, 700, 780, 0, SAGE, `${FACTS.H20_CN}`, SAGE_D);
+  hbar('東南亞的帳', 150, 890, 780, E.o3(inv(0.2, 2.0, lt)) * 0.92, MUST, '一直衝', MUST_D);
+  plain('示意，未按比例', 540, 1100, 30, DIM, { align: 'center', w: 600 });
+  man(860, GY, 260, MUST, { pose: 'think', dir: -1, face: 'worried' });
+  prop(g, 'question', { x: 860, y: GY - 320 + Math.sin(lt * 2.5) * 6, s: 70, color: DIM, alpha: pop(lt, 1.2) });
+}
+function c8(lt) {
+  // 輝達的說法：開到新加坡的管制晶片帳，九成九是美國客戶
+  framed(400, 830, 560, 560, SAGE);
+  pie(400, 860, 200, E.io(inv(0.2, 1.6, lt)) * FACTS.SG_US_PCT / 100, SAGE);
+  fig(`${FACTS.SG_US_PCT}%`, 400, 650, SAGE_D, pop(lt, 1.0), 'fig-us');
+  man(860, GY, 360, COAT, { pose: 'point', dir: -1, aim: -0.3, face: 'none' });
+  plain('開到新加坡的管制晶片帳', 400, 1190, 42, INK, { align: 'center', w: 700 });
+  plain('美國客戶', 400, 1246, 42, SAGE_D, { align: 'center', w: 700 });
+}
+function c9(lt) {
+  // 翻公司登記：放大鏡掃過文件堆，停在 Megaspeed
+  [[230, 860], [540, 840], [850, 870]].forEach(([x, y], k) => doc({ x, y, s: 340, title: k === 1 ? 'Megaspeed' : '', titlePx: 9, lines: 5 }));
+  const p = E.io(inv(0.2, 1.8, lt));
+  lens(lerp(200, 540, p), 930, 100);
+  man(540, GY, 300, MUST, { pose: 'think', face: 'none' });
+}
+function c10(lt) {
+  bag(540, 1230, 340 * (0.6 + 0.4 * E.o3(inv(0, 0.6, lt))), MUST);
+  fig(`${fmt(FACTS.ASSET_2023_WAN)} 萬美元`, 540, 720, MUST_D, pop(lt, 0.4), 'fig-a23');
+  plain(`${FACTS.Y2023} 年底`, 540, 620, 40, DIM, { align: 'center', w: 600 });
+}
+function c11(lt) {
+  const q = E.o3(inv(0.2, 1.8, lt));
+  bag(440, GY - 20, lerp(200, 420, q), MUST);
+  fig(`${FACTS.ASSET_2024_YI} 億美元`, 440, 600, MUST_D, pop(lt, 1.2), 'fig-a24');
+  fig(`約 ${FACTS.MULT} 倍`, 830, 1000, TERRA, pop(lt, 1.6), 'fig-mult');
+  plain(`${FACTS.Y2024} 年底`, 440, 520, 40, DIM, { align: 'center', w: 600 });
+}
+function c12(lt) {
+  // 阿里巴巴旗下的公司借錢給 Megaspeed：錢袋沿虛線過去
+  bldg(260, 300, 560, '#C9A27E', '阿里巴巴旗下');
+  bldg(820, 300, 460, '#B7A08E', 'Megaspeed');
+  g.save(); g.setLineDash([24, 22]); g.lineDashOffset = -lt * 60; g.strokeStyle = TERRA; g.lineWidth = 10; g.beginPath(); g.moveTo(410, 900); g.quadraticCurveTo(540, 760, 670, 900); g.stroke(); g.restore();
+  const q = loop(lt * 0.5, 1), x = lerp(410, 670, q), y = (1 - q) * (1 - q) * 900 + 2 * (1 - q) * q * 760 + q * q * 900;
+  bag(x, y + 40, 90, MUST);
+}
+function c13(lt) {
+  // 照片：拍立得裡兩個小人在台北吃飯
+  const a = pop(lt, 0.1);
+  g.save(); g.translate(540, 860); g.rotate(-0.04 + 0.02 * E.io(inv(0, 1, lt))); g.translate(-540, -860);
+  framed(540, 860, 760, 620, INK, a);
+  g.save(); g.globalAlpha *= a; rr(190, 580, 700, 440, 16, '#E9D8B8');
+  man(400, 980, 300, JACKET, { pose: 'stand', face: 'none', shadow: false });
+  man(680, 980, 300, PLUM, { pose: 'stand', dir: -1, face: 'none', shadow: false });
+  rr(250, 900, 580, 26, 10, WOOD);
+  plain('黃仁勳', 400, 640, 36, INK, { align: 'center', w: 700 }); plain('黃樂', 680, 640, 36, PLUM, { align: 'center', w: 700 });
+  plain('台北', 540, 1110, 44, INK, { align: 'center', w: 700 });
+  plain('示意圖', 540, 1160, 30, DIM, { align: 'center', w: 600 });
+  g.restore(); g.restore();
+}
+function c14(lt) {
+  // 近得讓人不安：兩人慢慢靠近，邊緣一圈淡紅
+  const p = E.io(inv(0.2, 2.2, lt));
+  g.save(); const gr = g.createRadialGradient(540, 960, 240, 540, 960, 620); gr.addColorStop(0, `rgba(120,108,96,${0.2 * p})`); gr.addColorStop(1, 'rgba(120,108,96,0)'); g.fillStyle = gr; g.fillRect(0, 300, W, 1320); g.restore();
+  man(lerp(300, 450, p), GY, 400, JACKET, { pose: 'stand', face: 'none' });
+  man(lerp(780, 630, p), GY, 400, PLUM, { pose: 'stand', dir: -1, face: 'none' });
+  prop(g, 'question', { x: 540, y: 640 + Math.sin(lt * 2.5) * 6, s: 90, color: TERRA, alpha: pop(lt, 1.4) });
+  plain('黃仁勳', lerp(300, 450, p), GY - 440, 40, INK, { align: 'center', w: 700 }); plain('黃樂', lerp(780, 630, p), GY - 440, 40, PLUM, { align: 'center', w: 700 });
+}
+function c15(lt) {
+  // 紐約時報：報紙落下，「懷疑」被圈起來
+  doc({ x: 380, y: lerp(700, 880, E.o3(inv(0, 0.7, lt))), s: 460, title: '紐約時報', titlePx: 10, lines: 6 });
+  const c = E.io(inv(0.8, 1.6, lt));
+  g.strokeStyle = TERRA; g.lineWidth = 12; g.beginPath(); g.ellipse(380, 1130, 140, 60, -0.05, 0, Math.PI * 2 * c); g.stroke();
+  plain('懷疑', 380, 1146, 52, TERRA_D, { align: 'center', w: 700 });
+  plain('美國情報單位懷疑', 540, 580, 56, TERRA_D, { align: 'center', w: 800 });
+  man(820, GY, 380, PLUM, { pose: 'stand', dir: -1, face: 'none' });
+  prop(g, 'question', { x: 820, y: GY - 450 + Math.sin(lt * 2.5) * 8, s: 90, color: DIM });
+}
+function c16(lt) {
+  // 董事會開會，桌上一份調查文件
+  [190, 360, 530, 700, 870].forEach((x, k) => man(x, GY, 300, COAT, { pose: k === 2 ? 'point' : 'stand', aim: -0.2, face: 'worried', shadow: false, tilt: Math.sin(lt * 2 + k) * 0.02 }));
+  table();
+  plain('輝達董事會', 540, 620, 48, INK, { align: 'center', w: 700 });
+  plain('11 月 8 日', 540, 690, 40, TERRA_D, { align: 'center', w: 700 });
+  doc({ x: 540, y: 960, s: 220, title: '獨立調查', titlePx: 11, lines: 3, alpha: pop(lt, 0.4) });
+}
+function c17(lt) {
+  // 寫信給員工，接著走出門
+  rr(150, 640, 380, 260, 20, '#FFFAF2'); g.strokeStyle = TERRA; g.lineWidth = 10; g.lineJoin = 'round';
+  g.beginPath(); g.moveTo(150, 640); g.lineTo(340, 790); g.lineTo(530, 640); g.stroke();
+  plain('給員工的信', 340, 960, 40, INK, { align: 'center', w: 700 });
+  rr(780, 760, 220, GY - 760, 18, WOOD); rr(800, 780, 180, GY - 800, 12, '#C7A77F');
+  const p = E.io(inv(1.0, 3.2, lt));
+  g.globalAlpha = 1 - E.io(inv(2.6, 3.4, lt));
+  man(lerp(560, 860, p), GY, 380, JACKET, { pose: p > 0 && p < 1 ? 'walk' : 'stand', t: lt, face: 'worried' });
+  g.globalAlpha = 1;
+  plain('黃仁勳', 890, 660, 40, INK, { align: 'center', w: 700 });
+  plain('11 月 11 日辭職', 860, 720, 40, TERRA_D, { align: 'center', w: 700 });
+}
+function c18(lt) {
+  // 回頭看四十頁：報告上一張圓餅圖
+  doc({ x: 400, y: 880, s: 520, title: `${FACTS.PAGES} 頁報告`, titlePx: 9, lines: 3 });
+  pie(400, 1000, 130, 0, TERRA);
+  g.strokeStyle = TERRA; g.lineWidth = 10; g.beginPath(); g.arc(400, 1000, 130, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * E.io(inv(0.3, 1.8, lt))); g.stroke();
+  man(840, GY, 380, MUST, { pose: 'point', dir: -1, aim: -0.2, face: 'none' });
+  plain('中國營收占比', 400, 1210, 40, INK, { align: 'center', w: 700 });
+}
+function c19(lt) {
+  // 報告估算兩成以上；輝達聳肩否認
+  pie(400, 880, 260, E.io(inv(0.2, 1.6, lt)) * FACTS.CN_SHARE / 100, TERRA);
+  plain('報告估算', 400, 500, 56, TERRA_D, { align: 'center', w: 800 });
+  plain('上個財年運算營收', 400, 1215, 38, DIM, { align: 'center', w: 700 });
+  fig(`${FACTS.CN_SHARE}% 以上`, 400, 590, TERRA_D, pop(lt, 1.0), 'fig-cn');
+  man(860, GY, 360, COAT, { pose: 'shrug', dir: -1, face: 'worried' });
+  prop(g, 'speech', { x: 840, y: GY - 460, s: 190, tail: 'left', text: '否認', px: 26, alpha: pop(lt, 1.6) });
+}
+function c20(lt) {
+  // 帳還沒人證實；司法部大樓前放大鏡來回掃
+  pie(300, 900, 200, FACTS.CN_SHARE / 100, TERRA);
+  prop(g, 'question', { x: 300, y: 900 + Math.sin(lt * 2.5) * 8, s: 150, color: INK });
+  bldg(800, 320, 520, '#9AA6B2', '美國司法部');
+  lens(800 + Math.sin(lt * 1.6) * 90, 1000, 70);
+}
+
+// head：卡名。只有封面（第 0 卡）畫成大標。
+const CARDS = [
+  { head: '放空輝達', hud: 'NVIDIA 官方公告', hl: ['放空輝達'], draw: c1 },
+  { head: '四十頁報告', hud: 'Culper Research／CBS News', hl: ['四十頁報告'], draw: c2 },
+  { head: '大家在笑', hud: 'MarketWatch', hl: ['笑他'], draw: c3 },
+  { head: '三個人', hud: 'MarketWatch／WSJ', hl: ['公司三個人'], draw: c4 },
+  { head: '放空', hud: 'MarketWatch', hl: ['股價跌才賺錢'], draw: c5 },
+  { head: '一片都沒賣', hud: '輝達 2026 財年第二季財報', hl: ['一片都沒賣'], draw: c6 },
+  { head: '對不上', hud: 'CBS News／Culper Research', hl: ['對不上'], draw: c7 },
+  { head: '輝達的說法', hud: '輝達 10-Q（2026 財年第二季）', hl: ['九成九'], draw: c8 },
+  { head: '公司登記', hud: 'Culper Research／Quantral', hl: ['Megaspeed'], draw: c9 },
+  { head: '資產', hud: 'Culper 引新加坡、馬來西亞公司登記', hl: ['三千三百萬'], draw: c10 },
+  { head: '翻倍', hud: 'Culper 引新加坡、馬來西亞公司登記', hl: ['快九十倍'], draw: c11 },
+  { head: '借錢', hud: '金融時報', hl: ['阿里巴巴'], draw: c12 },
+  { head: '照片', hud: 'CBS News／MarketWatch', hl: ['台北吃飯'], draw: c13 },
+  { head: '近得不安', hud: 'CBS News', hl: ['近得讓人不安'], draw: c14 },
+  { head: '懷疑', hud: '紐約時報（經 CBS News）', hl: ['懷疑'], draw: c15 },
+  { head: '董事會', hud: 'NPR（經 Quantral）', hl: ['董事會'], draw: c16 },
+  { head: '辭職', hud: 'MarketWatch／SEC 8-K', hl: ['十一號辭職'], draw: c17 },
+  { head: '主軸', hud: 'CBS News', hl: ['中國營收的占比'], draw: c18 },
+  { head: '兩成', hud: 'Culper Research／CBS News', hl: ['兩成以上', '輝達否認'], draw: c19 },
+  { head: '還在查', hud: 'Semafor（2026-11-12）', hl: ['還沒人證實', '還沒結束'], draw: c20 },
+];
+const N = CARDS.length;
+if (TL.lines.length !== N) throw new Error(`timeline.js 有 ${TL.lines.length} 句，卡片 ${N} 張，對不上`);
+const DUR = TL.dur;
+const T0 = TL.lines.map((l, i) => i === 0 ? 0 : l.t0 - 0.2);
+const END0 = TL.lines[N - 1].t1 + 0.3;   // 片尾系列卡
+const cardAt = t => { let i = 0; while (i + 1 < N && t >= T0[i + 1]) i++; return i; };
+const PH = TL.lines.flatMap((l, i) => (l.phrases || [{ text: l.text, t0: l.t0, t1: l.t1 }]).map(p => ({ ...p, card: i })));
+
+// ---------- 頂部系列標籤 ----------
+function series() {
+  plain(`${SERIES}｜系列`, 540, 150, 34, DIM, { align: 'center', w: 600 });
+  rr(510, 172, 60, 5, 3, TERRA);
+}
+
+// ---------- 字幕：一卡一個逗號短語，關鍵詞陶土紅，上方一條短橫線 ----------
+function caption(t) {
+  const j = PH.findIndex((p, k) => t >= p.t0 - 0.05 && t < Math.min(p.t1 + 0.25, PH[k + 1] ? PH[k + 1].t0 - 0.05 : Infinity));
+  if (j < 0 || t >= END0) return;
+  const p = PH[j], hl = CARDS[p.card].hl || [];
+  const px = 58, maxW = 900;
+  g.font = ZH(700, px);
+  const rows = g.measureText(p.text).width <= maxW ? [p.text] : [p.text.slice(0, Math.ceil(p.text.length / 2)), p.text.slice(Math.ceil(p.text.length / 2))];
+  const y0 = 1400 - (rows.length - 1) * 36;
+  rr(510, y0 - 92, 60, 6, 3, INK);
+  rows.forEach((r, k) => rich(r, 540, y0 + k * 74, px, hl));
+}
+function rich(s, cx, y, px, hl) {
+  const mark = Array(s.length).fill(false);
+  for (const w of hl) { let i = s.indexOf(w); while (i >= 0) { for (let k = 0; k < w.length; k++) mark[i + k] = true; i = s.indexOf(w, i + 1); } }
+  g.font = ZH(700, px); g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+  let x = cx - g.measureText(s).width / 2;
+  for (let k = 0; k < s.length; k++) { g.fillStyle = mark[k] ? TERRA : INK; g.fillText(s[k], x, y); x += g.measureText(s[k]).width; }
+}
+
+// ---------- 片尾系列卡 ----------
+function endCard(t) {
+  g.fillStyle = CREAM; g.fillRect(0, 0, W, H);
+  const lt = t - END0;
+  say(SERIES, 540, 640, 68, INK, 1, { id: 'end-series', align: 'center', bold: 0.03 });
+  say(`第 ${EP} 集`, 540, 720, 44, TERRA, 1, { id: 'end-ep', align: 'center' });
+  rr(510, 752, 60, 5, 3, SAGE);
+  [[MUST, 330, 'armsUp'], [COAT, 540, 'stand'], [SAGE, 750, 'armsUp']].forEach(([c, x, pose], k) => man(x, 1150, 260, c, { pose, face: 'smile', tilt: Math.sin(lt * 2 + k) * 0.04 }));
+  plain(HANDLE, 540, 1260, 40, DIM, { align: 'center', w: 600 });
+}
+
+// ---------- 主播 Paradox（Clawd Bot）：右上角 ----------
+const svgText = await fetch('./mascot/clawd-bot.svg').then(r => { if (!r.ok) throw new Error('取不到 mascot/clawd-bot.svg'); return r.text(); });
+const host = document.getElementById('mascot'); host.innerHTML = svgText;
+const ROOT = host.querySelector('svg'); if (!ROOT) throw new Error('mascot svg 解析失敗');
+const TRACK = { fps: 30, states: [{ t: 0, state: 'idle' }], looks: CARDS.map((c, i) => ({ t: T0[i], x: -0.5, y: 0.5 })), pokes: [] };
+function poseHost(t) {
+  applyPose(ROOT, poseAt(t, TRACK));
+  if (!TL.lines.some(l => t >= l.t0 && t <= l.t1)) return;
+  const a = 0.25 + 0.75 * Math.abs(Math.sin(t * 13.5)) * (0.55 + 0.45 * Math.abs(Math.sin(t * 4.3 + 1)));
+  ROOT.querySelector('#mouth').setAttribute('d', `M-5,8 Q0,${(9 + a * 5).toFixed(2)} 5,8`);
+}
+const MASCOT = { x: 875, y: 260, s: 224 };
+let mascotTok = 0;
+function finish(t) {
+  caption(t);
+  poseHost(t);
+  // 主播畫進 canvas：DOM SVG 疊層的合成結果會受上一幀影響，尋幀一致過不了
+  const tok = ++mascotTok, img = new Image();
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(ROOT));
+  return img.decode().then(() => {
+    if (tok !== mascotTok) return;
+    g.drawImage(img, MASCOT.x, MASCOT.y, MASCOT.s, MASCOT.s);
+  });
+}
+
+// ---------- 主迴圈 ----------
+const XF = 0.5;
+const snap = Object.assign(document.createElement('canvas'), { width: W, height: H });
+function render(t) {
+  t = clamp(t, 0, DUR); TXT = [];
+  if (t >= END0) {
+    const k = E.io(inv(END0, END0 + XF, t));
+    if (k < 1) { drawCard(N - 1, t); snap.getContext('2d').drawImage(g.canvas, 0, 0); TXT = []; }
+    endCard(t);
+    if (k < 1) { g.globalAlpha = 1 - k; g.drawImage(snap, 0, 0); g.globalAlpha = 1; }
+    return finish(t);
+  }
+  const i = cardAt(t), lt = t - T0[i];
+  const k = i && lt < XF ? E.io(lt / XF) : 1;
+  if (k < 1) { drawCard(i - 1, t); snap.getContext('2d').drawImage(g.canvas, 0, 0); TXT = []; }
+  drawCard(i, t);
+  if (k < 1) { g.globalAlpha = 1 - k; g.drawImage(snap, 0, 0); g.globalAlpha = 1; }
+  return finish(t);
+}
+function drawCard(i, t) {
+  const cd = CARDS[i], lt = t - T0[i];
+  g.fillStyle = CREAM; g.fillRect(0, 0, W, H);
+  series();
+  if (i === 0) say(cd.head, 540, 370, 170, INK, 1, { id: 'head1', align: 'center' });
+  g.save(); cd.draw(lt); g.restore();
+  g.globalAlpha = 1;
+  plain(`來源｜${cd.hud}`, 540, 1530, 28, DIM, { align: 'center', w: 500 });
+}
+
+// ---------- 對外契約 ----------
+window.DUR = DUR;
+window.render = render;
+window.TEXTS = t => { render(t); return TXT.filter(b => b.screen); };
+window.CUES = PH.map(p => ({ t0: p.t0, t1: p.t1, text: p.text }));
+window.SHAKES = [];
+window.EV = [{ t: 0, type: 'bed', len: DUR }];   // 只留配樂（calm 片型），不加換卡音效
+window.VOICE = TL.lines.map((l, j) => ({ t: l.t0, file: `out/voice/${String(j + 1).padStart(2, '0')}.wav` }));
+
+const allText = document.querySelector('script[type=module]').textContent + TL.lines.map(l => l.text).join('') + '0123456789,%';
+await Promise.all([700, 600].map(w => document.fonts.load(ZH(w, 58), allText)));
+await document.fonts.ready;
+for (let i = 0; i < N; i++) render(T0[i] + 0.6);
+render(0);
+window.READY = true;
+</script>
+</body>
+</html>

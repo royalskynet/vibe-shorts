@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>珍視生命：盧比奧說英雄不崇拜死亡</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}#mascot{display:none}#mascot svg{width:340px;height:340px}</style>
+<script src="engine.js"></script>
+<script src="timeline.js"></script>
+</head>
+<body>
+<div id="stage" style="position:relative;width:1080px;height:1920px">
+<canvas id="c" width="1080" height="1920" style="position:absolute;left:0;top:0"></canvas>
+<div id="mascot"></div>
+</div>
+<script type="module">
+// 單人旁白科普：一句一卡（TREATMENT.md 分鏡表），Clawd Bot 當主播站右上。
+// 主視覺零件：person（人形）、ship（船，傾斜＋下沉）、temple（帕德嫩神廟線稿）、stamp（郵票）、bars（長條）。
+// 禁止清單（TREATMENT.md）：不畫真人臉與肖像、不畫國旗與宗教符號、不畫爆炸與屍體、不畫兒童持武器。
+// 所有動作都是 t 的封閉式（seek_check.mjs 會比亂序算出的同一幀）；循環用取餘數，不累積。
+import { poseAt, applyPose } from './mascot/clawd-bot-shot.mjs';
+const G = window.G, E = G.E, TL = window.TL, W = 1080, H = 1920;
+const g = document.getElementById('c').getContext('2d', { alpha: false });
+const { clamp, inv, lerp, mix, rgba } = G;
+
+const BG = '#1d1b19', BG2 = '#262320', CREAM = '#f5efe6', DIM = '#a39a8e', OR = '#d97757', ORL = '#f29172', GOLD = '#f6b966', RED = '#ff8577', GREEN = '#68e399', BLUE = '#7fa7d9';
+const WALL = '#332e29', FRAME = '#8a8177', LIGHT = '#ffd79a', SEA = '#1f3446';
+const ZH = (w, px) => `${w} ${px}px "PingFang TC"`, MONO = (px, w = 500) => `${w} ${px}px Menlo, "PingFang TC"`;
+
+// 會出現在畫面上的事實數字集中在這裡，不要在別處重寫一次。每一個都要在 meta/facts.md 有一行附來源。
+const FACTS = {
+  SPEECH_YEAR: 2026,          // 演講年
+  SPEECH_MD: '10.7',          // 2026-10-07 雅典普尼克斯山
+  PNYX_BC: 507,               // 公元前 507 年起在普尼克斯山開公民大會
+  TITANIC_YEAR: 1912,         // 鐵達尼號沉沒
+  SEWOL_YEAR: 2014,           // 世越號沉沒
+  SEWOL_DEAD: 304,            // 罹難人數
+  SEWOL_STUDENTS: 250,        // 其中檀園高中學生
+  FAHMIDEH_AGE: 13,           // 法赫米德年齡
+  FAHMIDEH_YEAR: 1980,        // 兩伊戰爭爆發、霍拉姆沙赫爾
+  STAMP_YEAR: 1986,           // 伊朗發行紀念郵票
+};
+
+// ---------- 字 ----------
+let TXT = [], NOW = 0;
+function say(s, x, y, px, col, p, o = {}) {
+  const font = o.mono ? MONO(px) : ZH(o.w || 600, px);
+  // 原地淡入，不往上滑（使用者 10-30：頻繁滑入眼睛不舒服）
+  g.save(); g.font = font; g.letterSpacing = o.ls || '0px'; g.textAlign = o.align || 'left'; g.textBaseline = 'alphabetic';
+  const w = g.measureText(s).width;
+  g.globalAlpha *= E.io(p); g.fillStyle = col; g.fillText(s, x, y); g.restore();
+  if (o.id) {
+    const x0 = o.align === 'center' ? x - w / 2 : o.align === 'right' ? x - w : x;
+    TXT.push({ id: o.id, text: s, x0, y0: y - px, x1: x0 + w, y1: y + px * 0.25, screen: true });
+  }
+  return w;
+}
+function plain(s, x, y, px, col, o = {}) {
+  g.font = o.mono ? MONO(px, o.w || 500) : ZH(o.w || 600, px); g.textAlign = o.align || 'left'; g.textBaseline = 'alphabetic';
+  g.letterSpacing = o.ls || '0px'; g.fillStyle = col; g.fillText(s, x, y); g.letterSpacing = '0px';
+}
+const pop = (lt, a, d = 0.5) => E.o3(inv(a, a + d, lt));   // 不用回彈（語氣沉穩）
+const loop = (x, n) => ((x % n) + n) % n;
+
+// ---------- 舞台：y 800–1630 的圓角框，框內畫什麼都裁在裡面 ----------
+const ST = { x: 60, y: 800, w: 960, h: 830 };
+const SC = { x: ST.x + ST.w / 2, y: ST.y + ST.h / 2 };   // 舞台中心
+// 顯示位置：舞台縮 0.85 置中到 y 735–1441（x 132–948），出處 1474，字幕框頂 1490（一行到 1598）；再縮亮度差異會跌破 calm 下限 0.20
+const SAFE = { k: 0.85, y: 735, hud: 1474, cap: 1490 };
+function stage(fn) {
+  g.save(); g.beginPath(); g.roundRect(ST.x, ST.y, ST.w, ST.h, 28); g.clip();
+  g.fillStyle = BG2; g.fillRect(ST.x, ST.y, ST.w, ST.h);
+  fn(); g.restore();
+  g.strokeStyle = rgba(CREAM, 0.16); g.lineWidth = 2; g.beginPath(); g.roundRect(ST.x, ST.y, ST.w, ST.h, 28); g.stroke();
+}
+function cam(px, py, k, fn) { g.save(); g.translate(px, py); g.scale(k, k); g.translate(-px, -py); fn(); g.restore(); }
+function stampMark(x, y, s, text, p, rot = -0.12) {   // 蓋章：縮放落下＋一圈框（不做鏡頭震動，calm 片型）
+  const k = lerp(2.1, 1, E.o3(p)), a = E.io(inv(0, 0.35, p));
+  g.save(); g.translate(x, y); g.rotate(rot); g.scale(k, k); g.globalAlpha = a;
+  g.strokeStyle = OR; g.lineWidth = 5 / k; g.beginPath(); g.roundRect(-s / 2, -s * 0.21, s, s * 0.42, 10); g.stroke();
+  plain(text, 0, s * 0.1, s * 0.2, OR, { align: 'center', w: 700 });
+  g.restore(); g.globalAlpha = 1;
+}
+
+// ---------- 長條比較 ----------
+// items: [{v, label, col}]；p 0–1 長出
+function bars(x, y, w, h, items, p, o = {}) {
+  const max = o.max ?? Math.max(...items.map(i => i.v)), n = items.length, bw = Math.min(o.bw || 150, w / n - 24);
+  items.forEach((it, i) => {
+    const bx = x + i * (w / n) + (w / n - bw) / 2, hh = h * (it.v / max) * E.o3(clamp(p * 1.25 - i * 0.12));
+    g.fillStyle = it.col || OR; g.fillRect(bx, y - hh, bw, hh);
+    if (hh > 26) plain(it.num ?? String(it.v), bx + bw / 2, y - hh - 18, 44, it.col || OR, { align: 'center', w: 700 });
+    if (it.label) plain(it.label, bx + bw / 2, y + 48, 34, DIM, { align: 'center' });
+  });
+  g.strokeStyle = rgba(CREAM, 0.3); g.lineWidth = 3; g.beginPath(); g.moveTo(x, y); g.lineTo(x + w, y); g.stroke();
+}
+function counter(x, y, v, p, px = 96, suffix = '', col = GOLD) {
+  const shown = v * E.o3(clamp(p));
+  const s = (Number.isInteger(v) ? Math.round(shown) : shown.toFixed(2).replace(/0+$/, '').replace(/\.$/, '')) + suffix;
+  plain(s, x, y, px, col, { align: 'center', w: 700, mono: true });
+}
+// ---------- 人形 ----------
+function person(x, y, s, col, o = {}) {   // 原點＝腳底，s＝身高
+  const hr = s * 0.13;
+  g.strokeStyle = col; g.lineWidth = Math.max(3, s * 0.055); g.lineCap = 'round';
+  G.disc(g, x, y - s + hr, hr, col);
+  g.beginPath(); g.moveTo(x, y - s + hr * 2); g.lineTo(x, y - s * 0.42); g.stroke();
+  const ph = o.ph ?? 0, sw = Math.sin(ph) * s * 0.1;
+  g.beginPath(); g.moveTo(x, y - s * 0.42); g.lineTo(x - s * 0.11 + sw, y); g.moveTo(x, y - s * 0.42); g.lineTo(x + s * 0.11 + sw * -1, y); g.stroke();
+  if (o.phone) {   // 舉起一支手機拍照（不是舉手禮）
+    const ay = y - s * 0.86;
+    g.beginPath(); g.moveTo(x, y - s * 0.74); g.lineTo(x + s * 0.17, ay); g.stroke();
+    g.fillStyle = o.lit ? LIGHT : rgba(CREAM, 0.35); g.fillRect(x + s * 0.12, ay - s * 0.12, s * 0.12, s * 0.17);
+  } else {
+    g.beginPath(); g.moveTo(x - s * 0.14, y - s * 0.56); g.lineTo(x + s * 0.14, y - s * 0.56); g.stroke();
+  }
+}
+function tank(x, y, s, a) {   // 坦克線稿（只在卡 07 滑進滑走，表示「不是靠政變」）
+  g.globalAlpha = a; g.strokeStyle = rgba(CREAM, 0.5); g.lineWidth = 4;
+  g.beginPath(); g.roundRect(x - s, y - s * 0.3, s * 2, s * 0.42, 14); g.stroke();
+  g.beginPath(); g.roundRect(x - s * 0.55, y - s * 0.62, s * 1.1, s * 0.34, 8); g.stroke();
+  g.beginPath(); g.moveTo(x + s * 0.5, y - s * 0.46); g.lineTo(x + s * 1.3, y - s * 0.46); g.stroke();
+  for (let i = -3; i <= 3; i++) { const r = s * 0.13; g.beginPath(); g.arc(x + i * s * 0.3, y + s * 0.12, r, 0, 7); g.stroke(); }
+  g.globalAlpha = 1;
+}
+
+// ---------- 海與船 ----------
+function water(y, a = 1) {   // 舞台下緣的海面：兩層正弦波，只依 NOW
+  g.globalAlpha = a;
+  for (let k = 0; k < 2; k++) {
+    g.fillStyle = k ? rgba(SEA, 0.95) : rgba(BLUE, 0.28); g.beginPath(); g.moveTo(ST.x, ST.y + ST.h);
+    for (let x = ST.x; x <= ST.x + ST.w; x += 20) g.lineTo(x, y + k * 18 + Math.sin(x * 0.02 + NOW * (1.2 + k * 0.5)) * 8);
+    g.lineTo(ST.x + ST.w, ST.y + ST.h); g.closePath(); g.fill();
+  }
+  g.globalAlpha = 1;
+}
+// o: x, y 水線中心；s 船長；tilt 弧度；sink 往下沉的像素；funnels 煙囪數；col 線色
+function ship(o) {
+  const s = o.s ?? 600, n = o.funnels ?? 0;
+  g.save(); g.translate(o.x, o.y + (o.sink || 0)); g.rotate(o.tilt || 0);
+  G.poly(g, [[-s / 2, -s * 0.1], [s / 2 + s * 0.04, -s * 0.1], [s / 2 - s * 0.04, s * 0.06], [-s / 2 + s * 0.03, s * 0.06]], WALL);
+  g.strokeStyle = o.col || rgba(CREAM, 0.6); g.lineWidth = 4;
+  G.poly(g, [[-s / 2, -s * 0.1], [s / 2 + s * 0.04, -s * 0.1], [s / 2 - s * 0.04, s * 0.06], [-s / 2 + s * 0.03, s * 0.06]], null, true);
+  g.fillStyle = '#3d3731'; g.fillRect(-s * 0.36, -s * 0.18, s * 0.68, s * 0.08); g.strokeRect(-s * 0.36, -s * 0.18, s * 0.68, s * 0.08);
+  if (!n) { g.fillRect(-s * 0.26, -s * 0.25, s * 0.44, s * 0.07); g.strokeRect(-s * 0.26, -s * 0.25, s * 0.44, s * 0.07); }
+  for (let i = 0; i < n; i++) { const fx = -s * 0.26 + i * s * 0.15; g.fillStyle = GOLD; g.fillRect(fx, -s * 0.3, s * 0.06, s * 0.12); }
+  for (let i = 0; i < 9; i++) G.disc(g, -s * 0.4 + i * s * 0.1, -s * 0.03, s * 0.009, rgba(LIGHT, o.lights ?? 0.7));
+  if (o.deck) o.deck(s);   // 甲板上的人形，座標在船的區域系
+  g.restore();
+}
+function lifeboat(x, y, s, a, who = 3) {   // 救生艇＋上面幾個小人形
+  g.globalAlpha = a;
+  G.poly(g, [[x - s, y - s * 0.18], [x + s, y - s * 0.18], [x + s * 0.8, y + s * 0.12], [x - s * 0.8, y + s * 0.12]], rgba(CREAM, 0.75));
+  for (let i = 0; i < who; i++) person(x + (i - (who - 1) / 2) * s * 0.5, y - s * 0.18, s * 0.7, CREAM, { ph: 0 });
+  g.globalAlpha = 1;
+}
+
+// ---------- 帕德嫩神廟與普尼克斯山（線稿） ----------
+function temple(x, y, s, a) {   // 原點＝基座底邊中心，s＝寬
+  g.globalAlpha = a; g.strokeStyle = rgba(CREAM, 0.55); g.lineWidth = 3; g.fillStyle = rgba(CREAM, 0.06);
+  for (let k = 0; k < 3; k++) { g.beginPath(); g.rect(x - s / 2 - (2 - k) * 10, y - (k + 1) * 12, s + (2 - k) * 20, 12); g.fill(); g.stroke(); }
+  const top = y - 36 - s * 0.36;
+  for (let i = 0; i < 8; i++) { const cx = x - s / 2 + 20 + i * (s - 40) / 7; g.beginPath(); g.rect(cx - 9, top, 18, s * 0.36); g.fill(); g.stroke(); }
+  g.beginPath(); g.rect(x - s / 2 - 6, top - 26, s + 12, 26); g.fill(); g.stroke();
+  G.poly(g, [[x - s / 2 - 6, top - 26], [x, top - 26 - s * 0.14], [x + s / 2 + 6, top - 26]], rgba(CREAM, 0.06));
+  G.poly(g, [[x - s / 2 - 6, top - 26], [x, top - 26 - s * 0.14], [x + s / 2 + 6, top - 26]], null, true);
+  g.globalAlpha = 1;
+}
+function hillside(y, a = 1) {   // 前景的山丘：一條緩坡曲線
+  g.globalAlpha = a; g.fillStyle = '#2f2a25'; g.beginPath(); g.moveTo(ST.x, ST.y + ST.h);
+  for (let x = ST.x; x <= ST.x + ST.w; x += 16) { const u = (x - ST.x) / ST.w; g.lineTo(x, y + 90 * (u - 0.4) * (u - 0.4)); }
+  g.lineTo(ST.x + ST.w, ST.y + ST.h); g.closePath(); g.fill(); g.globalAlpha = 1;
+}
+
+// ---------- 其他零件 ----------
+function helmet(x, y, s, col) {   // 人形頭上一頂鋼盔（軍人）
+  g.fillStyle = col; g.beginPath(); g.arc(x, y - s + s * 0.13, s * 0.17, Math.PI, 0); g.fill(); g.fillRect(x - s * 0.2, y - s + s * 0.12, s * 0.4, s * 0.03);
+}
+function bubble(x, y, w, h, text, a, col = CREAM) {   // 對話框
+  g.globalAlpha = a; g.fillStyle = rgba(col, 0.12); g.strokeStyle = rgba(col, 0.6); g.lineWidth = 3;
+  g.beginPath(); g.roundRect(x - w / 2, y - h / 2, w, h, 18); g.fill(); g.stroke();
+  G.poly(g, [[x - 30, y + h / 2], [x - 6, y + h / 2], [x - 40, y + h / 2 + 34]], rgba(col, 0.6));
+  plain(text, x, y + 16, 44, col, { align: 'center', w: 700 }); g.globalAlpha = 1;
+}
+function speaker(x, y, s, p) {   // 喇叭＋三圈聲波（p 0–1 循環）
+  g.fillStyle = rgba(CREAM, 0.7); g.fillRect(x - s * 0.5, y - s * 0.2, s * 0.3, s * 0.4);
+  G.poly(g, [[x - s * 0.2, y - s * 0.2], [x + s * 0.2, y - s * 0.5], [x + s * 0.2, y + s * 0.5], [x - s * 0.2, y + s * 0.2]], rgba(CREAM, 0.7));
+  for (let k = 0; k < 3; k++) { const u = loop(p + k / 3, 1); g.globalAlpha = 1 - u; g.strokeStyle = CREAM; g.lineWidth = 4; g.beginPath(); g.arc(x + s * 0.25, y, s * (0.3 + u * 0.6), -0.7, 0.7); g.stroke(); }
+  g.globalAlpha = 1;
+}
+function stamp(x, y, s, p, year) {   // 郵票：齒孔邊框＋小人形＋年份
+  const k = lerp(0.6, 1, E.o3(clamp(p))); g.save(); g.translate(x, y); g.scale(k, k); g.rotate(-0.06); g.globalAlpha = E.io(clamp(p * 2));
+  g.fillStyle = '#efe7da'; g.fillRect(-s / 2, -s * 0.62, s, s * 1.24);
+  g.fillStyle = BG2; for (let i = 0; i <= 10; i++) { G.disc(g, -s / 2 + i * s / 10, -s * 0.62, 7, BG2); G.disc(g, -s / 2 + i * s / 10, s * 0.62, 7, BG2); }
+  for (let i = 0; i <= 12; i++) { G.disc(g, -s / 2, -s * 0.62 + i * s * 1.24 / 12, 7, BG2); G.disc(g, s / 2, -s * 0.62 + i * s * 1.24 / 12, 7, BG2); }
+  g.fillStyle = '#c9b9a0'; g.fillRect(-s * 0.4, -s * 0.5, s * 0.8, s * 0.8);
+  person(0, s * 0.24, s * 0.5, '#5a4a3a', { ph: 0 });
+  plain(String(year), 0, s * 0.5, s * 0.14, '#241f1a', { align: 'center', w: 700, mono: true });
+  g.restore(); g.globalAlpha = 1;
+}
+function bag(x, y, s, a) {   // 兒童書包，正面一個小人形
+  g.globalAlpha = a; g.fillStyle = '#4a5b6e'; g.beginPath(); g.roundRect(x - s / 2, y - s * 0.6, s, s * 1.2, 24); g.fill();
+  g.fillStyle = '#5c7088'; g.beginPath(); g.roundRect(x - s / 2, y - s * 0.6, s, s * 0.42, [24, 24, 8, 8]); g.fill();
+  g.strokeStyle = rgba(CREAM, 0.5); g.lineWidth = 6; g.beginPath(); g.arc(x, y - s * 0.6, s * 0.22, Math.PI, 0); g.stroke();
+  g.fillStyle = '#efe7da'; g.fillRect(x - s * 0.24, y - s * 0.08, s * 0.48, s * 0.5); person(x, y + s * 0.38, s * 0.36, '#5a4a3a', { ph: 0 });
+  g.globalAlpha = 1;
+}
+function arrowRow(y, from, to, col, tag, a, strike = 0) {   // 「犧牲 → ○○」一列，tag 是手段／目的
+  g.globalAlpha = a;
+  plain(from, ST.x + 170, y + 18, 56, CREAM, { align: 'center', w: 700 });
+  g.strokeStyle = col; g.lineWidth = 7; g.beginPath(); g.moveTo(ST.x + 290, y); g.lineTo(ST.x + 520, y); g.stroke();
+  G.poly(g, [[ST.x + 520, y - 18], [ST.x + 552, y], [ST.x + 520, y + 18]], col);
+  plain(to, ST.x + 740, y + 18, 56, col, { align: 'center', w: 700 });
+  plain(tag, ST.x + 740, y + 84, 36, DIM, { align: 'center' });
+  if (strike) { g.strokeStyle = RED; g.lineWidth = 8; g.beginPath(); g.moveTo(ST.x + 600, y - 4); g.lineTo(ST.x + 600 + 280 * E.o3(clamp(strike)), y - 4); g.stroke(); }
+  g.globalAlpha = 1;
+}
+function glow(x, y, r, a, col = LIGHT) {
+  const rg = g.createRadialGradient(x, y, 0, x, y, r); rg.addColorStop(0, rgba(col, 0.55 * a)); rg.addColorStop(1, rgba(col, 0));
+  g.fillStyle = rg; g.fillRect(x - r, y - r, r * 2, r * 2);
+}
+
+
+// ---------- 每張卡的舞台 ----------
+const FLOOR = ST.y + ST.h - 120;
+function c01(lt) {   // 兩個人形並排：左邊戴鋼盔的軍人，右邊灰色人形；兩人底下都標「不怕死」，中間浮出問號
+  stage(() => {
+    const xl = SC.x - 230, xr = SC.x + 230;
+    person(xl, FLOOR, 330, GOLD, { ph: 0 }); helmet(xl, FLOOR, 330, GOLD);
+    person(xr, FLOOR, 330, '#8a8177', { ph: 0 });
+    plain('軍人', xl, FLOOR + 70, 46, GOLD, { align: 'center', w: 700 });
+    plain('自殺炸彈客', xr, FLOOR + 70, 46, DIM, { align: 'center', w: 700 });
+    plain('不怕死', xl, ST.y + 140, 50, CREAM, { align: 'center' }); plain('不怕死', xr, ST.y + 140, 50, CREAM, { align: 'center' });
+    const q = 0.75 + 0.25 * Math.sin(lt * 2.2);
+    g.globalAlpha = q; plain('？', SC.x, SC.y + 40, 200, OR, { align: 'center', w: 800 }); g.globalAlpha = 1;
+  });
+}
+function c02(lt) {   // 普尼克斯山：前景山坡上一個小人形站在講台，遠景右上是帕德嫩神廟線稿
+  stage(() => {
+    glow(ST.x + 690, ST.y + 300, 360, 0.6 + 0.2 * Math.sin(lt * 0.8));
+    temple(ST.x + 690, ST.y + 380, 400, E.io(inv(0, 1.2, lt)));
+    plain('帕德嫩神廟', ST.x + 690, ST.y + 440, 36, DIM, { align: 'center' });
+    hillside(ST.y + 560);
+    g.fillStyle = rgba(CREAM, 0.25); g.fillRect(ST.x + 230, ST.y + 590, 120, 36);
+    person(ST.x + 290, ST.y + 590, 140, CREAM, { ph: 0 });
+    g.globalAlpha = E.io(inv(0.8, 1.8, lt));
+    plain('普尼克斯山', ST.x + 290, ST.y + 700, 46, CREAM, { align: 'center', w: 700 });
+    plain(`公元前 ${FACTS.PNYX_BC} 年起在這裡開公民大會`, SC.x, ST.y + 780, 34, DIM, { align: 'center' });
+    g.globalAlpha = 1;
+  });
+}
+function c03(lt) {   // 斜雨越下越密，人形站著不動，身後一圈金光
+  stage(() => {
+    const dens = lerp(14, 60, E.io(inv(0, 3.5, lt)));
+    g.strokeStyle = rgba(CREAM, 0.28); g.lineWidth = 3;
+    for (let i = 0; i < dens; i++) {
+      const sx = ST.x + loop(i * 97.3, ST.w + 200) - 100, sy = ST.y + loop(i * 61.7 + NOW * 900, ST.h + 120) - 60;
+      g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx - 26, sy + 70); g.stroke();
+    }
+    glow(SC.x, FLOOR - 200, 260, E.io(inv(0.6, 2.2, lt)), GOLD);
+    person(SC.x, FLOOR, 380, CREAM, { ph: 0 });
+    g.fillStyle = rgba(CREAM, 0.2); g.fillRect(SC.x - 160, FLOOR, 320, 10);
+    g.globalAlpha = E.io(inv(1.0, 1.9, lt));
+    plain('還守著', SC.x, ST.y + 130, 60, GOLD, { align: 'center', w: 700 }); g.globalAlpha = 1;
+  });
+}
+function c04(lt) {   // 三個圖示依序跳出：對話框打勾、站崗的士兵、跟船的船長
+  stage(() => {
+    const xs = [ST.x + 170, SC.x, ST.x + ST.w - 170];
+    const a = i => E.io(inv(0.2 + i * 1.3, 0.8 + i * 1.3, lt));
+    bubble(xs[0], SC.y - 60, 220, 120, '說到做到', a(0), GOLD);
+    person(xs[0], FLOOR, 200, CREAM, { ph: 0 });
+    g.globalAlpha = a(1);
+    person(xs[1], FLOOR, 240, CREAM, { ph: 0 }); helmet(xs[1], FLOOR, 240, CREAM);
+    g.strokeStyle = FRAME; g.lineWidth = 8; g.beginPath(); g.moveTo(xs[1] + 70, FLOOR); g.lineTo(xs[1] + 70, FLOOR - 360); g.stroke();
+    G.poly(g, [[xs[1] + 74, FLOOR - 360], [xs[1] + 170, FLOOR - 330], [xs[1] + 74, FLOOR - 300]], GOLD);
+    g.globalAlpha = a(2);
+    ship({ x: xs[2], y: FLOOR - 30, s: 260, tilt: 0.08, deck: s => person(s * 0.1, -s * 0.18, s * 0.42, GOLD, { ph: 0 }) });
+    g.globalAlpha = 1;
+    ['說話算話', '不丟崗位', '跟船一起'].forEach((t, i) => { g.globalAlpha = a(i); plain(t, xs[i], FLOOR + 74, 42, CREAM, { align: 'center', w: 700 }); g.globalAlpha = 1; });
+  });
+}
+function c05(lt) {   // 鐵達尼號慢慢傾斜，救生艇往左划開；船上留一個金色人形
+  stage(() => {
+    const p = E.io(inv(0, 6, lt));
+    glow(ST.x + 160, ST.y + 120, 220, 0.4, BLUE);
+    ship({ x: SC.x + 140, y: ST.y + 560, s: 720, funnels: 4, tilt: lerp(0.02, 0.16, p), sink: lerp(0, 60, p), lights: 0.8 - 0.5 * p,
+      deck: s => { person(s * 0.3, -s * 0.18, s * 0.17, GOLD, { ph: 0 }); } });
+    water(ST.y + 600);
+    for (let i = 0; i < 2; i++) lifeboat(lerp(SC.x - 60, ST.x + 130 + i * 190, E.io(inv(0.3 + i * 0.6, 3.5 + i * 0.6, lt))), ST.y + 650 + i * 70, 70, 0.9);
+    plain(`${FACTS.TITANIC_YEAR}`, ST.x + 80, ST.y + 110, 48, DIM, { mono: true });
+    g.globalAlpha = E.io(inv(1.5, 2.4, lt));
+    plain('船長留在船上', ST.x + ST.w - 60, ST.y + 120, 52, GOLD, { align: 'right', w: 700 }); g.globalAlpha = 1;
+  });
+}
+function c06(lt) {   // 世越號側傾，喇叭一直喊「待在原地」；一艘小艇載著紅色人形先離開；計數器跑到 304
+  stage(() => {
+    ship({ x: SC.x - 80, y: ST.y + 470, s: 620, tilt: 0.42, sink: 40, lights: 0.25 });
+    water(ST.y + 500);
+    speaker(ST.x + 140, ST.y + 150, 120, loop(lt, 1.4) / 1.4);
+    bubble(ST.x + 390, ST.y + 140, 300, 100, '請待在原地', 1);
+    const u = E.io(inv(0.6, 3.0, lt));
+    lifeboat(lerp(SC.x + 40, ST.x + ST.w - 120, u), ST.y + 560, 60, 1, 0); person(lerp(SC.x + 40, ST.x + ST.w - 120, u), ST.y + 549, 70, RED, { ph: 0 });
+    g.globalAlpha = E.io(inv(1.2, 2.0, lt)); plain('船長先走', ST.x + ST.w - 120, ST.y + 470, 42, RED, { align: 'center', w: 700 }); g.globalAlpha = 1;
+    counter(SC.x, ST.y + ST.h - 100, FACTS.SEWOL_DEAD, inv(1.5, 3.4, lt), 110, ' 人');
+    plain('沒回來', SC.x, ST.y + ST.h - 30, 40, CREAM, { align: 'center' });
+  });
+}
+function c07(lt) {   // 兩列箭頭：「犧牲 → 守住原則（手段）」對照「犧牲 → 殉道本身（目的）」
+  stage(() => {
+    arrowRow(ST.y + 230, '犧牲', '守住原則', GOLD, '是手段', E.io(inv(0.1, 0.9, lt)));
+    arrowRow(ST.y + 520, '犧牲', '殉道本身', RED, '變成目的', E.io(inv(1.4, 2.3, lt)));
+    g.globalAlpha = E.io(inv(2.5, 3.3, lt));
+    plain('盧比奧對伊朗激進教士的說法', SC.x, ST.y + ST.h - 70, 38, DIM, { align: 'center' }); g.globalAlpha = 1;
+  });
+}
+function c08(lt) {   // 坦克從右邊開進來，在小人形前停下；計數器 13 歲
+  stage(() => {
+    const u = E.o3(inv(0, 2.6, lt));
+    tank(lerp(ST.x + ST.w + 260, SC.x + 200, u), FLOOR - 40, 150, 0.95);
+    person(ST.x + 220, FLOOR, 190, GOLD, { ph: 0 });
+    g.fillStyle = rgba(CREAM, 0.14); g.fillRect(ST.x, FLOOR + 30, ST.w, 8);
+    counter(ST.x + 220, ST.y + 220, FACTS.FAHMIDEH_AGE, inv(0.3, 1.6, lt), 130, ' 歲');
+    plain(`${FACTS.FAHMIDEH_YEAR} · 兩伊戰爭`, ST.x + 220, ST.y + 300, 38, DIM, { align: 'center' });
+  });
+}
+function c09(lt) {   // 郵票蓋下來，旁邊一個印著他的兒童書包；引號「我們的領袖」
+  stage(() => {
+    stamp(ST.x + 280, SC.y + 40, 300, inv(0.1, 1.2, lt), FACTS.STAMP_YEAR);
+    bag(ST.x + ST.w - 250, SC.y + 80, 240, E.io(inv(1.2, 2.2, lt)));
+    g.globalAlpha = E.io(inv(0.6, 1.4, lt));
+    plain('「我們的領袖」', SC.x, ST.y + 120, 64, CREAM, { align: 'center', w: 700 }); g.globalAlpha = 1;
+    plain('郵票', ST.x + 280, ST.y + ST.h - 60, 40, DIM, { align: 'center' });
+    g.globalAlpha = E.io(inv(1.2, 2.2, lt)); plain('兒童書包', ST.x + ST.w - 250, ST.y + ST.h - 60, 40, DIM, { align: 'center' }); g.globalAlpha = 1;
+  });
+}
+function c10(lt) {   // 核心句兩行：打勾「願意為信念而死」、打叉並劃掉「崇拜死亡」
+  stage(() => {
+    g.globalAlpha = E.io(inv(0.1, 0.8, lt));
+    plain('✓', ST.x + 110, ST.y + 300, 90, GREEN, { align: 'center', w: 800 });
+    plain('願意為信念而死', ST.x + 190, ST.y + 300, 70, CREAM, { w: 700 });
+    g.globalAlpha = E.io(inv(1.6, 2.4, lt));
+    plain('✕', ST.x + 110, ST.y + 500, 90, RED, { align: 'center', w: 800 });
+    plain('崇拜死亡', ST.x + 190, ST.y + 500, 70, DIM, { w: 700 });
+    const s = E.o3(inv(2.3, 3.0, lt));
+    g.strokeStyle = RED; g.lineWidth = 9; g.beginPath(); g.moveTo(ST.x + 180, ST.y + 476); g.lineTo(ST.x + 180 + 300 * s, ST.y + 476); g.stroke();
+    g.globalAlpha = 1;
+    plain('"our heroes do not worship death"', SC.x, ST.y + ST.h - 90, 34, DIM, { align: 'center', mono: true });
+  });
+}
+function c11(lt) {   // 兩根長條一起長高：命有多貴、犧牲多重
+  stage(() => {
+    bars(ST.x + 140, ST.y + 640, 680, 460, [
+      { v: 100, num: '', label: '命有多貴', col: GOLD },
+      { v: 100, num: '', label: '犧牲多重', col: OR },
+    ], inv(0.2, 3.2, lt), { bw: 190 });
+    g.globalAlpha = E.io(inv(1.2, 2.0, lt)); plain('＝', SC.x, ST.y + 470, 120, CREAM, { align: 'center', w: 700 }); g.globalAlpha = 1;
+  });
+}
+function c12(lt) {   // 同兩根長條一起縮到底，小人形褪成灰色
+  stage(() => {
+    const k = 1 - 0.92 * E.io(inv(0.4, 3.0, lt));
+    bars(ST.x + 140, ST.y + 640, 680, 460, [
+      { v: 100 * k, num: '', label: '命有多貴', col: GOLD },
+      { v: 100 * k, num: '', label: '犧牲多重', col: OR },
+    ], 1, { bw: 190, max: 100 });
+    person(ST.x + ST.w - 150, ST.y + 640, 190, mix(GOLD, '#4a4540', 1 - k), { ph: 0 });
+    g.globalAlpha = E.io(inv(1.4, 2.3, lt)); plain('死亡被捧成榮耀', SC.x, ST.y + 110, 60, RED, { align: 'center', w: 700 }); g.globalAlpha = 1;
+  });
+}
+function c13(lt) {   // 人形背後一件披風，披風慢慢褪掉，剩一個普通人
+  stage(() => {
+    const k = 1 - E.io(inv(0.6, 2.4, lt)), x = SC.x, s = 400, sh = FLOOR - s * 0.72;
+    g.globalAlpha = k; g.fillStyle = RED;
+    g.beginPath(); g.moveTo(x - s * 0.12, sh); g.lineTo(x + s * 0.12, sh);
+    g.lineTo(x + s * 0.3 + Math.sin(lt * 2) * 12, FLOOR - 20); g.lineTo(x - s * 0.3 + Math.sin(lt * 2 + 1) * 12, FLOOR - 20); g.closePath(); g.fill();
+    g.globalAlpha = 1;
+    person(x, FLOOR, s, mix(CREAM, GOLD, 1 - k), { ph: 0 });
+    g.fillStyle = rgba(CREAM, 0.2); g.fillRect(x - 200, FLOOR, 400, 10);
+    g.globalAlpha = 0.4 + 0.6 * k; plain('披風', SC.x, ST.y + 130, 60, RED, { align: 'center', w: 700 }); g.globalAlpha = 1;
+    const s2 = E.o3(inv(1.6, 2.4, lt));
+    g.strokeStyle = RED; g.lineWidth = 8; g.beginPath(); g.moveTo(SC.x - 70, ST.y + 108); g.lineTo(SC.x - 70 + 140 * s2, ST.y + 108); g.stroke();
+  });
+}
+function c14(lt) {   // 戴鋼盔的人形站著，上方「不怕死」被劃掉
+  stage(() => {
+    person(SC.x, FLOOR, 400, GOLD, { ph: 0 }); helmet(SC.x, FLOOR, 400, GOLD);
+    g.fillStyle = rgba(CREAM, 0.2); g.fillRect(SC.x - 200, FLOOR, 400, 10);
+    plain('國軍', SC.x, FLOOR + 70, 46, GOLD, { align: 'center', w: 700 });
+    g.globalAlpha = E.io(inv(0.2, 0.9, lt)); plain('不怕死', SC.x, ST.y + 130, 64, DIM, { align: 'center', w: 700 }); g.globalAlpha = 1;
+    const s = E.o3(inv(1.4, 2.2, lt));
+    g.strokeStyle = RED; g.lineWidth = 9; g.beginPath(); g.moveTo(SC.x - 110, ST.y + 108); g.lineTo(SC.x - 110 + 220 * s, ST.y + 108); g.stroke();
+  });
+}
+function c15(lt) {   // 鋼盔人形在前；身後一排房子窗戶依序亮起，遠處山形島嶼慢慢浮出
+  stage(() => {
+    const isl = E.io(inv(0.8, 2.4, lt));
+    g.globalAlpha = 0.25 + 0.6 * isl; g.fillStyle = '#3a4a3c';
+    g.beginPath(); g.moveTo(ST.x + 120, ST.y + 420);
+    [[220, 300], [300, 340], [400, 230], [480, 310], [560, 250], [660, 330], [760, 290], [840, 420]].forEach(([dx, y]) => g.lineTo(ST.x + dx, ST.y + y));
+    g.closePath(); g.fill(); g.globalAlpha = 1;
+    for (let i = 0; i < 6; i++) {
+      const hx = ST.x + 70 + i * 140, hy = FLOOR - 10, lit = clamp(inv(0.1 + i * 0.15, 0.4 + i * 0.15, lt));
+      g.fillStyle = WALL; g.fillRect(hx, hy - 110, 110, 110);
+      g.beginPath(); g.moveTo(hx - 10, hy - 110); g.lineTo(hx + 55, hy - 160); g.lineTo(hx + 120, hy - 110); g.closePath(); g.fill();
+      g.fillStyle = mix('#4a4540', LIGHT, lit); g.fillRect(hx + 35, hy - 80, 40, 36);
+    }
+    person(SC.x, FLOOR + 40, 300, GOLD, { ph: 0 }); helmet(SC.x, FLOOR + 40, 300, GOLD);
+  });
+}
+function c16(lt) {   // 六個島名兩欄依序浮出，每個名字旁一個亮點
+  stage(() => {
+    ['台灣', '澎湖', '金門', '馬祖', '東沙', '太平島'].forEach((n, i) => {
+      const k = E.io(inv(0.2 + i * 0.4, 0.7 + i * 0.4, lt));
+      const x = ST.x + 180 + (i % 2) * 420, y = ST.y + 190 + Math.floor(i / 2) * 190;
+      g.globalAlpha = k;
+      glow(x, y - 10, 70, 0.7, GOLD); G.disc(g, x, y - 10, 14, GOLD);
+      plain(n, x + 50, y + 8, 60, CREAM, { w: 700 });
+    });
+    g.globalAlpha = 1;
+  });
+}
+function c17(lt) {   // 一個人形站在中間，身後金光慢慢變大
+  stage(() => {
+    glow(SC.x, FLOOR - 220, lerp(200, 520, E.io(inv(0, 3.0, lt))), 1, GOLD);
+    person(SC.x, FLOOR, 400, CREAM, { ph: 0 });
+    g.fillStyle = rgba(CREAM, 0.2); g.fillRect(SC.x - 200, FLOOR, 400, 10);
+  });
+}
+
+// ---------- 卡 ----------
+// 一張卡對一句旁白（timeline.js 第 i 句）；卡的起點＝那句開口前 0.25 秒。hud＝數字的出處。
+const CARDS = [
+  { head: '英雄不怕死？', sub: '炸彈客也不怕死', hud: '示意圖', draw: c01 },
+  { head: '珍視生命', sub: `盧比奧 · 雅典 ${FACTS.SPEECH_YEAR}.${FACTS.SPEECH_MD}`, hud: 'RAIR · Fox News · Wikipedia（Pnyx）', draw: c02 },
+  { head: '英雄是誰', sub: '最難的時候還守著', hud: 'Overton（演講逐字）', draw: c03 },
+  { head: '英雄是誰', sub: '守信 · 守崗 · 守船', hud: 'Overton（演講逐字）', draw: c04 },
+  { head: '跟船一起沉', sub: `${FACTS.TITANIC_YEAR} 鐵達尼號`, hud: 'Wikipedia（Edward Smith）', draw: c05 },
+  { head: '先走的船長', sub: `${FACTS.SEWOL_YEAR} 世越號 · ${FACTS.SEWOL_DEAD} 人`, hud: 'Wikipedia（Sinking of MV Sewol）', draw: c06 },
+  { head: '死亡崇拜', sub: '殉道當成目的', hud: 'Overton（演講逐字）', draw: c07 },
+  { head: '死亡崇拜', sub: `${FACTS.FAHMIDEH_AGE} 歲 · 兩伊戰爭`, hud: 'Wikipedia（Mohammad Hossein Fahmideh）', draw: c08 },
+  { head: '死亡崇拜', sub: `${FACTS.STAMP_YEAR} 紀念郵票`, hud: 'Wikipedia（Mohammad Hossein Fahmideh）', draw: c09 },
+  { head: '不崇拜死亡', sub: '願意為信念而死', hud: 'Overton（演講逐字）', draw: c10 },
+  { head: '珍視生命', sub: '所以犧牲才重', hud: 'Overton（演講逐字）', draw: c11 },
+  { head: '珍視生命', sub: '死亡被捧成榮耀', hud: 'Wikipedia（Mohammad Hossein Fahmideh）', draw: c12 },
+  { head: '沒披披風', sub: '不是所有英雄', hud: '示意圖', draw: c13 },
+  { head: '國軍弟兄', sub: '也不是不怕死', hud: '示意圖', draw: c14 },
+  { head: '身後是誰', sub: '台灣家庭 · 多山的小國', hud: '示意圖', draw: c15 },
+  { head: '身後是誰', sub: '從台澎金馬到東沙、太平島', hud: '兩岸人民關係條例 §2', draw: c16 },
+  { head: '選擇守護', sub: '正因為珍惜生命', hud: '示意圖', draw: c17 },
+];
+// 段名 → 畫面上的章名（鉤子不標）
+const CHAP = { 鉤子: '', 機制: '一、英雄是誰', 轉折: '二、死亡崇拜', 落點: '三、珍視生命', 提問: '三、珍視生命', 收尾: '三、珍視生命' };
+const N = CARDS.length;
+if (TL.lines.length !== N) throw new Error(`timeline.js 有 ${TL.lines.length} 句，卡片 ${N} 張，對不上`);
+const DUR = TL.dur;
+const T0 = TL.lines.map((l, i) => i === 0 ? 0 : l.t0 - 0.25);
+const cardAt = t => { let i = 0; while (i + 1 < N && t >= T0[i + 1]) i++; return i; };
+
+// ---------- 背景：上方斜紋帶等速慢捲，讓每張卡都有連續動態 ----------
+function band(t) {
+  g.save(); g.beginPath(); g.rect(0, 0, W, 120); g.clip();
+  g.fillStyle = BG2; g.fillRect(0, 0, W, 120);
+  const off = (t * 40) % 80;
+  for (let x = -160; x < W + 160; x += 80) G.poly(g, [[x + off, 0], [x + off + 40, 0], [x + off - 80, 120], [x + off - 120, 120]], rgba(OR, 0.35));
+  g.restore();
+}
+
+// ---------- 字幕 ----------
+function caption(t) {
+  const L = TL.lines.find(l => t >= l.t0 - 0.1 && t < l.t1 + 0.2);
+  if (!L) return;
+  const s = L.text.replace(/[。！]$/, ''), px = 42, maxW = 1000;
+  g.font = ZH(500, px);
+  const fits = r => g.measureText(r).width <= maxW;
+  // 在標點後斷行，貪婪裝滿一行；單段本身太長才逐字斷
+  const segs = s.match(/[^，、；：]+[，、；：]?/g), rows = [];
+  let cur = '';
+  for (const sg of segs) {
+    if (fits(cur + sg)) { cur += sg; continue; }
+    if (cur) rows.push(cur);
+    cur = '';
+    for (const ch of sg) { if (!fits(cur + ch)) { rows.push(cur); cur = ''; } cur += ch; }
+  }
+  if (cur) rows.push(cur);
+  const h = 50 + rows.length * 58;
+  g.fillStyle = '#0f0e0d'; g.fillRect(0, SAFE.cap, W, h);
+  rows.forEach((r, j) => plain(r, W / 2, SAFE.cap + 66 + j * 58, px, CREAM, { align: 'center', w: 500 }));
+}
+
+// ---------- 主持人 ----------
+const svgText = await fetch('./mascot/clawd-bot.svg').then(r => { if (!r.ok) throw new Error('取不到 mascot/clawd-bot.svg'); return r.text(); });
+const host = document.getElementById('mascot'); host.innerHTML = svgText;
+const ROOT = host.querySelector('svg'); if (!ROOT) throw new Error('mascot svg 解析失敗');
+const TRACK = { fps: 30, states: [{ t: 0, state: 'idle' }], looks: CARDS.map((c, i) => ({ t: T0[i], x: -0.5, y: 0.5 })), pokes: [] };
+function poseHost(t) {
+  applyPose(ROOT, poseAt(t, TRACK));
+  // 嘴跟旁白開合；表情維持 idle
+  if (!TL.lines.some(l => t >= l.t0 && t <= l.t1)) return;
+  const a = 0.25 + 0.75 * Math.abs(Math.sin(t * 13.5)) * (0.55 + 0.45 * Math.abs(Math.sin(t * 4.3 + 1)));
+  ROOT.querySelector('#mouth').setAttribute('d', `M-5,8 Q0,${(9 + a * 5).toFixed(2)} 5,8`);
+}
+
+// ---------- 主迴圈 ----------
+// 換卡＝原地交叉淡化 XF 秒：先畫上一張、存起來，再畫這一張，把上一張以漸弱透明度疊回去。
+const XF = 0.6;
+const snap = Object.assign(document.createElement('canvas'), { width: W, height: H });
+function render(t) {
+  t = clamp(t, 0, DUR); TXT = []; NOW = t;
+  const i = cardAt(t), lt = t - T0[i];
+  const k = i && lt < XF ? E.io(lt / XF) : 1;
+  if (k < 1) { drawCard(i - 1, t); snap.getContext('2d').drawImage(g.canvas, 0, 0); TXT = []; }
+  drawCard(i, t);
+  if (k < 1) { g.globalAlpha = 1 - k; g.drawImage(snap, 0, 0); g.globalAlpha = 1; }
+  return finish(t);
+}
+function drawCard(i, t) {
+  const cd = CARDS[i], lt = t - T0[i];
+  g.fillStyle = BG; g.fillRect(0, 0, W, H);
+  band(t);
+  plain('珍視生命', 60, 186, 30, DIM, { mono: true, ls: '4px' });
+  const ch = CHAP[TL.lines[i].section]; if (ch === undefined) throw new Error(`段名 ${TL.lines[i].section} 沒有章名`);
+  if (ch) plain(ch, 60, 246, 44, CREAM, { w: 600 });
+  // 進度條按章分組，章與章之間空一格
+  let gx = 60;
+  for (let j = 0; j < N; j++) {
+    if (j && CHAP[TL.lines[j].section] !== CHAP[TL.lines[j - 1].section]) gx += 14;
+    g.fillStyle = j <= i ? OR : rgba(CREAM, 0.2); g.fillRect(gx, 276, 14, j === i ? 10 : 5); gx += 20;
+  }
+  // 大標＝這一段的主題，同主題連續幾張卡共用、不重播動畫；副標＝這張卡的關鍵詞。
+  // 第 0 卡第 0 幀就完整顯示（封面）。
+  let gi = i; while (gi > 0 && CARDS[gi - 1].head === cd.head) gi--;
+  const glt = t - T0[gi];
+  const pin = i === 0 ? () => 1 : (a, b) => inv(a, b, lt);
+  const big = cd.head.length > 6 ? 120 : cd.head.length > 4 ? 150 : 180, hy = 330 + big * 0.86 + 60;
+  say(cd.head, 60, hy, big, CREAM, i === 0 ? 1 : inv(0.05, 0.6, glt), { id: 'head' + (gi + 1) });
+  if (cd.sub) say(cd.sub, 64, hy + 110, 68, ORL, pin(0.15, 0.7), { id: 'sub' + (i + 1) });
+  if (cd.tag) say(cd.tag, 64, hy + 190, 46, GOLD, pin(0.3, 0.85), { id: 'tag' + (i + 1) });
+  plain(`來源｜${cd.hud}`, W / 2 - ST.w * SAFE.k / 2, SAFE.hud, 30, DIM, { mono: true });
+  // 舞台照原座標畫，整塊縮放置中：Shorts 底部標題／留言列約從 y 1580 起蓋住、右側按鈕蓋 x>930
+  g.save(); g.translate(W / 2, SAFE.y); g.scale(SAFE.k, SAFE.k); g.translate(-SC.x, -ST.y);
+  cd.draw(lt);
+  g.restore();
+}
+function finish(t) {
+  caption(t);
+  poseHost(t);
+  const fade = t > DUR - 0.6 ? inv(DUR - 0.6, DUR, t) : 0;
+  if (fade) { g.globalAlpha = fade; g.fillStyle = '#000'; g.fillRect(0, 0, W, H); g.globalAlpha = 1; }
+  // 主播畫進 canvas：DOM SVG 疊層的合成結果會受上一幀影響，尋幀一致過不了
+  const tok = ++mascotTok, img = new Image();
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(ROOT));
+  return img.decode().then(() => {
+    if (tok !== mascotTok) return;   // 已經畫下一幀了，舊圖不能蓋上去
+    g.globalAlpha = 1 - fade; g.drawImage(img, 730, 60, 340, 340); g.globalAlpha = 1;
+  });
+}
+let mascotTok = 0;
+
+// ---------- 對外契約 ----------
+window.DUR = DUR;
+window.render = render;
+window.TEXTS = t => { render(t); return TXT.filter(b => b.screen); };
+window.CUES = TL.lines.map(l => ({ t0: l.t0, t1: l.t1, text: l.text }));
+window.SHAKES = [];
+window.EV = (() => {
+  const e = [{ t: 0, type: 'bed', len: DUR }];
+  // 不加任何音效：換卡「登」一聲使用者 10-30 嫌吵拿掉，只留配樂（calm 片型）
+  return e.sort((a, b) => a.t - b.t);
+})();
+window.VOICE = TL.lines.map((l, j) => ({ t: l.t0, file: `out/voice/${String(j + 1).padStart(2, '0')}.wav` }));
+
+// 字型：這段程式碼本身就含畫面上所有字（卡片、標籤、圖表字），整段拿去預載
+const allText = document.querySelector('script[type=module]').textContent + TL.lines.map(l => l.text).join('') + '0123456789';
+await Promise.all([document.fonts.load(ZH(600, 180), allText), document.fonts.load(ZH(500, 42), allText), document.fonts.load(ZH(700, 46), allText), document.fonts.load(MONO(30), allText)]);
+await document.fonts.ready;
+for (let i = 0; i < N; i++) render(T0[i] + 0.6);
+render(0);
+window.READY = true;
+</script>
+</body>
+</html>

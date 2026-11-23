@@ -1,0 +1,13 @@
+{
+ "video": "films/nvidia-short/nvidia-short.mp4",
+ "duration": 77.97,
+ "size": "1080x1920",
+ "fps": 30.0,
+ "cuts": [],
+ "shot_seconds": [
+  77.97
+ ],
+ "median_shot": 77.97,
+ "sheet": "films/nvidia-short/qa/final-sheet.jpg",
+ "sheet_phone": "films/nvidia-short/qa/final-sheet-360.jpg"
+}

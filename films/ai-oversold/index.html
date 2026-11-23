@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>台北藍大於綠？民調少算了誰</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}#mascot{display:none}#mascot svg{width:340px;height:340px}</style>
+<script src="engine.js"></script>
+<script src="timeline.js"></script>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<div id="mascot"></div>
+<script type="module">
+// 單人旁白科普，畫面照無邊探索（refs/boundless/ANALYSIS.md §3，使用者 11-03 採用）：
+// 全片同一張米色底、不硬切；扁平小人＋四色；一句一個畫面狀態（CARDS），字幕一卡一個逗號短語（timeline.js 的 phrases）；
+// 頂部系列標籤，片尾系列卡。藍綠是本片主題，陣營色用灰藍／鼠尾草綠，中間選民芥末黃，不開口的人灰色。
+// 11-04 改版（使用者定）：小人與道具改用共用插畫庫 illust/illust.mjs（正本 assets/illust/，scripts/illust_install.sh 複製進來）；
+// 只留封面大標：第 0 卡有大標，其餘卡只有系列標籤＋畫面＋字幕＋來源，畫面往上放大當主角（precheck「內頁大標」門）。
+// 禁止清單（TREATMENT.md）：不畫 2026 候選人、不引 2026 民調、不畫政黨標誌。
+// 所有動作都是 t 的封閉式（seek_check.mjs 會比亂序算出的同一幀）；循環用取餘數，不累積。
+import { poseAt, applyPose } from './mascot/clawd-bot-shot.mjs';
+import { PALETTE, person, prop } from './illust/illust.mjs';
+const G = window.G, E = G.E, TL = window.TL, W = 1080, H = 1920;
+const g = document.getElementById('c').getContext('2d', { alpha: false });
+const { clamp, inv, lerp, mix } = G;
+
+const CREAM = PALETTE.cream, INK = PALETTE.ink, TERRA = PALETTE.terra, MUST = PALETTE.mustard, COAT = PALETTE.coat;
+// 政黨色由片子自己決定（插畫庫不寫死）：綠＝民進黨、灰藍＝國民黨
+const SAGE = '#7FA57A', BLUE = '#6F8FB0', MUTE = '#B3A797', SOFT = '#EBE1D2', DIM = '#6F5F50';
+const BLUE_D = '#4F6F90', SAGE_D = '#557A51', MUST_D = '#9A6F1C';
+const ZH = (w, px) => `${w} ${px}px "PingFang TC"`;
+const SERIES = '選前看懂台北', EP = 1, HANDLE = '@paradoxbar';
+const GY = 1270;   // 畫面地平線：小人腳底；字幕短橫線在 1308
+
+// 會出現在畫面上的事實數字集中在這裡，不要在別處重寫一次。每一個都要在 meta/facts.md 有一行附來源。
+const FACTS = {
+  Y2024: 2024,
+  LAI_TPE_2024: 587899,       // F6 賴清德台北市得票
+  HOU_TPE_2024: 587258,       // F6 侯友宜台北市得票
+  GAP_2024: 641,              // F6 藍綠差
+  Y2018: 2018,
+  POLL_KO_2018: 42.1,         // F14 TPOF 2018-10
+  POLL_DING_2018: 28.5,       // F14
+  KO_LEAD_2018: 13.6,         // F14
+  KO_VOTES_2018: 580820,      // F15
+  KO_WIN_2018: 3254,          // F15 丁守中差的票數
+  RALLY_OCT: 52.7,            // F23 丁守中泛藍支持度 10 月
+  RALLY_NOV: 66.8,            // F23 11 月
+};
+const fmt = n => n.toLocaleString('en-US');
+
+// ---------- 字 ----------
+let TXT = [];
+function say(s, x, y, px, col, p, o = {}) {
+  g.save(); g.font = ZH(o.w || 700, px); g.textAlign = o.align || 'left'; g.textBaseline = 'alphabetic';
+  const w = g.measureText(s).width;
+  g.globalAlpha *= E.io(p); g.fillStyle = col; g.fillText(s, x, y);
+  // PingFang 最粗只到 Semibold；o.bold 描同色邊加粗，大標在奶油底上才讀得出（封面 OCR）
+  if (o.bold) { g.strokeStyle = col; g.lineWidth = px * o.bold; g.lineJoin = 'round'; g.strokeText(s, x, y); }
+  g.restore();
+  if (o.id) {
+    const x0 = o.align === 'center' ? x - w / 2 : o.align === 'right' ? x - w : x;
+    TXT.push({ id: o.id, text: s, x0, y0: y - px, x1: x0 + w, y1: y + px * 0.25, screen: true });
+  }
+  return w;
+}
+function plain(s, x, y, px, col, o = {}) {
+  g.font = ZH(o.w || 600, px); g.textAlign = o.align || 'left'; g.textBaseline = 'alphabetic';
+  g.fillStyle = col; g.fillText(s, x, y);
+}
+const pop = (lt, a, d = 0.5) => E.o3(inv(a, a + d, lt));
+const loop = (x, n) => ((x % n) + n) % n;
+const rr = (x, y, w, h, r, col) => { g.fillStyle = col; g.beginPath(); g.roundRect(x, y, w, h, r); g.fill(); };
+const man = (x, y, s, body, o = {}) => person(g, { x, y, s, body, ...o });
+// 畫面裡的數字標籤：比字幕大一點、遠小於大標（< precheck HEADLINE_PX），算插畫的一部分
+const fig = (s, x, y, col, p = 1, id) => say(s, x, y, 64, col, p, { id, align: 'center', bold: 0.03 });
+
+// ---------- 40 人方陣：顏色照人數分配，換狀態時逐人換色；姿勢混搭 ----------
+const PERM = (() => { const r = G.rng(11), a = [...Array(40).keys()]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; })();
+const POSE_MIX = (() => { const r = G.rng(23); return Array.from({ length: 40 }, () => { const v = r(); return v < 0.62 ? ['stand', 1] : v < 0.72 ? ['armsUp', 1] : v < 0.82 ? ['point', r() < 0.5 ? 1 : -1] : v < 0.91 ? ['think', 1] : ['shrug', 1]; }); })();
+function cols(spec) { const out = Array(40).fill(SOFT); let k = 0; for (const [c, n] of spec) for (let m = 0; m < n; m++) out[PERM[k++]] = c; return out; }
+const C_IMPRESSION = cols([[BLUE, 26], [SAGE, 14]]);
+const C_2018 = cols([[BLUE, 16], [SAGE, 11], [MUST, 13]]);          // 示意：藍綠黃都有
+const C_SILENT = cols([[BLUE, 12], [SAGE, 9], [MUST, 7], [MUTE, 12]]);
+function crowd(o) {
+  const s = 120, nc = 8, dx = 116, dy = 146;
+  const x0 = 540 - dx * (nc - 1) / 2 - dx * 0.25, y0 = o.y0;
+  for (let k = 0; k < 40; k++) {
+    const r = Math.floor(k / nc), c = k % nc;
+    const x = x0 + c * dx + (r % 2 ? dx * 0.5 : 0), y = y0 + r * dy;
+    const pk = o.from ? E.io(inv(0.1 + (k / 40) * 0.6, 0.5 + (k / 40) * 0.6, o.lt)) : 1;
+    const col = o.from ? mix(o.from[k], o.to[k], pk) : o.to[k];
+    const silent = o.q && o.to[k] === MUTE;
+    const [pose, dir] = silent ? ['shrug', 1] : POSE_MIX[k];
+    man(x, y, s, col, { pose, dir, face: silent && pk > 0.5 ? 'worried' : 'none' });
+    if (silent) prop(g, 'question', { x: x + 4, y: y - s - 26 + Math.sin(o.lt * 2.5 + k) * 4, s: 26, color: DIM, alpha: pk });
+  }
+}
+
+// ---------- 長條：rows=[{name, val, col, tc, label}]，x0／w 是長條範圍 ----------
+function bars(o) {
+  const x0 = o.x0 ?? 120, w = o.w ?? 800, gap = o.gap ?? 200, bh = o.bh ?? 100;
+  o.rows.forEach((r, j) => {
+    const y = o.y + j * gap, pk = E.o3(inv(0.15 + j * 0.2, 1.1 + j * 0.2, o.lt));
+    plain(r.name, x0, y - 20, 42, INK, { w: 600 });
+    rr(x0, y, w, bh, 20, SOFT);
+    rr(x0, y, Math.max(16, w * (r.val / o.max) * pk), bh, 20, r.col);
+    g.globalAlpha = inv(0.5, 0.9, pk); plain(r.label, x0 + w, y - 20, 42, r.tc, { align: 'right', w: 800 }); g.globalAlpha = 1;
+  });
+}
+
+// 白卡片放在米色底上，藏字檢查（textless_check）算不到畫面；要用卡片就加一圈有色外框
+// （2026-11-11 songshan-airport 14 張卡因此被擋）
+function framed(cx, cy, w, h, col, a = 1) {
+  g.save(); g.globalAlpha *= a; rr(cx - w / 2 - 18, cy - h / 2 - 18, w + 36, h + 36, 34, col); g.restore();
+  prop(g, 'card', { x: cx, y: cy, w, h, alpha: a });
+}
+
+// ---------- 每張卡的畫面（畫在 y 500–1290；x≥875、y<480 是主播位置） ----------
+function c1(lt) {
+  crowd({ y0: 690, to: C_IMPRESSION, lt });
+}
+function c2(lt) {
+  // 天秤：兩邊站著綠藍小人，晃一下就幾乎平了——差 641 票
+  const S = 640, k = S / 100, cx = 540, by = GY;
+  const tilt = lerp(0.2, -0.012, E.o3(inv(0.1, 1.6, lt))) + Math.sin(lt * 5) * 0.03 * (1 - E.o3(inv(0.1, 2.2, lt)));
+  prop(g, 'balance', { x: cx, y: by, s: S, tilt, leftColor: SAGE, rightColor: BLUE });
+  [[-1, SAGE, SAGE_D, `民進黨 賴清德`, FACTS.LAI_TPE_2024], [1, BLUE, BLUE_D, '國民黨 侯友宜', FACTS.HOU_TPE_2024]].forEach(([sx, c, tc, name, v]) => {
+    const ex = cx + sx * Math.cos(tilt) * 48 * k, py = by + (-88 + sx * Math.sin(tilt) * 48 + 34) * k;
+    man(ex - 42, py, 150, c, { pose: sx < 0 ? 'armsUp' : 'stand', shadow: false });
+    man(ex + 42, py, 150, c, { pose: sx < 0 ? 'stand' : 'shrug', shadow: false });
+    plain(name, ex, py + 120, 38, INK, { align: 'center', w: 600 });
+    plain(fmt(v), ex, py + 172, 44, tc, { align: 'center', w: 800 });
+  });
+  fig(`差 ${FACTS.GAP_2024} 票`, 540, 600, TERRA, inv(1.2, 1.7, lt), 'fig-gap');
+}
+function cTarget(lt) {
+  // 靶：藍綠圈幾乎一樣寬，射飛鏢的人皺眉，落點散在中心附近
+  const cx = 610, cy = 800;
+  g.strokeStyle = '#8A6A55'; g.lineWidth = 16; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(cx - 40, cy + 200); g.lineTo(cx - 150, GY); g.moveTo(cx + 40, cy + 200); g.lineTo(cx + 150, GY); g.stroke();
+  g.save(); g.shadowColor = 'rgba(59,47,42,0.2)'; g.shadowBlur = 30; g.shadowOffsetY = 10; G.disc(g, cx, cy, 250, CREAM); g.restore();
+  [[250, BLUE], [195, SAGE], [140, BLUE], [85, SAGE], [32, CREAM]].forEach(([r, c]) => G.disc(g, cx, cy, r, c));
+  const R = G.rng(5);
+  for (let k = 0; k < 6; k++) {
+    const a = R() * Math.PI * 2, d = 40 + R() * 180, q = pop(lt, 0.3 + k * 0.25, 0.3);
+    if (q <= 0) continue;
+    const x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d;
+    g.globalAlpha = q; G.disc(g, x, y, 13, INK); g.strokeStyle = INK; g.lineWidth = 6; g.beginPath(); g.moveTo(x, y); g.lineTo(x + 46, y - 46); g.stroke();
+    g.fillStyle = TERRA; g.beginPath(); g.moveTo(x + 40, y - 52); g.lineTo(x + 62, y - 56); g.lineTo(x + 52, y - 40); g.closePath(); g.fill(); g.globalAlpha = 1;
+  }
+  man(190, GY, 400, COAT, { pose: 'point', aim: -0.45, face: 'worried' });
+}
+function table() {
+  // 長桌（前板擋住腿，看起來是坐著）＋盤子
+  rr(60, 1080, 960, 34, 14, '#A5835D');
+  rr(80, 1106, 920, GY - 1106, 10, '#C7A77F');
+  g.fillStyle = 'rgba(59,47,42,0.08)'; g.fillRect(80, 1106, 920, 18);
+  [300, 510, 720].forEach(x => { g.fillStyle = '#FFFFFF'; g.beginPath(); g.ellipse(x, 1084, 62, 16, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#E7DCCB'; g.beginPath(); g.ellipse(x, 1084, 40, 9, 0, 0, Math.PI * 2); g.fill(); });
+}
+function c4(lt, quiet) {
+  // 午餐桌：三個同事比手畫腳罵人，你（芥末黃）在旁邊；quiet 時你低頭、旁邊冒「……」
+  const poses = [['point', 1], ['shrug', 1], ['armsUp', 1]];
+  [190, 400, 610].forEach((x, k) => {
+    man(x, GY, 380, TERRA, { pose: poses[k][0], aim: -0.2, face: 'worried', tilt: Math.sin(lt * 2.4 + k) * 0.03, shadow: false });
+    prop(g, 'speech', { x: x + 40, y: 790 - k * 18 + Math.sin(lt * 3 + k) * 6, s: 120 + 18 * Math.sin(lt * 3 + k), tail: 'left', stroke: TERRA, color: TERRA });
+  });
+  const down = quiet ? E.io(inv(0.2, 0.9, lt)) : 0;
+  man(870, GY, 380, MUST, { pose: quiet ? 'stand' : 'think', dir: -1, face: 'worried', tilt: -down * 0.16, shadow: false });
+  table();
+  if (!quiet) prop(g, 'question', { x: 880, y: 800 + Math.sin(lt * 2.5) * 6, s: 70, color: DIM });
+  if (quiet) prop(g, 'speech', { x: 900, y: 790, s: 110, tail: 'left', color: DIM, fill: '#F2ECE2', alpha: pop(lt, 0.8) });
+}
+function c5(lt) { c4(lt, true); }
+function spiral(cx, cy, turns, step, col, w, rot = 0, sy = 1) {
+  g.strokeStyle = col; g.lineWidth = w; g.lineCap = 'round'; g.beginPath();
+  for (let a = 0; a < turns; a += 0.05) { const r = 6 + a * step, x = cx + Math.cos(a + rot) * r, y = cy + Math.sin(a + rot) * r * sy; a ? g.lineTo(x, y) : g.moveTo(x, y); }
+  g.stroke();
+}
+function c6(lt) {
+  // 沉默螺旋名稱卡：研究文件（標題＋螺旋圖）＋學者指著它、頭上燈泡亮起
+  // 文件釘在 sage 展示板上（文件紙色接近底色，藏字後畫面太空，textless_check 擋）
+  g.save(); g.fillStyle = SAGE; g.beginPath(); g.roundRect(110, 560, 520, 640, 28); g.fill();
+  g.strokeStyle = INK; g.lineWidth = 10; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(200, 1200); g.lineTo(170, GY); g.moveTo(540, 1200); g.lineTo(570, GY); g.stroke(); g.restore();
+  prop(g, 'document', { x: 370, y: 850, s: 440, title: '沉默螺旋', titlePx: 9, lines: 2 });
+  spiral(345, 960, 12 * (0.7 + 0.3 * E.io(inv(0.1, 2.0, lt))), 6.5, TERRA, 16);
+  man(800, GY, 400, COAT, { pose: 'point', dir: -1, aim: -0.35, face: 'smile' });
+  prop(g, 'bulb', { x: 790, y: 700, s: 190, on: pop(lt, 0.6, 0.6), t: lt });
+}
+function c10(lt) {
+  // 先感覺風向：皺眉想事情，頭上雷達波，旗子被風吹
+  prop(g, 'flag', { x: 190, y: GY, s: 420, color: MUTE, t: lt * 2.2 });
+  man(600, GY, 440, MUST, { pose: 'think', face: 'worried' });
+  for (let k = 0; k < 3; k++) {
+    const r = 70 + loop(lt * 70 + k * 60, 180);
+    g.globalAlpha = 1 - r / 260; g.strokeStyle = TERRA; g.lineWidth = 18; g.lineCap = 'round';
+    g.beginPath(); g.arc(600, 870, r, -Math.PI * 0.85, -Math.PI * 0.15); g.stroke();
+  }
+  g.globalAlpha = 1; g.strokeStyle = MUTE; g.lineWidth = 14; g.lineCap = 'round';
+  for (let k = 0; k < 4; k++) { const x = 40 + loop(lt * 260 + k * 230, 760); g.beginPath(); g.moveTo(x, 560 + k * 60); g.lineTo(x + 170, 560 + k * 60); g.stroke(); }
+}
+function c11(lt) {
+  // 一邊越來越小聲、變灰；另一邊拿大聲公、泡泡越來越大
+  const p = E.io(inv(0.2, 3.2, lt));
+  spiral(540, 640, 14 * p, 9, MUTE, 16, 0, 0.6);
+  for (let k = 0; k < 3; k++) {
+    const x = 110 + k * 135, c = mix(MUST, MUTE, clamp(p * 1.4 - k * 0.2));
+    man(x, GY, 240, c, { pose: p > 0.5 ? 'stand' : 'shrug', face: 'worried' });
+    if (p < 0.95) prop(g, 'speech', { x: x + 24, y: GY - 290, s: 90 * (1 - p), tail: 'left', color: MUST_D, alpha: 1 - p });
+  }
+  const P = [['armsUp', 1], ['point', 1], ['armsUp', 1]];
+  for (let k = 0; k < 3; k++) {
+    const x = 620 + k * 150;
+    man(x, GY, 240, TERRA, { pose: P[k][0], aim: -0.3, face: 'smile' });
+    prop(g, 'speech', { x: x + 10, y: GY - 300 - p * 40, s: 70 + p * 60, tail: 'left', stroke: TERRA, color: TERRA });
+  }
+  prop(g, 'megaphone', { x: 873, y: 1074, s: 120, t: lt, alpha: pop(lt, 0.4) });
+}
+function c12(lt) {
+  prop(g, 'card', { x: 540, y: 800, w: 920, h: 440 });
+  bars({ x0: 150, w: 780, y: 700, gap: 190, lt, max: 50, rows: [
+    { name: '柯文哲', val: FACTS.POLL_KO_2018, col: MUST, tc: MUST_D, label: `${FACTS.POLL_KO_2018}%` },
+    { name: '丁守中', val: FACTS.POLL_DING_2018, col: BLUE, tc: BLUE_D, label: `${FACTS.POLL_DING_2018}%` }] });
+  man(330, GY, 230, MUST, { pose: 'armsUp', face: 'smile' });
+  man(750, GY, 230, BLUE, { pose: 'stand', face: 'worried' });
+  plain(`${FACTS.Y2018} 年 10 月民調`, 540, 630, 36, DIM, { align: 'center', w: 600 });
+}
+function c13(lt) {
+  prop(g, 'card', { x: 540, y: 800, w: 920, h: 440 });
+  bars({ x0: 150, w: 780, y: 700, gap: 190, lt, max: FACTS.KO_VOTES_2018, rows: [
+    { name: '柯文哲', val: FACTS.KO_VOTES_2018, col: MUST, tc: MUST_D, label: fmt(FACTS.KO_VOTES_2018) },
+    { name: '丁守中', val: FACTS.KO_VOTES_2018 - FACTS.KO_WIN_2018, col: BLUE, tc: BLUE_D, label: fmt(FACTS.KO_VOTES_2018 - FACTS.KO_WIN_2018) }] });
+  man(200, GY, 230, MUST, { pose: 'shrug', face: 'worried' });
+  man(880, GY, 230, BLUE, { pose: 'shrug', face: 'smile' });
+  fig(`只差 ${fmt(FACTS.KO_WIN_2018)} 票`, 540, 1180, TERRA, inv(1.4, 1.9, lt), 'fig-win');
+}
+function cWhy(lt) {
+  // 兩組長條縮圖（民調差很大、開票幾乎一樣）放在卡片上，旁邊大問號＋想不通的人
+  prop(g, 'card', { x: 340, y: 860, w: 560, h: 620, alpha: pop(lt, 0.1) });
+  g.globalAlpha = pop(lt, 0.1);
+  plain('民調', 110, 650, 42, INK, { w: 700 }); rr(110, 670, 460, 70, 18, MUST); rr(110, 760, 311, 70, 18, BLUE);
+  plain('開票', 110, 950, 42, INK, { w: 700 }); rr(110, 970, 460, 70, 18, MUST); rr(110, 1060, 457, 70, 18, BLUE);
+  g.globalAlpha = 1;
+  const q = E.o3(inv(0.4, 1.0, lt));
+  if (q > 0) prop(g, 'question', { x: 820, y: 690, s: 230 * q });
+  man(830, GY, 300, COAT, { pose: 'think', face: 'worried', dir: -1 });
+}
+function cPhone(lt) {
+  // 民調電話響，灰色那人聳肩沒接、頭上問號
+  const sh = loop(lt, 1.2) < 0.5 ? Math.sin(lt * 40) * 6 : 0;
+  prop(g, 'phone', { x: 300 + sh, y: 880, s: 380, rows: 3, avatars: [BLUE, SAGE, MUST] });
+  for (let k = 0; k < 3; k++) { const r = 230 + loop(lt * 120 + k * 50, 150); g.globalAlpha = 1 - (r - 230) / 150; g.strokeStyle = TERRA; g.lineWidth = 14; g.lineCap = 'round'; g.beginPath(); g.arc(300, 880, r, -0.5, 0.5); g.stroke(); }
+  g.globalAlpha = 1;
+  man(830, GY, 400, MUTE, { pose: 'shrug', face: 'worried', dir: -1 });
+  prop(g, 'question', { x: 830, y: GY - 470 + Math.sin(lt * 2.5) * 8, s: 90, color: DIM });
+}
+function c14(lt) {
+  // 兩種說法並排，篇幅一樣；底下各站一個代表
+  [0, 1].forEach(j => {
+    const cx = 320 + j * 440, a = j ? pop(lt, 0.6) : 1;
+    prop(g, 'card', { x: cx, y: 830, w: 400, h: 480, alpha: a });
+    g.save(); g.globalAlpha *= a;
+    plain(j ? '藍營歸隊' : '沉默螺旋', cx, 690, 48, INK, { align: 'center', w: 700 });
+    if (!j) spiral(cx, 890, 12, 11, TERRA, 22, lt);
+    else {
+      const q = E.o3(inv(0.9, 2.2, lt)), h = lerp(FACTS.RALLY_OCT, FACTS.RALLY_NOV, q) * 3.2;
+      rr(cx - 110, 1050 - h, 220, h, 18, BLUE);
+      plain(`${q < 0.5 ? FACTS.RALLY_OCT : FACTS.RALLY_NOV}%`, cx, 1030 - h, 40, BLUE_D, { align: 'center', w: 800 });
+      plain(q < 0.5 ? '10 月' : '11 月', cx, 1078, 30, DIM, { align: 'center', w: 600 });
+    }
+    man(cx, GY, 190, j ? BLUE : MUST, { pose: j ? 'armsUp' : 'stand', face: j ? 'smile' : 'worried' });
+    g.restore();
+  });
+}
+function c16(lt) {
+  crowd({ y0: 690, from: C_2018, to: C_SILENT, lt, q: true });
+}
+function c17(lt) {
+  // 三種顏色的人走向同一個票箱，投完票笑
+  const bx = 540, top = 1060;
+  g.save(); g.shadowColor = 'rgba(59,47,42,0.2)'; g.shadowBlur = 24; g.shadowOffsetY = 8; rr(bx - 130, top, 260, GY - top, 22, '#5A463C'); g.restore();
+  rr(bx - 142, top - 12, 284, 40, 14, INK); rr(bx - 60, top - 2, 120, 12, 6, CREAM);
+  g.strokeStyle = CREAM; g.lineWidth = 16; g.lineCap = 'round'; g.lineJoin = 'round';
+  g.beginPath(); g.moveTo(bx - 40, top + 110); g.lineTo(bx - 8, top + 140); g.lineTo(bx + 46, top + 80); g.stroke();
+  [[BLUE, 130, 330, 1], [SAGE, 950, 760, -1], [MUST, 1000, 880, -1]].forEach(([c, x0, x1, dir], k) => {
+    const p = E.io(inv(0.1 + k * 0.2, 1.8 + k * 0.2, lt)), x = lerp(x0, x1, p), walking = p > 0 && p < 1;
+    const d = loop(lt - 1.8 - k * 0.5, 1.6);
+    man(x, GY, 230, c, { pose: walking ? 'walk' : lt > 1.8 && d < 0.8 ? 'point' : 'stand', t: lt, dir, aim: -0.5, face: p >= 1 ? 'smile' : 'none' });
+    if (lt > 1.8 && d < 0.8) { const q = d / 0.8; rr(lerp(x, bx - 25, q), lerp(1000, top - 40, q) - Math.sin(q * Math.PI) * 120, 50, 36, 6, CREAM); }
+  });
+}
+
+// head：卡名。只有封面（第 0 卡）畫成大標，其他卡不畫（使用者 11-04：只留封面大標，precheck「內頁大標」門）。
+const CARDS = [
+  { head: '藍大於綠', hud: '示意圖', hl: ['藍大於綠'], draw: c1 },
+  { head: '總統票差', hud: '中選會', hl: ['六百四十一票'], draw: c2 },
+  { head: '很難猜準', hud: '示意圖', hl: ['猜準'], draw: cTarget },
+  { head: '想像一下', hud: '示意圖', hl: ['偏偏你支持他'], draw: c4 },
+  { head: '假裝沒意見', hud: '示意圖', hl: ['假裝沒意見'], draw: c5 },
+  { head: '沉默螺旋', hud: 'Griffin《傳播理論》第 29 章', hl: ['沉默螺旋'], draw: c6 },
+  { head: '偷看風向', hud: 'Griffin《傳播理論》第 29 章', hl: ['偷看風向', '少數'], draw: c10 },
+  { head: '越來越大聲', hud: 'Griffin《傳播理論》第 29 章', hl: ['越大聲', '跟著閉嘴'], draw: c11 },
+  { head: '民調領先', hud: '台灣民意基金會', hl: ['十三點六個百分點'], draw: c12 },
+  { head: '開票結果', hud: '公視', hl: ['三千兩百五十四票'], draw: c13 },
+  { head: '差這麼多', hud: '台灣民意基金會／公視', hl: ['差這麼多'], draw: cWhy },
+  { head: '不想表態', hud: 'Griffin《傳播理論》第 29 章', hl: ['不想表態'], draw: cPhone },
+  { head: '兩種說法', hud: `美麗島電子報 ${FACTS.Y2018}-11`, hl: ['歸隊'], draw: c14 },
+  { head: '不開口的人', hud: '示意圖', hl: ['不開口的人'], draw: c16 },
+  { head: '一起投票', hud: '示意圖', hl: ['共同未來'], draw: c17 },
+];
+const N = CARDS.length;
+if (TL.lines.length !== N) throw new Error(`timeline.js 有 ${TL.lines.length} 句，卡片 ${N} 張，對不上`);
+const DUR = TL.dur;
+const T0 = TL.lines.map((l, i) => i === 0 ? 0 : l.t0 - 0.2);
+const END0 = TL.lines[N - 1].t1 + 0.3;   // 片尾系列卡
+const cardAt = t => { let i = 0; while (i + 1 < N && t >= T0[i + 1]) i++; return i; };
+const PH = TL.lines.flatMap((l, i) => (l.phrases || [{ text: l.text, t0: l.t0, t1: l.t1 }]).map(p => ({ ...p, card: i })));
+
+// ---------- 頂部系列標籤 ----------
+function series() {
+  plain(`${SERIES}｜系列`, 540, 150, 34, DIM, { align: 'center', w: 600 });
+  rr(510, 172, 60, 5, 3, TERRA);
+}
+
+// ---------- 字幕：一卡一個逗號短語，關鍵詞陶土紅，上方一條短橫線 ----------
+function caption(t) {
+  const j = PH.findIndex((p, k) => t >= p.t0 - 0.05 && t < Math.min(p.t1 + 0.25, PH[k + 1] ? PH[k + 1].t0 - 0.05 : Infinity));
+  if (j < 0 || t >= END0) return;
+  const p = PH[j], hl = CARDS[p.card].hl || [];
+  const px = 58, maxW = 900;
+  g.font = ZH(700, px);
+  const rows = g.measureText(p.text).width <= maxW ? [p.text] : [p.text.slice(0, Math.ceil(p.text.length / 2)), p.text.slice(Math.ceil(p.text.length / 2))];
+  const y0 = 1400 - (rows.length - 1) * 36;
+  rr(510, y0 - 92, 60, 6, 3, INK);
+  rows.forEach((r, k) => rich(r, 540, y0 + k * 74, px, hl));
+}
+function rich(s, cx, y, px, hl) {
+  const mark = Array(s.length).fill(false);
+  for (const w of hl) { let i = s.indexOf(w); while (i >= 0) { for (let k = 0; k < w.length; k++) mark[i + k] = true; i = s.indexOf(w, i + 1); } }
+  g.font = ZH(700, px); g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+  let x = cx - g.measureText(s).width / 2;
+  for (let k = 0; k < s.length; k++) { g.fillStyle = mark[k] ? TERRA : INK; g.fillText(s[k], x, y); x += g.measureText(s[k]).width; }
+}
+
+// ---------- 片尾系列卡 ----------
+function endCard(t) {
+  g.fillStyle = CREAM; g.fillRect(0, 0, W, H);
+  const lt = t - END0;
+  // 系列名比照參考帳號片尾：中等字級（< precheck HEADLINE_PX），三個小人是主角
+  say(SERIES, 540, 640, 68, INK, 1, { id: 'end-series', align: 'center', bold: 0.03 });
+  say(`第 ${EP} 集`, 540, 720, 44, TERRA, 1, { id: 'end-ep', align: 'center' });
+  rr(510, 752, 60, 5, 3, SAGE);
+  [[BLUE, 330, 'armsUp'], [MUST, 540, 'stand'], [SAGE, 750, 'armsUp']].forEach(([c, x, pose], k) => man(x, 1150, 260, c, { pose, face: 'smile', tilt: Math.sin(lt * 2 + k) * 0.04 }));
+  plain(HANDLE, 540, 1260, 40, DIM, { align: 'center', w: 600 });
+}
+
+// ---------- 主播 Paradox（Clawd Bot）：右上角，寫法照 films/elected-dictator ----------
+const svgText = await fetch('./mascot/clawd-bot.svg').then(r => { if (!r.ok) throw new Error('取不到 mascot/clawd-bot.svg'); return r.text(); });
+const host = document.getElementById('mascot'); host.innerHTML = svgText;
+const ROOT = host.querySelector('svg'); if (!ROOT) throw new Error('mascot svg 解析失敗');
+const TRACK = { fps: 30, states: [{ t: 0, state: 'idle' }], looks: CARDS.map((c, i) => ({ t: T0[i], x: -0.5, y: 0.5 })), pokes: [] };
+function poseHost(t) {
+  applyPose(ROOT, poseAt(t, TRACK));
+  // 嘴跟旁白開合；表情維持 idle
+  if (!TL.lines.some(l => t >= l.t0 && t <= l.t1)) return;
+  const a = 0.25 + 0.75 * Math.abs(Math.sin(t * 13.5)) * (0.55 + 0.45 * Math.abs(Math.sin(t * 4.3 + 1)));
+  ROOT.querySelector('#mouth').setAttribute('d', `M-5,8 Q0,${(9 + a * 5).toFixed(2)} 5,8`);
+}
+// 畫框 x 875 起、y 260 起、邊長 224（框右緣的透明留白超出畫面無妨），可見身形約 x 906–1067、y 299–455：
+// IG 主頁格把 9:16 置中裁成 3:4（上下各裁約 240px），整隻要在 y 240 以下；左邊讓開置中大標（最寬到 x 890）。
+const MASCOT = { x: 875, y: 260, s: 224 };
+let mascotTok = 0;
+function finish(t) {
+  caption(t);
+  poseHost(t);
+  // 主播畫進 canvas：DOM SVG 疊層的合成結果會受上一幀影響，尋幀一致過不了
+  const tok = ++mascotTok, img = new Image();
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(ROOT));
+  return img.decode().then(() => {
+    if (tok !== mascotTok) return;   // 已經畫下一幀了，舊圖不能蓋上去
+    g.drawImage(img, MASCOT.x, MASCOT.y, MASCOT.s, MASCOT.s);
+  });
+}
+
+// ---------- 主迴圈 ----------
+// 換卡＝原地交叉淡化 XF 秒：底色一樣，看起來是小人與道具在原地換狀態，不是切鏡頭。
+const XF = 0.5;
+const snap = Object.assign(document.createElement('canvas'), { width: W, height: H });
+function render(t) {
+  t = clamp(t, 0, DUR); TXT = [];
+  if (t >= END0) {
+    const k = E.io(inv(END0, END0 + XF, t));
+    if (k < 1) { drawCard(N - 1, t); snap.getContext('2d').drawImage(g.canvas, 0, 0); TXT = []; }
+    endCard(t);
+    if (k < 1) { g.globalAlpha = 1 - k; g.drawImage(snap, 0, 0); g.globalAlpha = 1; }
+    return finish(t);
+  }
+  const i = cardAt(t), lt = t - T0[i];
+  const k = i && lt < XF ? E.io(lt / XF) : 1;
+  if (k < 1) { drawCard(i - 1, t); snap.getContext('2d').drawImage(g.canvas, 0, 0); TXT = []; }
+  drawCard(i, t);
+  if (k < 1) { g.globalAlpha = 1 - k; g.drawImage(snap, 0, 0); g.globalAlpha = 1; }
+  return finish(t);
+}
+function drawCard(i, t) {
+  const cd = CARDS[i], lt = t - T0[i];
+  g.fillStyle = CREAM; g.fillRect(0, 0, W, H);
+  series();
+  // 只留封面大標（使用者 11-04）：第 0 卡第 0 幀就完整顯示，其他卡不畫大標副標，畫面當主角
+  if (i === 0) say(cd.head, 540, 370, 170, INK, 1, { id: 'head1', align: 'center' });  // 170px 不描邊：bold 0.05 會糊（11-11 使用者回報）
+  g.save(); cd.draw(lt); g.restore();
+  g.globalAlpha = 1;
+  plain(`來源｜${cd.hud}`, 540, 1530, 32, DIM, { align: 'center', w: 600 });
+}
+
+// ---------- 對外契約 ----------
+window.DUR = DUR;
+window.render = render;
+window.TEXTS = t => { render(t); return TXT.filter(b => b.screen); };
+window.CUES = PH.map(p => ({ t0: p.t0, t1: p.t1, text: p.text }));
+window.SHAKES = [];
+window.EV = [{ t: 0, type: 'bed', len: DUR }];   // 只留配樂（calm 片型），不加換卡音效
+window.VOICE = TL.lines.map((l, j) => ({ t: l.t0, file: `out/voice/${String(j + 1).padStart(2, '0')}.wav` }));
+
+// 字型：這段程式碼本身就含畫面上所有字，整段拿去預載
+const allText = document.querySelector('script[type=module]').textContent + TL.lines.map(l => l.text).join('') + '0123456789,%';
+await Promise.all([700, 600].map(w => document.fonts.load(ZH(w, 58), allText)));
+await document.fonts.ready;
+for (let i = 0; i < N; i++) render(T0[i] + 0.6);
+render(0);
+window.READY = true;
+</script>
+</body>
+</html>

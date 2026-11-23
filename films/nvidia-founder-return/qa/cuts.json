@@ -1,0 +1,13 @@
+{
+ "video": "films/nvidia-founder-return/nvidia-founder-return.mp4",
+ "duration": 79.03,
+ "size": "1080x1920",
+ "fps": 30.0,
+ "cuts": [],
+ "shot_seconds": [
+  79.03
+ ],
+ "median_shot": 79.03,
+ "sheet": "films/nvidia-founder-return/qa/final-sheet.jpg",
+ "sheet_phone": "films/nvidia-founder-return/qa/final-sheet-360.jpg"
+}

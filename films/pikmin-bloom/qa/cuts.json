@@ -1,0 +1,13 @@
+{
+ "video": "films/pikmin-bloom/pikmin-bloom.mp4",
+ "duration": 75.5,
+ "size": "1080x1920",
+ "fps": 30.0,
+ "cuts": [],
+ "shot_seconds": [
+  75.5
+ ],
+ "median_shot": 75.5,
+ "sheet": "films/pikmin-bloom/qa/final-sheet.jpg",
+ "sheet_phone": "films/pikmin-bloom/qa/final-sheet-360.jpg"
+}

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<!-- 輪播模板：scripts/carousel.sh 複製到 films/<片>/out/carousel-src/ 再由 still.mjs 截圖。
+     serve 把這個目錄掛在 /@film/，所以只能用相對路徑載同目錄的檔。畫布固定 1080x1350（IG 4:5）。
+     ponytail: 純文字泡泡，沒有角色圖；要角色入鏡就從片子 still 截一張當底圖 -->
+<style>
+  html, body { margin: 0; width: 1080px; height: 1350px; overflow: hidden; }
+  body { font-family: "PingFang TC", sans-serif; color: #F4EFE8;
+         background: linear-gradient(180deg, #0F1424 0%, #1E2A44 55%, #201F1D 100%); }
+  #page { position: absolute; inset: 0; padding: 100px 80px 170px; box-sizing: border-box;
+          display: flex; flex-direction: column; justify-content: center; gap: 34px; }
+  .b { max-width: 78%; padding: 26px 34px; border-radius: 36px; font-size: 50px; line-height: 1.38;
+       font-weight: 600; border: 4px solid #252422; }
+  .b small { display: block; font-size: 30px; font-weight: 600; margin-bottom: 6px; }
+  .host { align-self: flex-start; background: #3A2620; }
+  .host small { color: #F29172; }
+  .clawd { align-self: flex-end; background: #1D3328; }
+  .clawd small { color: #68E399; }
+  .cover .b { font-size: 64px; }
+  .dense { gap: 22px; }
+  .dense .b { font-size: 44px; padding: 20px 30px; }
+  .dense .b small { font-size: 26px; margin-bottom: 2px; }
+  #acct { position: absolute; left: 80px; bottom: 60px; font-size: 34px; color: #F6B966; }
+  #cta { align-self: center; margin-top: 30px; font-size: 46px; color: #F6B966; font-weight: 600; }
+  #num { position: absolute; right: 70px; bottom: 60px; font-size: 32px; color: #9AA3B5; }
+</style>
+</head>
+<body>
+<div id="page"></div><div id="acct"></div><div id="num"></div>
+<script src="./timeline.js"></script>
+<script src="./pages.js"></script>
+<script>
+const PAGES = buildPages(window.TL);
+window.PAGES = PAGES.length;
+const esc = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+window.render = t => {
+  const i = Math.round(t), p = PAGES[i], el = document.getElementById('page');
+  el.className = p.cover ? 'cover' : p.lines.length > 4 ? 'dense' : '';
+  el.innerHTML = p.lines.map(l => `<div class="b ${l.who === 'clawd' ? 'clawd' : 'host'}"><small>${esc(l.name)}</small>${esc(l.text)}</div>`).join('')
+    + (p.cta ? `<div id="cta">${esc(p.cta)} ↓</div>` : '');
+  document.getElementById('acct').textContent = p.account || '';
+  document.getElementById('num').textContent = `${i + 1}/${PAGES.length}`;
+};
+document.fonts.load('600 50px "PingFang TC"', window.TL.lines.map(l => l.text).join('')).then(() => document.fonts.ready).then(() => {
+  render(0); window.READY = true;
+});
+</script>
+</body>
+</html>

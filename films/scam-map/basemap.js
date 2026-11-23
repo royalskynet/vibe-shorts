@@ -1,0 +1,2 @@
+// fetch_basemap.py 產生，不要手改。
+window.BASEMAP = {"attrib": "EOxCloudless https://cloudless.eox.at by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2016 & 2017)", "tiles": [{"name": "wide", "src": "data/basemap/wide.jpg", "rect": [-935.52, -480.0, 2668.5, 2845.71]}, {"name": "north", "src": "data/basemap/north.jpg", "rect": [492.91, 360.0, 470.91, 394.29]}, {"name": "kinmen", "src": "data/basemap/kinmen.jpg", "rect": [-260.55, 630.86, 125.58, 72.0]}, {"name": "matsu", "src": "data/basemap/matsu.jpg", "rect": [273.15, -6.86, 219.76, 171.43]}]};
