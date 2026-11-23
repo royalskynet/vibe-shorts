@@ -1,6 +1,6 @@
-# vibe-shorts
+# vibe-shorts-pipeline
 
-營銷號（Threads `@paradoxbar.tw`）的知識短片流水線：對標爆款 → 拆解 → 寫稿 → 配音 → 程式渲染 → 閘門 → 三平台匯出 → 發布 → 回饋。公開 repo，放設計、決議、腳本與每支片的原始碼（由私有 pipeline 脫敏而來；state/logs/ops/launchd 不收錄），不放成片檔（見 `.gitignore`）。
+營銷號（Threads `@paradoxbar.tw`）的知識短片流水線：對標爆款 → 拆解 → 寫稿 → 配音 → 程式渲染 → 閘門 → 三平台匯出 → 發布 → 回饋。私有 repo，放設計、決議、腳本與每支片的原始碼，不放成片檔（見 `.gitignore`）。
 
 2026-10-11 開立。目前進度與下一步只寫在 [PLAN.md](PLAN.md)，這裡不重抄。
 

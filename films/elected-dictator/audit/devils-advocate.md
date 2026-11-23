@@ -1,6 +1,6 @@
 # Devil's Advocate Evidence Pack
 
-Report: REPO_ROOT/films/elected-dictator/audit/claims.md
+Report: /Users/you/dev/vibe-shorts-pipeline/films/elected-dictator/audit/claims.md
 Reviewed: 2026-11-01
 Core conclusion as read: 不是有選舉就叫民主，是我們一起守住規則，它才算數。
 

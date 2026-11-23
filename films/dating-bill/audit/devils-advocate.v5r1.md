@@ -1,6 +1,6 @@
 # Devil's Advocate Evidence Pack
 
-Report: REPO_ROOT/films/dating-bill/audit/claims.md
+Report: /Users/you/dev/vibe-shorts-pipeline/films/dating-bill/audit/claims.md
 Reviewed: 2026-10-14
 Core conclusion as read: 沒遇到適合的人、交友範圍太小排在最前面，錢也一直在名單上。
 

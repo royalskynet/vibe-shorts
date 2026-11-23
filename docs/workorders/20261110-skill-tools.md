@@ -1,6 +1,6 @@
 ## 任務
 
-工作目錄 REPO_ROOT。先讀計畫 REPO_ROOT/docs/plans/2026-11-10-marketer-pipeline.md 的 A 段，再讀 skills/vibe-shorts/SKILL.md、docs/BROLL.md、scripts/reverse.py 開頭 docstring 與 argparse、scripts/broll.py 的 main()。
+工作目錄 /Users/you/dev/vibe-shorts-pipeline。先讀計畫 /Users/you/dev/vibe-shorts-pipeline/docs/plans/2026-11-10-marketer-pipeline.md 的 A 段，再讀 skills/vibe-shorts/SKILL.md、docs/BROLL.md、scripts/reverse.py 開頭 docstring 與 argparse、scripts/broll.py 的 main()。
 
 ### 1. skills/vibe-shorts/SKILL.md 與 docs/BROLL.md
 SKILL.md「做一支片」表加兩列，照既有列的三欄格式（步／指令／驗收）：
@@ -14,7 +14,7 @@ writes!: skills/vibe-shorts/SKILL.md docs/BROLL.md
 ## 驗收
 
 ```bash
-cd REPO_ROOT
+cd /Users/you/dev/vibe-shorts-pipeline
 grep -q 'scripts/reverse.py' skills/vibe-shorts/SKILL.md
 grep -q 'scripts/broll.py fetch' skills/vibe-shorts/SKILL.md
 grep -q 'drawBroll' skills/vibe-shorts/SKILL.md

@@ -2,7 +2,7 @@
 
 拆單豁免：接續 wo-pikmin-3b-visuals.md 的未完部分，驗收沿用同一段。
 
-工作目錄：`REPO_ROOT`。`films/pikmin-bloom/index.html`、`meta/facts.md`、`TREATMENT.md` 標題／時限／禁止清單已改完，只剩 `TREATMENT.md` 的 `## 分鏡` 表格還是舊的 7 列。
+工作目錄：`/Users/you/dev/vibe-shorts-pipeline`。`films/pikmin-bloom/index.html`、`meta/facts.md`、`TREATMENT.md` 標題／時限／禁止清單已改完，只剩 `TREATMENT.md` 的 `## 分鏡` 表格還是舊的 7 列。
 
 只做一件事：讀 `docs/plans/wo-pikmin-3b-visuals.md` 的「卡」表（15 列）與「### 3」第 5 點，把 `films/pikmin-bloom/TREATMENT.md` 的分鏡表換成 15 列（表頭不變、衝擊事件全填 `—`、動作欄不得含抽象詞、內容欄填 `narration.md` 對應句逐字、來源欄照第 5 點）。段名：鉤子＝1–3、兩種寫法＝4–5、錢從哪來＝6–10、官方改了什麼＝11–13、落點＝14–15。其他檔與其他段一字不動。
 
@@ -10,7 +10,7 @@
 
 ```bash
 set -e
-cd REPO_ROOT
+cd /Users/you/dev/vibe-shorts-pipeline
 F=films/pikmin-bloom
 # 不該動的檔
 [ "$(shasum -a 256 $F/narration.md | cut -d' ' -f1)" = "06bea4a63db540617277c22004816df1fff802ba839387fbdb9f200863a34cc5" ] || { echo 'narration 被改'; exit 1; }
@@ -28,9 +28,9 @@ grep -q '投入時間或金錢與否' $F/TREATMENT.md || { echo 'TREATMENT 缺�
 grep -q '公告怎麼稱呼台灣' $F/TREATMENT.md || { echo 'TREATMENT 標題沒換'; exit 1; }
 python3 - <<'PY'
 import sys, re
-sys.path.insert(0, 'REPO_ROOT/scripts')
+sys.path.insert(0, '/Users/you/dev/vibe-shorts-pipeline/scripts')
 import precheck as p
-t = open('REPO_ROOT/films/pikmin-bloom/TREATMENT.md', encoding='utf-8').read()
+t = open('/Users/you/dev/vibe-shorts-pipeline/films/pikmin-bloom/TREATMENT.md', encoding='utf-8').read()
 rows = p.storyboard_rows(t)
 head = [c.strip() for c in rows[0].strip('|').split('|')]
 ai = next(i for i, c in enumerate(head) if c.startswith('動作'))
@@ -61,14 +61,14 @@ grep -q "QUOTE_ZH_TW = '全台的全家便利商店門市'" $H || { echo '繁中
 # 模組程式語法
 python3 - <<'PY'
 import re, subprocess, sys
-h = open('REPO_ROOT/films/pikmin-bloom/index.html', encoding='utf-8').read()
+h = open('/Users/you/dev/vibe-shorts-pipeline/films/pikmin-bloom/index.html', encoding='utf-8').read()
 m = re.search(r'[<]script type="module">(.*?)[<]/script>', h, re.S)
 if not m: print('找不到 module script'); sys.exit(1)
 open('/tmp/wo3b-check.mjs', 'w', encoding='utf-8').write(m.group(1))
 r = subprocess.run(['node', '--check', '/tmp/wo3b-check.mjs'], capture_output=True, text=True)
 if r.returncode: print(r.stderr); sys.exit(1)
 # 每張卡的 hl 詞要在對應旁白句裡
-nar = open('REPO_ROOT/films/pikmin-bloom/narration.md', encoding='utf-8').read()
+nar = open('/Users/you/dev/vibe-shorts-pipeline/films/pikmin-bloom/narration.md', encoding='utf-8').read()
 lines = [l for l in nar.splitlines() if l.strip() and not l.startswith('#')]
 cards = re.findall(r"^\s*\{\s*head:.*$", h, re.M)
 for i, (c, ln) in enumerate(zip(cards, lines), 1):
@@ -80,7 +80,7 @@ PY
 # 數字閘門：FACTS 與 facts.md 對得上，卡片裸數字檢查
 python3 - <<'PY'
 import re, sys
-f = 'REPO_ROOT/films/pikmin-bloom/'
+f = '/Users/you/dev/vibe-shorts-pipeline/films/pikmin-bloom/'
 h = open(f + 'index.html', encoding='utf-8').read()
 src = open(f + 'meta/facts.md', encoding='utf-8').read().replace(',', '')
 blk = re.search(r"const FACTS = \{(.*?)\n\};", h, re.S)

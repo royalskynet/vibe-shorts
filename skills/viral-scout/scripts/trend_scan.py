@@ -30,7 +30,7 @@ from pathlib import Path
 # Reddit 要求 UA 寫成「平台:程式:版本 (by /u/帳號)」並且會擋假冒瀏覽器的。
 # 2026-10-11 實測：前面掛 Mozilla/5.0 一律 429，改成下面這樣就 200。
 # 退避重試救不了這種擋法，重試三次還是 429。
-UA = "macos:vibe-shorts:1.0 (by /u/royalskynet)"
+UA = "macos:vibe-shorts-pipeline:1.0 (by /u/royalskynet)"
 OUT_DIR = Path.home() / ".vibe-trends"
 TOP_N = 5
 

@@ -44,7 +44,7 @@
 
 ## 驗收（全部 exit 0 才算完）
 ```bash
-cd REPO_ROOT
+cd /Users/you/dev/vibe-shorts-pipeline
 wo-verify docs/workorders/20261110-skill-tools.md
 for t in tests/test_*.py; do python3 "$t" >/dev/null 2>&1 || { echo "FAIL $t"; exit 1; }; done
 for t in tests/test_*.mjs; do node "$t" >/dev/null 2>&1 || { echo "FAIL $t"; exit 1; }; done

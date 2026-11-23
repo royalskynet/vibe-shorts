@@ -1,6 +1,6 @@
 # Devil's Advocate Evidence Pack
 
-Report: REPO_ROOT/films/dating-bill/audit/claims.md
+Report: /Users/you/dev/vibe-shorts-pipeline/films/dating-bill/audit/claims.md
 Reviewed: 2026-10-14
 Core conclusion as read: 「核心結論＝旁白稿逐句陳述的事實。」落點為「帳單怎麼分，兩個人說好就好。」
 

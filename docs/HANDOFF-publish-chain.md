@@ -7,7 +7,7 @@
 ## 零、驗證現況（唯讀，不會動任何東西）
 
 ```bash
-cd REPO_ROOT
+cd /Users/you/dev/vibe-shorts-pipeline
 python3 scripts/publish/tokens.py status        # yt/ig/threads 三個都要「已登入」
 python3 scripts/publish/tokens.py whoami threads # 要是 paradoxbar.tw
 python3 scripts/publish/social.py list yt        # 10-13 起 2I__EhCB2U0 費馬為 PUBLIC
@@ -39,7 +39,7 @@ python3 scripts/publish/funnel.py status
 2. ~~container 端點實打~~ 10-13 完成。失敗三次才通，原因與修法見 fix 10518（公開 DNS 延遲、
    交付檔 yuvj420p／edit list、tailscaled --https 壞掉改 TCP 直通）。Meta 抓檔沒用 Range。
 3. ~~YouTube 轉公開~~ 10-13 完成，`yt_upload.py public films/<片> <影片ID>` 會一併更新標題說明。
-4. 10-13 發現選題排程 `com.user.vibe-trends` 從沒裝進 LaunchAgents（10-11 後沒跑過），已補裝；
+4. 10-13 發現選題排程 `com.host.vibe-trends` 從沒裝進 LaunchAgents（10-11 後沒跑過），已補裝；
    Reddit RSS 配額降到每 60 秒 1 次，已修（fix 10517）。
 
 ## 三、必須先問使用者的（對外公開，不可逆）

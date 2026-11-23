@@ -96,7 +96,7 @@ python3 core/render/sheet.py /tmp/msheet/sheet.jpg /tmp/msheet/*.jpg --cols 4
 
 ## 版本控制
 
-本 repo（`REPO_ROOT`）以 `git subtree` 併入私有母 repo **`royalskynet/ether-projects`**，子目錄名 `vibe-shorts-pipeline`。
+本 repo（`~/dev/vibe-shorts-pipeline`）以 `git subtree` 併入私有母 repo **`royalskynet/ether-projects`**，子目錄名 `vibe-shorts-pipeline`。
 
 - `.git/hooks/post-commit` 已裝：commit 後背景跑 `~/dev/ether-projects/bin/subtree-sync`
 - 失敗會寫 `~/dev/ether-projects/logs/subtree-sync.log` 並發 Telegram，不會擋 commit

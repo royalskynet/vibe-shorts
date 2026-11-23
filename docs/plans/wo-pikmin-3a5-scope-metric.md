@@ -2,7 +2,7 @@
 
 拆單豁免：旁白改字、humanize 的 sha 戳記、claims 與說明欄互相綁定，分開派會讓 sha 與內容對不上。
 
-工作目錄：`REPO_ROOT`。第四輪稽核兩個爭點成立：(1) 鉤子漏了「兩大手機商店」範圍（官方網路商店不在估算內）；(2) AppMagic 把這組數字定義為商店內購淨營收估算（排除平台費用、含稅），不是玩家實際花費，「消費估算」要改成「內購營收估算」。只做下面的取代，其他句子一字不動。不改 `index.html`／`mix.py`／`build.sh`，不 render，不 git commit，不跑 `approve.py`／`voice.py`／`restamp.sh`。
+工作目錄：`/Users/you/dev/vibe-shorts-pipeline`。第四輪稽核兩個爭點成立：(1) 鉤子漏了「兩大手機商店」範圍（官方網路商店不在估算內）；(2) AppMagic 把這組數字定義為商店內購淨營收估算（排除平台費用、含稅），不是玩家實際花費，「消費估算」要改成「內購營收估算」。只做下面的取代，其他句子一字不動。不改 `index.html`／`mix.py`／`build.sh`，不 render，不 git commit，不跑 `approve.py`／`voice.py`／`restamp.sh`。
 
 ### 1. `films/pikmin-bloom/narration.md`（照字面）
 - 「而且二〇二六年上半年，這款遊戲約一半的消費估算，來自台灣。」→「而且二〇二六年上半年，這款遊戲在兩大手機商店，約一半的內購營收估算來自台灣。」
@@ -21,7 +21,7 @@
 ## 驗收
 
 ```bash
-cd REPO_ROOT
+cd /Users/you/dev/vibe-shorts-pipeline
 f=films/pikmin-bloom/narration.md
 grep -q '而且二〇二六年上半年，這款遊戲在兩大手機商店，約一半的內購營收估算來自台灣。' "$f"
 grep -q '台灣內購營收估算約一千八百五十萬美元' "$f"
@@ -31,7 +31,7 @@ if grep -qE '消費估算|收入|台灣玩家' "$f"; then echo '舊口徑殘留'
 if grep -qE '[0-9]' "$f"; then echo '旁白殘留阿拉伯數字'; exit 1; fi
 python3 - <<'PY'
 import re, sys
-nar = open('REPO_ROOT/films/pikmin-bloom/narration.md').read()
+nar = open('/Users/you/dev/vibe-shorts-pipeline/films/pikmin-bloom/narration.md').read()
 body = re.sub(r'^#+.*$', '', nar, flags=re.M)
 norm = lambda s: re.sub(r'[\s，、：；「」『』（）,.!?？！。]', '', s)
 ss = [s for s in re.split(r'[。？！\n]', body) if len(norm(s)) >= 1]

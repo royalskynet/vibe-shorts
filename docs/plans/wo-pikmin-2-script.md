@@ -1,6 +1,6 @@
 ## 任務
 
-工作目錄：`REPO_ROOT`。只寫 `films/pikmin-bloom/` 底下的文字檔，不改 `index.html`／`mix.py`／`build.sh`，不 render，不 git commit，不跑 `approve.py`、`voice.py`。
+工作目錄：`/Users/you/dev/vibe-shorts-pipeline`。只寫 `films/pikmin-bloom/` 底下的文字檔，不改 `index.html`／`mix.py`／`build.sh`，不 render，不 git commit，不跑 `approve.py`、`voice.py`。
 
 先讀：`docs/WRITING.md` §7、`docs/寫稿原則.md`、範本 `films/taipei-silence/narration.md`（只學口吻，不抄句子）、`films/pikmin-bloom/meta/facts.md`、`films/pikmin-bloom/SOURCES.md`、`films/pikmin-bloom/TREATMENT.md`。**不要讀 `refs/viral-text/pikmin-seed.md`**。
 
@@ -36,10 +36,10 @@
 ## 驗收
 
 ```bash
-cd REPO_ROOT
+cd /Users/you/dev/vibe-shorts-pipeline
 python3 - <<'PY'
 import re, sys, difflib, pathlib
-root = pathlib.Path('REPO_ROOT')
+root = pathlib.Path('/Users/you/dev/vibe-shorts-pipeline')
 seed = (root / 'refs/viral-text/pikmin-seed.md').read_text()
 def norm(s): return re.sub(r'[\s，、：；「」『』（）,.!?？！。]', '', s)
 def sents(t):

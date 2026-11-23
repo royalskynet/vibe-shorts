@@ -1,6 +1,6 @@
 # 台北治安：怕暗巷，錢在手機裡被騙（單人旁白科普）初稿，待使用者核
 
-核准：~/OpenBot/Shared/approved/2026-11-05-taipei-safety.md（docs/SERIES-taipei-issues.md 題 9）。格式照 docs/WRITING.md §7 與系列規則：單人旁白，一支只講一個機制「犯罪從街上搬進手機」；國際案例用日本派出所（核准檔點名）；台灣兩種主張排在日本後面，各 4 句。
+核准：/Users/you/OpenBot/Shared/approved/2026-11-05-taipei-safety.md（docs/SERIES-taipei-issues.md 題 9）。格式照 docs/WRITING.md §7 與系列規則：單人旁白，一支只講一個機制「犯罪從街上搬進手機」；國際案例用日本派出所（核准檔點名）；台灣兩種主張排在日本後面，各 4 句。
 
 爆款證據：YouTube｜273萬播放｜TAKASHii「Is Japan Really Safe For Foreign Women?」（707 秒）｜https://youtu.be/B2bstM49sJk；YouTube｜200萬播放｜ANNnewsCH「新宿・歌舞伎町交番に密着」（887 秒，交番）｜https://youtu.be/-9TWZ_Bb5Hk；YouTube｜116萬播放｜lifeintaiwan「台灣有多安全？ IS TAIWAN SAFE?」（559 秒，同題台灣）｜https://youtu.be/KrQE3Hns_KI；YouTube｜103萬播放｜CBS Sunday Morning「Walking the beat in Japan, a "heaven for cops"」（346 秒，交番）｜https://youtu.be/DAri8cD4kN8；YouTube｜37萬播放｜今周刊「每天騙走4億元！ 為什麼台灣變成詐騙天堂？」（553 秒，詐騙）｜https://youtu.be/GtvD1ljhU5g；YouTube｜17萬播放｜劉品薇「台灣治安真的贏日本？」（161 秒，Shorts 長度）｜https://youtu.be/gKsIMxgTSd4
 

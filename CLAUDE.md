@@ -1,4 +1,4 @@
-# CLAUDE.md — vibe-shorts
+# CLAUDE.md — vibe-shorts-pipeline
 
 專案導覽見 README.md；進度正本是 PLAN.md。本檔只放 agent 在這個 repo 做事會做錯的規則。
 

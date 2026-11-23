@@ -1,6 +1,6 @@
 # Devil's Advocate Evidence Pack
 
-Report: REPO_ROOT/films/free-speech-line/audit/claims.md
+Report: /Users/you/dev/vibe-shorts-pipeline/films/free-speech-line/audit/claims.md
 Reviewed: 2026-11-15
 Core conclusion as read: 所以羅大佑在廣播上罵總統，本來就不在這一條裡。
 

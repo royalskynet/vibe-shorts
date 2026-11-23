@@ -40,7 +40,7 @@ import time
 from pathlib import Path
 
 PORT = 10000  # 見坑 1、4；Funnel 只開放 443／8443／10000
-HOST = "<your-host>.ts.net"
+HOST = "host.tailnet.ts.net"
 HOME = Path(os.environ.get("VIBE_PUBLISH_DIR") or Path.home() / ".vibe-publish")
 STATE = HOME / "funnel.json"
 SERVE = HOME / "serve"

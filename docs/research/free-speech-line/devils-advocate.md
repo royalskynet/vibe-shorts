@@ -1,6 +1,6 @@
 # Devil's Advocate Evidence Pack
 
-Report: REPO_ROOT/films/free-speech-line/FACTS.md
+Report: /Users/you/dev/vibe-shorts-pipeline/films/free-speech-line/FACTS.md
 Reviewed: 2026-11-15
 Core conclusion as read: 言論自由的界線：說和做分開管。
 

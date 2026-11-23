@@ -1,6 +1,6 @@
 # Devil's Advocate Evidence Pack
 
-Report: REPO_ROOT/films/dune-messiah-trap/audit/claims.md
+Report: /Users/you/dev/vibe-shorts-pipeline/films/dune-messiah-trap/audit/claims.md
 Reviewed: 2026-11-20
 Core conclusion as read: 當我們只按陣營接受答案，就是把判斷力交了出去。
 

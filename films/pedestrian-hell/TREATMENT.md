@@ -1,6 +1,6 @@
 # 行人地獄（單人旁白科普）第二版，待使用者核
 
-核准：~/OpenBot/Shared/approved/2026-10-29-pedestrian-hell.md（proposal 題 1）。格式照 docs/WRITING.md §7：m3 男聲單人旁白，一支只講一個機制「路怎麼設計，駕駛就怎麼開」，拆成路寬、轉角、車速三步，國際解法用霍博肯，台北兩派做法跟霍博肯放在一起對照（第二版照核准檔「修改意見」1–5 改）。
+核准：/Users/you/OpenBot/Shared/approved/2026-10-29-pedestrian-hell.md（proposal 題 1）。格式照 docs/WRITING.md §7：m3 男聲單人旁白，一支只講一個機制「路怎麼設計，駕駛就怎麼開」，拆成路寬、轉角、車速三步，國際解法用霍博肯，台北兩派做法跟霍博肯放在一起對照（第二版照核准檔「修改意見」1–5 改）。
 
 爆款證據：YouTube｜826萬播放｜Not Just Bikes「Stroads are Ugly, Expensive, and Dangerous」（長片，本片機制來源：路的設計速度決定駕駛車速）｜https://youtu.be/ORzNZUeUHAM；YouTube｜88萬播放｜Not Just Bikes「Are Taipei's Roads Still a "Living Hell"?」（長片，同題台北）｜https://youtu.be/ZdDYVjDwgwA；YouTube｜38.5萬播放｜FUNDAY「台灣交通行人地獄？」（110 秒短片）｜https://youtu.be/IAMx3m4zngI；IG｜127萬播放｜@boundless__explorer 塞車成因（86 秒，§7 節奏與「答案是你自己」式反直覺第二句）｜https://www.instagram.com/reel/DQfdx-zDEqI/
 

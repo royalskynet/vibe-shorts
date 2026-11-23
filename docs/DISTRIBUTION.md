@@ -15,7 +15,7 @@
 | Threads 文字鉤子 | 寫 `queue/threads/<日期>-<名>.md`（`approved: no`） |
 | 自引用（套娃） | 佇列檔加 `quote: <片>/threads`，內文要有新資訊（數據、下一集預告），不重貼原說明 |
 
-發布要人點頭：草稿一律 `approved: no`，使用者說好才改 yes。launchd `com.user.vibe-threads-queue` 每 30 分鐘發到點的。
+發布要人點頭：草稿一律 `approved: no`，使用者說好才改 yes。launchd `com.host.vibe-threads-queue` 每 30 分鐘發到點的。
 轉發（repost）不做：官方文件頁 404，查不到端點。
 
 ## 2. 回覆他人貼文（手動）

@@ -1,6 +1,6 @@
 ## 任務
 
-工作目錄 REPO_ROOT。照計畫 REPO_ROOT/docs/plans/2026-11-10-broll-dedup.md 的「B. 引擎圖層」段實作，先讀計畫、assets/illust/illust.mjs、tests/test_illust.mjs（假 context 寫法）、scripts/illust_install.sh。
+工作目錄 /Users/you/dev/vibe-shorts-pipeline。照計畫 /Users/you/dev/vibe-shorts-pipeline/docs/plans/2026-11-10-broll-dedup.md 的「B. 引擎圖層」段實作，先讀計畫、assets/illust/illust.mjs、tests/test_illust.mjs（假 context 寫法）、scripts/illust_install.sh。
 
 ### 1. 新增 assets/broll/broll.mjs
 ES module，匯出 frameIndex、coverRect、framePath、drawBroll，規格照計畫 B 段。無外部依賴。
@@ -21,7 +21,7 @@ regress: for t in tests/test_illust.mjs tests/test_mascot_pose.mjs; do node "$t"
 ## 驗收
 
 ```bash
-cd REPO_ROOT
+cd /Users/you/dev/vibe-shorts-pipeline
 node tests/test_broll.mjs
 node -e "import('./assets/broll/broll.mjs').then(m=>{for(const k of ['frameIndex','coverRect','framePath','drawBroll'])if(typeof m[k]!=='function')process.exit(1)})"
 grep -q 'drawBroll' docs/BROLL.md

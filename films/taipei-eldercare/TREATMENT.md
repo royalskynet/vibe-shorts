@@ -1,6 +1,6 @@
 # 台北長照（單人旁白科普）初稿，待使用者核
 
-核准：~/OpenBot/Shared/approved/2026-11-01-taipei-eldercare.md（docs/SERIES-taipei-issues.md 題 5）。格式照 docs/WRITING.md §7 與系列規則：單人旁白，一支只講一個機制「長照一天補三小時，其他二十一小時跟夜裡沒人，家裡只好請外籍看護，請了又不能用居家服務」；國際案例用日本 2012 年起的「定期巡回・随時対応型訪問介護看護」（日夜定時上門＋按鈴隨叫隨到）；台灣兩種主張排在日本後面，各 5 句。範本稿 films/taipei-rent、films/taipei-childcare（bccd752）。
+核准：/Users/you/OpenBot/Shared/approved/2026-11-01-taipei-eldercare.md（docs/SERIES-taipei-issues.md 題 5）。格式照 docs/WRITING.md §7 與系列規則：單人旁白，一支只講一個機制「長照一天補三小時，其他二十一小時跟夜裡沒人，家裡只好請外籍看護，請了又不能用居家服務」；國際案例用日本 2012 年起的「定期巡回・随時対応型訪問介護看護」（日夜定時上門＋按鈴隨叫隨到）；台灣兩種主張排在日本後面，各 5 句。範本稿 films/taipei-rent、films/taipei-childcare（bccd752）。
 
 爆款證據：YouTube｜560萬播放｜LastWeekTonight「Long-Term Care」（1361 秒，長照缺口落在家人身上＝本片機制方向）｜https://youtu.be/2xlol-SNQRU；YouTube｜314萬播放｜Financial Times「Japan's population crisis reaches tipping point」（1201 秒，日本高齡照顧）｜https://youtu.be/nmdujC0MUKA；YouTube｜79.6萬播放｜日テレNEWS「【介護】担い手がいない…」（461 秒，日本照顧人力）｜https://youtu.be/d7lQUGbOJaw；YouTube｜35.4萬播放｜聯合報「【長照沒有英雄】照顧者血淚告白」（112 秒，同題台灣 Shorts 長度）｜https://youtu.be/F0niMbuREMM；YouTube｜31.8萬播放｜TVBS「長照機構床位竟要排3年」（561 秒，同題台灣）｜https://youtu.be/XaMKS2s2QYE；IG｜127萬播放｜@boundless__explorer 塞車成因（86 秒，§7 節奏與反直覺第二句）｜https://www.instagram.com/reel/DQfdx-zDEqI/
 

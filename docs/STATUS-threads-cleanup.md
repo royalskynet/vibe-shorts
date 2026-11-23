@@ -3,7 +3,7 @@
 - 帳號：@iris96284 → @paradoxbar.tw，名稱「悖論小酒館」、新頭貼、新簡介，已生效。
 - 串文：47 篇已刪光（網頁點擊）。
 - 回覆：API 刪 96 則（含試刪 1 則）。10-14 翻頁實數：前 11 頁還有 275 則（最舊 2025-08-20），第 12 頁 500，實際更多。每次排程跑完 hpush 白話摘要到 Telegram（plist 需補 PATH 含 ~/.local/bin，否則找不到 hermes）。
-  - 每日排程（10-14 起）：`scripts/publish/prune_replies.py`，launchd `com.user.threads-prune-replies` 每天 18:35 跑，log 在 `logs/prune-replies.log`；列表正常且 0 則才自己 bootout，列表 500／刪除失敗不停。舊的 /tmp 迴圈已停。
+  - 每日排程（10-14 起）：`scripts/publish/prune_replies.py`，launchd `com.host.threads-prune-replies` 每天 18:35 跑，log 在 `logs/prune-replies.log`；列表正常且 0 則才自己 bootout，列表 500／刪除失敗不停。舊的 /tmp 迴圈已停。
   - 10-14 01:30 手動 kickstart 一次：被「已超過 Threads API 限速」擋，0 則刪除（前一天剛刪 96 則，配額看起來是滾動 24h）。
   - **10-19 20:57 清完**：18:35 排程刪 15 則後撞 Threads 貼文配額（`error_user_title: 已超過 Threads API 限速`，log 有原始錯誤，不是原因不明）；20:57 手動再跑補刪最後 5 則，`list_mine()` 空、`count_mine()` 回 `(0, True)`。排程仍載入，明天 18:35 跑一次看到 0 則會自己 bootout。
   - 坑：`/me/replies` 帶 `limit=100` 會回 500；翻到後面某頁也會 500。做法是每次只抓第一頁、刪完再抓。

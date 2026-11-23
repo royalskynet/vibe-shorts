@@ -1,6 +1,6 @@
 # Devil's Advocate Evidence Pack
 
-Report: REPO_ROOT/films/mib-lotr/audit/claims.md
+Report: /Users/you/dev/vibe-shorts-pipeline/films/mib-lotr/audit/claims.md
 Reviewed: 2026-11-11
 Core conclusion as read: 一個守著地球，一個守著中土，都說歲月靜好是有人拿自己的日子換來的。
 

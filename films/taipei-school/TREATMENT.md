@@ -1,6 +1,6 @@
 # 台北校園教育：國中找不到老師（單人旁白科普）初稿，待使用者核
 
-核准：~/OpenBot/Shared/approved/2026-11-03-taipei-school.md（docs/SERIES-taipei-issues.md 題 7）。格式照 docs/WRITING.md §7 與系列規則：單人旁白，一支只講一個機制「台北留不住老師：薪水全國一樣、台北花費最高，行政又壓在老師身上 → 老師往外縣市調 → 缺的課由留下的老師超鐘點」；國際案例用芬蘭（核准檔指定方向）；台灣兩種主張排在芬蘭後面，各 4 句。範本稿 films/taipei-rent、films/taipei-childcare（bccd752），寫法對齊 films/taipei-flood。
+核准：/Users/you/OpenBot/Shared/approved/2026-11-03-taipei-school.md（docs/SERIES-taipei-issues.md 題 7）。格式照 docs/WRITING.md §7 與系列規則：單人旁白，一支只講一個機制「台北留不住老師：薪水全國一樣、台北花費最高，行政又壓在老師身上 → 老師往外縣市調 → 缺的課由留下的老師超鐘點」；國際案例用芬蘭（核准檔指定方向）；台灣兩種主張排在芬蘭後面，各 4 句。範本稿 films/taipei-rent、films/taipei-childcare（bccd752），寫法對齊 films/taipei-flood。
 
 爆款證據：YouTube｜866萬播放｜ABC News (Australia) 7.30「Why Finland's schools outperform most others across the developed world」（408 秒）｜https://youtu.be/7xCe2m0kiSg；YouTube｜577萬播放｜BBC World Service「Which country has the best education in the world?」（1333 秒）｜https://youtu.be/liyn5xWvx44；YouTube｜222萬播放｜阿滴「三點就放學! 回家都在玩? 芬蘭學生怎麼看台灣的教育制度?」（919 秒，同題中文、芬蘭對照台灣）｜https://youtu.be/VHnyCM6iG7o；YouTube｜204萬播放｜The Young Turks「5 Reasons Why Finland Is A Global Education Leader」（306 秒）｜https://youtu.be/UfmFIEh2QjU；YouTube｜25.9萬播放｜Al Jazeera English「Student screen time: Finnish schools reverse policy on digital devices」（160 秒，Shorts 長度）｜https://youtu.be/sxo15FPGyYw；YouTube｜17.8萬播放｜民視異言堂「薪資低 壓力大 學校教師荒 昔日鐵飯碗生鏽 老師已不再是志願」（897 秒，同題台灣）｜https://youtu.be/Isel0kG9pl0；YouTube｜12.9萬播放｜TVBS 十點不一樣「『教師荒』蔓延全台! 7.4萬準教師棄教職原因曝光」（312 秒）｜https://youtu.be/pSl75UB7dRs
 

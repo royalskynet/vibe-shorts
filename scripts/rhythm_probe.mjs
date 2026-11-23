@@ -2,7 +2,7 @@
 // rhythm_check.py 要先有 mp4 才能量，一次全片渲染三分鐘；調動態量時太慢。
 // 這支只抽幾個一秒窗口，在瀏覽器裡把畫布縮到 64x36 比，用的判準跟 rhythm_check.py 一樣。
 // 用法：node scripts/rhythm_probe.mjs <片子資料夾> [--fps 30] [--at 0,12,25,37,49,58]
-import { openDemo, closeServer, requireDemo } from '~/lemo-opuscar/core/render/page.mjs';
+import { openDemo, closeServer, requireDemo } from '/Users/you/lemo-opuscar/core/render/page.mjs';
 
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };

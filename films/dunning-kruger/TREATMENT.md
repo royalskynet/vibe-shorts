@@ -1,6 +1,6 @@
 # 為什麼越不懂的人越有把握（單人旁白科普）第一版
 
-題目來源：`~/OpenBot/Shared/approved/2026-11-02-dunning-kruger.md`（提案 `marketer-topics-2026-11-02/proposal.md` 第 1 題，使用者已選）。提案寫的是對談格式，本片照 `docs/WRITING.md` §7 改成 m3 男聲單人旁白，不寫對談、不放 Claude 角度。
+題目來源：`/Users/you/OpenBot/Shared/approved/2026-11-02-dunning-kruger.md`（提案 `marketer-topics-2026-11-02/proposal.md` 第 1 題，使用者已選）。提案寫的是對談格式，本片照 `docs/WRITING.md` §7 改成 m3 男聲單人旁白，不寫對談、不放 Claude 角度。
 
 格式：一支只講一個機制「看出自己錯，用的是寫對的同一套能力，所以最不會的人最看不出自己不會」，拆三步（搶匪的真實案例 → 1999 康乃爾實驗量出落差 → 給看別人答案沒用、教會解題才改口）。
 

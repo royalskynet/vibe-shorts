@@ -1,6 +1,6 @@
 # Devil's Advocate Evidence Pack
 
-Report: REPO_ROOT/films/value-life/audit/claims.md
+Report: /Users/you/dev/vibe-shorts-pipeline/films/value-life/audit/claims.md
 Reviewed: 2026-11-01
 Core conclusion as read: 「我們的英雄願意為信念而死，但不崇拜死亡。」
 

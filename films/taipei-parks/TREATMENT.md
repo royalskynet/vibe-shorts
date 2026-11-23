@@ -1,6 +1,6 @@
 # 台北公園與運動：下班搶不到場地（單人旁白科普）初稿，待使用者核
 
-核准：~/OpenBot/Shared/approved/2026-11-04-taipei-parks.md（docs/SERIES-taipei-issues.md 題 8）。格式照 docs/WRITING.md §7 與系列規則：單人旁白，一支只講一個機制「運動的人擠在下班跟週末，場地又要一大塊地、補得慢」；國際案例用新加坡公園連道（核准檔點名）；台灣兩種主張排在新加坡後面，各 4 句，代價都是時間。
+核准：/Users/you/OpenBot/Shared/approved/2026-11-04-taipei-parks.md（docs/SERIES-taipei-issues.md 題 8）。格式照 docs/WRITING.md §7 與系列規則：單人旁白，一支只講一個機制「運動的人擠在下班跟週末，場地又要一大塊地、補得慢」；國際案例用新加坡公園連道（核准檔點名）；台灣兩種主張排在新加坡後面，各 4 句，代價都是時間。
 
 爆款證據：YouTube｜209萬播放｜Nature on PBS「How Singapore's Urban Design Makes Way for Wildlife」（867 秒，新加坡綠化，同案例最高）｜https://youtu.be/Jw1b_SviPyU；YouTube｜108萬播放｜Ministry of Sustainability and the Environment「Singapore Green Plan 2030」（93 秒，官方片，播放可能含廣告投放）｜https://youtu.be/nrFxTglhBQY；YouTube｜27萬播放｜City Beautiful「Does Your City Have Enough Parks?」（740 秒，鉤子與步行距離標準）｜https://youtu.be/qnyikrFlGdU；YouTube｜27萬播放｜PBS Terra「Singapore: Designing a Megacity in Harmony with Nature」（812 秒）｜https://youtu.be/3w3QCcItxTo；YouTube｜13.7萬播放｜C40 Cities「What is a '15-minute city'?」（112 秒，Shorts 長度）｜https://youtu.be/McGyONofhi4；YouTube｜12.6萬播放｜ITV News「What is a '15-minute city'?」（90 秒）｜https://youtu.be/bIzIABRh5tc；YouTube｜12.3萬播放｜NParksSG「Singapore, A City In Nature」（184 秒）｜https://youtu.be/uta4HenSRzQ
 

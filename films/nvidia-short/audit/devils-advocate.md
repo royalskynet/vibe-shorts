@@ -1,6 +1,6 @@
 # Devil's Advocate Evidence Pack
 
-Report: REPO_ROOT/films/nvidia-short/audit/claims.md
+Report: /Users/you/dev/vibe-shorts-pipeline/films/nvidia-short/audit/claims.md
 Reviewed: 2026-11-13
 Core conclusion as read: 核心結論＝旁白稿逐句陳述的事實。
 

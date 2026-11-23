@@ -1,6 +1,6 @@
 ## 任務
 
-工作目錄：`REPO_ROOT`。只補查「同大題」爆款證據並更新帳本與 `TREATMENT.md` 一行，不寫稿、不 render、不 git commit。
+工作目錄：`/Users/you/dev/vibe-shorts-pipeline`。只補查「同大題」爆款證據並更新帳本與 `TREATMENT.md` 一行，不寫稿、不 render、不 git commit。
 
 背景：Pikmin Bloom 把台灣寫成「中國台灣」的同題 Shorts 查到 0 筆 ≥10 萬，上一輪連同大題（品牌／遊戲把台灣寫成中國引發抵制）也 0 筆符合「≤180 秒且 ≥10 萬」。使用者已核准「同大題爆款當證據」的例外，所以要放寬範圍再查，仍然不編數字。
 
@@ -17,7 +17,7 @@
 ## 驗收
 
 ```bash
-cd REPO_ROOT
+cd /Users/you/dev/vibe-shorts-pipeline
 grep -q '皮克敏同大題補查' refs/VIRAL-LEDGER.md
 line=$(grep -E '^爆款證據：' films/pikmin-bloom/TREATMENT.md)
 echo "$line" | grep -q '同題 0 筆'

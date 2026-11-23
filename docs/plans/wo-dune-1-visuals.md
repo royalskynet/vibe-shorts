@@ -1,6 +1,6 @@
 ## 任務
 
-工作目錄：`REPO_ROOT`。片目錄 `films/dune-messiah-trap`。旁白 `narration.md` 已核准定稿（17 句、5 段），`index.html` 目前還是 taipei-silence 範本殘件。本單把畫面做出來，一句一卡共 17 卡，並同步 TREATMENT 分鏡。
+工作目錄：`/Users/you/dev/vibe-shorts-pipeline`。片目錄 `films/dune-messiah-trap`。旁白 `narration.md` 已核准定稿（17 句、5 段），`index.html` 目前還是 taipei-silence 範本殘件。本單把畫面做出來，一句一卡共 17 卡，並同步 TREATMENT 分鏡。
 
 只做兩件事：
 1. 重寫 `films/dune-messiah-trap/index.html`（17 張卡）。
@@ -55,7 +55,7 @@ const FACTS = { Y_ESSAY: 1980, DEATH_TOLL: 61000000000, PLANETS_STERILIZED: 90, 
 ## 驗收
 
 ```bash
-cd REPO_ROOT
+cd /Users/you/dev/vibe-shorts-pipeline
 F=films/dune-messiah-trap
 [ "$(shasum -a 256 $F/narration.md | cut -d' ' -f1)" = "706ab410c749e5d0dd91d54b96661df8e11c94540facf21524e8f23dbc577584" ] || { echo 'narration 被改'; exit 1; }
 n=$(find $F/audit $F/meta $F/mix.py $F/build.sh $F/cast.json $F/pace.json $F/SOURCES.md $F/timeline.js $F/engine.js $F/narration.md -newer docs/plans/wo-dune-1-visuals.md | wc -l | tr -d ' ')
@@ -67,7 +67,7 @@ grep -q '沙丘其實在警告你別信救世主' $F/index.html || { echo 'title
 grep -q "沙丘其實在警告你'" $F/index.html || grep -q '沙丘其實在警告你"' $F/index.html || grep -q '沙丘其實在警告你`' $F/index.html || { echo '封面大標沒放'; exit 1; }
 python3 - <<'PY'
 import re, sys
-f = 'REPO_ROOT/films/dune-messiah-trap/'
+f = '/Users/you/dev/vibe-shorts-pipeline/films/dune-messiah-trap/'
 h = open(f + 'index.html', encoding='utf-8').read()
 lines = [l.strip() for l in open(f + 'narration.md', encoding='utf-8') if l.strip() and not l.startswith('#')]
 blk = re.search(r"const CARDS = \[(.*?)\n\];", h, re.S)

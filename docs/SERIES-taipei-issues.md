@@ -32,7 +32,7 @@
 
 ## 排程
 
-使用者 10-31 定：每天排一題，直到清單排完。`scripts/series_feed.py` 由 launchd `com.user.vibe-series-feed` 每天 20:30 跑（21:00 截止前）：取下表第一個還沒有核准檔的題，寫 `~/OpenBot/Shared/approved/<日期>-<slug>.md`（status approved）→ 當晚 02:00 autoloop 寫稿 → 隔天 08:35 Marketer 通知審稿。已排過就看核准檔，不改這張表。
+使用者 10-31 定：每天排一題，直到清單排完。`scripts/series_feed.py` 由 launchd `com.host.vibe-series-feed` 每天 20:30 跑（21:00 截止前）：取下表第一個還沒有核准檔的題，寫 `~/OpenBot/Shared/approved/<日期>-<slug>.md`（status approved）→ 當晚 02:00 autoloop 寫稿 → 隔天 08:35 Marketer 通知審稿。已排過就看核准檔，不改這張表。
 
 | 序 | slug | 議題 | 國際案例方向 |
 |---|---|---|---|

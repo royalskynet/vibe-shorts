@@ -1,13 +1,13 @@
 ## 任務
 
-工作目錄：`REPO_ROOT`。只做查證與爆款帳，不寫旁白稿、不改 `index.html`、不 render、不 git commit。`films/pikmin-bloom/` 已存在。
+工作目錄：`/Users/you/dev/vibe-shorts-pipeline`。只做查證與爆款帳，不寫旁白稿、不改 `index.html`、不 render、不 git commit。`films/pikmin-bloom/` 已存在。
 
 背景：手遊 Pikmin Bloom（皮克敏）官方公告把台灣寫成「中國台灣」，台灣玩家出現退坑、停止課金聲浪。這是 2026 年 11 月的即時新聞，你的記憶不可靠，所有事實必須從網路讀到，讀不到寫「未查證」。不要讀或引用 `refs/viral-text/pikmin-seed.md`。
 
 網路讀取一律用這兩條指令（TinyFish 優先，擋了自動往上一階）：
 ```bash
-python3 ~/dev/ladder-search/scripts/ladder.py search "<查詢>"
-python3 ~/dev/ladder-search/scripts/ladder.py read <url>
+python3 /Users/you/dev/ladder-search/scripts/ladder.py search "<查詢>"
+python3 /Users/you/dev/ladder-search/scripts/ladder.py read <url>
 ```
 
 ### A. 事實查證
@@ -28,7 +28,7 @@ python3 ~/dev/ladder-search/scripts/ladder.py read <url>
 ## 驗收
 
 ```bash
-cd REPO_ROOT
+cd /Users/you/dev/vibe-shorts-pipeline
 for n in 1 2 3 4 5; do
   f=films/pikmin-bloom/refs/evidence/F$n.txt
   test -s "$f"

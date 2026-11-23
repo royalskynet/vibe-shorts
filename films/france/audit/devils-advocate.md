@@ -1,6 +1,6 @@
 # Devil's Advocate Evidence Pack
 
-Report: REPO_ROOT/films/france/audit/claims.md
+Report: /Users/you/dev/vibe-shorts-pipeline/films/france/audit/claims.md
 Reviewed: 2026-10-20
 Core conclusion as read: 核心結論＝旁白稿逐句陳述的事實。
 

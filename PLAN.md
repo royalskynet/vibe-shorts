@@ -19,7 +19,7 @@
 | ⑧b 分發 | 一片多形態（輪播、Threads 文字貼、自引用）、手動回覆、系列化（HN 發布即時推播 11-06 刪，CHG-20261106-09） | `meta_publish.py --carousel`、`threads_post.py`（佇列）；規則 `docs/DISTRIBUTION.md` | 2026-10-20 上線，佇列 3 則待核 |
 | ⑨ 回饋 | 48 小時後抓三平台數據，決定主力平台與下一個對標 | `scripts/publish/stats.py`（一支一行：上架小時、播放、讚、留言、分享） | ✅ 10-17；節奏先 1–2 天一支，不追日更 |
 
-趨勢掃描 `trend_scan.py`（launchd `com.user.vibe-trends`）降為備用題庫，不再當主要選題來源。
+趨勢掃描 `trend_scan.py`（launchd `com.host.vibe-trends`）降為備用題庫，不再當主要選題來源。
 
 ②（拆別人的片）的分工是刻意的：切點與秒數由 ffmpeg 量，景別、運鏡這類判斷才交給模型，最後 15 道程式化關卡逐條對帳。
 
@@ -107,7 +107,7 @@ clean-reels.mp4  dev=0 x264-SEI=0    ← 跑過 scrub 才清乾淨
 
 ### ① 趨勢掃描的 Reddit 429 — 真因是 UA，不是打太密
 
-原本的 UA 是 `Mozilla/5.0 (Macintosh; ...) vibe-shorts/1.0`。Reddit 擋假冒瀏覽器的 UA，一律回 429。改成它 API 規則要求的格式 `macos:vibe-shorts:1.0 (by /u/royalskynet)` 就 200。
+原本的 UA 是 `Mozilla/5.0 (Macintosh; ...) vibe-shorts-pipeline/1.0`。Reddit 擋假冒瀏覽器的 UA，一律回 429。改成它 API 規則要求的格式 `macos:vibe-shorts-pipeline:1.0 (by /u/royalskynet)` 就 200。
 
 **我第一次診斷錯了**，以為是連續打六個沒有間隔，加了退避重試。重試完還是 429，因為擋法跟頻率無關。而且我連跑三輪把 IP 配額打爆，之後連 curl 配好 UA 也 429，自己把量測搞髒。等配額回復後做乾淨對照：同 IP、相隔三秒，好 UA 200、Mozilla UA 429。
 
