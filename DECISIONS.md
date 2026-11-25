@@ -217,3 +217,11 @@ cabinet `collectors/mkt_trends.py` 的竄升榜候選命中政治詞會標「政
 - `docs/寫稿原則.md` 整份重寫成「量到什麼就寫什麼」，樣本仍是 11-03 的 11 支 reel；`docs/WRITING.md` §3、§7 第 9 條同步。
 - WRITING §8 爆點結構改為選配，不再由閘門驗。
 - 未抓到 11-03 之後的新片：這台沒有瀏覽器，IG 需登入；新樣本要等下一次有機器可抓時再補。
+
+## 公開鏡像不放個別影片與第三方模型（2026-11-25）
+
+使用者：「live2d模型就是要排除」「私有repo的內容本來就要排除個別影片一個都不能映射去公開技能，若有誤發請刪除」。
+
+- `films/*` 一個都不進公開 `vibe-shorts` repo；唯二例外是 SKILL.md 指名的範本 `films/nerf`（對談範本片）與 `films/taipei-silence`（新片範本）。已發片在公開端的歷史 commit 留著，工作樹清乾淨（公開 `0bc40a9`，刪 46 支 1066 檔）。
+- Live2D／第三方 ripped 素材（`*.moc3`、`*.exp3.json`、`*.physics3.json`、`*.model3.json`、`*.vtube.json`、`*.cc_*.cfg`、`live2dcubismcore*`、`cubism.es.js`）永遠排除。
+- 排除規則正本＝`ops/mirror-excludes.txt`（ops 本身不進公開端），接在公開 `.gitignore` 後面用，指令寫在檔頭。取代 fixindex 12329 的排除段。
