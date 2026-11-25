@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 import precheck  # noqa: E402
 
-CLAUDE = "/Users/51mini/.local/bin/claude"
+CLAUDE = "/Users/you/.local/bin/claude"
 OC_MODEL = "opencode-go/deepseek-v4.1-flash"
 ENGINES = {
     "opus": ["claude", "claude-opus-5-5"],

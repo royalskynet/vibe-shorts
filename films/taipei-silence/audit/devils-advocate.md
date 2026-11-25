@@ -1,6 +1,6 @@
 # Devil's Advocate Evidence Pack
 
-Report: /Users/51mini/dev/vibe-shorts-pipeline/films/taipei-silence/audit/claims.md
+Report: /Users/you/dev/vibe-shorts-pipeline/films/taipei-silence/audit/claims.md
 Reviewed: 2026-11-03
 Core conclusion as read: 所以台北到底藍多少、綠多少，有一部分藏在不開口的人裡。
 

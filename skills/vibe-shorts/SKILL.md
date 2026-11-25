@@ -9,7 +9,7 @@ description: 營銷號（悖論小酒館 @paradoxbar）短片流水線：建片�
 
 全部程式生成：畫面是 `index.html` 的 `render(t)`，聲音是本機 Qwen3-TTS＋程式合成配樂；不用 AI 生圖、剪輯軟體、外部 TTS API。改片子＝改程式碼與稿子。
 
-進度正本 `PLAN.md`、repo 規則 `CLAUDE.md`、已裁決不重議 `DECISIONS.md`、寫稿細則 `docs/WRITING.md`（私有端，技能包不帶）、品牌色票 `BRAND.md`、配音選型 `VOICE.md`（私有端，技能包不帶）。
+進度正本 `PLAN.md`（私有端，技能包不帶）、repo 規則 `CLAUDE.md`、已裁決不重議 `DECISIONS.md`、寫稿細則 `docs/WRITING.md`（私有端，技能包不帶）、品牌色票 `BRAND.md`、配音選型 `VOICE.md`（私有端，技能包不帶）。
 
 ## 硬規則
 

@@ -43,7 +43,7 @@ LOG = Path(os.environ.get("AUTOLOOP_LOG", ROOT / "logs/autoloop.log"))
 # 不載 user 層設定：它的 CLAUDE_CODE_SUBPROCESS_ENV_SCRUB 會把 -p 的權限打回 default（fixindex 10029），
 # 使用者層 hook（delegate-guard）也會在無人值守時要求改派。訂閱 OAuth 照常。skill 改由 prompt 指檔讀。
 CLAUDE = shlex.split(os.environ.get(
-    "AUTOLOOP_CLAUDE", "/Users/51mini/.local/bin/claude -p --model claude-opus-5-5"
+    "AUTOLOOP_CLAUDE", "/Users/you/.local/bin/claude -p --model claude-opus-5-5"
     " --setting-sources project,local --permission-mode bypassPermissions"))
 PY = os.environ.get("AUTOLOOP_PY", "/usr/bin/python3")
 DCQ = shlex.split(os.environ.get("AUTOLOOP_DCQ", "dcq"))
@@ -60,7 +60,7 @@ FLEET = os.environ.get("AUTOLOOP_FLEET", str(Path(__file__).resolve().parent))  
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,40}$")
 GH_BLOB = "https://github.com/royalskynet/vibe-shorts-pipeline/blob/main"  # 私人 repo；稿子寫好就 push，清單給連結不給本機路徑
 
-SCRIPT_PROMPT = """你在 /Users/51mini/dev/vibe-shorts-pipeline，先讀 /Users/51mini/.claude/skills/vibe-shorts/SKILL.md（vibe-shorts skill，查表段的 references 需要時再讀），照它與 repo CLAUDE.md 做事。這是無人值守的夜間批次，沒有人會回答問題。
+SCRIPT_PROMPT = """你在 /Users/you/dev/vibe-shorts-pipeline，先讀 /Users/you/.claude/skills/vibe-shorts/SKILL.md（vibe-shorts skill，查表段的 references 需要時再讀），照它與 repo CLAUDE.md 做事。這是無人值守的夜間批次，沒有人會回答問題。
 
 任務：替使用者已選的題目寫單人旁白科普稿（docs/WRITING.md §7；不寫對談），只寫稿，不建置。
 - 核准檔：{path}（題目、proposal 路徑、第幾題都在 frontmatter）
@@ -69,11 +69,11 @@ SCRIPT_PROMPT = """你在 /Users/51mini/dev/vibe-shorts-pipeline，先讀 /Users
 要做：
 1. 片目錄不存在就照 skill「做一支片」步 1 建，但範本改用 films/france（複製後清舊產物、改 build.sh 的 OUT=、rhythm-profile 寫 card、pace.json 與 m3 男聲照 france）。
 2. 照 docs/WRITING.md §7＋§8（爆點結構：懸念留到最後、40–60% 再鉤、爆點壓後 20%、結尾回扣第一句）從同題爆款抽鉤子與機制寫旁白稿：寫 TREATMENT.md（要有「爆款證據：」行，連結＋播放數）、narration.md、SOURCES.md、meta/facts.md。台詞不照抄，禁防衛性中立語言。
-3. 寫完照 /Users/51mini/.claude/plugins/cache/genie-harness/genie-harness/0.5.5/skills/genie-humanizer/SKILL.md 逐句過一遍 narration.md：念出來要像台灣人口語（「輸得越準」這類翻譯腔、硬湊的文法改掉），一句一件事，同一個東西同一個叫法，不用格言收尾。改完寫 films/{slug}/audit/humanize.md：首行 `narration_sha: <narration.md 的 sha256>`，下面列改了哪些句（原句 → 新句），precheck「口語化」門會核。
+3. 寫完照 /Users/you/.claude/plugins/cache/genie-harness/genie-harness/0.5.5/skills/genie-humanizer/SKILL.md 逐句過一遍 narration.md：念出來要像台灣人口語（「輸得越準」這類翻譯腔、硬湊的文法改掉），一句一件事，同一個東西同一個叫法，不用格言收尾。改完寫 films/{slug}/audit/humanize.md：首行 `narration_sha: <narration.md 的 sha256>`，下面列改了哪些句（原句 → 新句），precheck「口語化」門會核。
 4. 不跑 build.sh、不渲染、不上傳、不發布、不 commit，不動其他片目錄。
 完成就結束；做不到就在 films/{slug}/BLOCKED.md 寫原因。"""
 
-BUILD_PROMPT = """你在 /Users/51mini/dev/vibe-shorts-pipeline，先讀 /Users/51mini/.claude/skills/vibe-shorts/SKILL.md（vibe-shorts skill，查表段的 references 需要時再讀），照它與 repo CLAUDE.md 做事。這是無人值守的夜間批次，沒有人會回答問題。
+BUILD_PROMPT = """你在 /Users/you/dev/vibe-shorts-pipeline，先讀 /Users/you/.claude/skills/vibe-shorts/SKILL.md（vibe-shorts skill，查表段的 references 需要時再讀），照它與 repo CLAUDE.md 做事。這是無人值守的夜間批次，沒有人會回答問題。
 
 任務：films/{slug} 的改編稿使用者已核過（核准檔 {path}），接著建片到可發布。
 - 先讀核准檔全文：內文的「## 建片注意」「## 修改意見」優先於 skill 預設。

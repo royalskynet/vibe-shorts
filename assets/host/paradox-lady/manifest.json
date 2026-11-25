@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "canvas": {
+    "w": 1536,
+    "h": 2304
+  },
+  "rects": {
+    "face": {
+      "x": 430,
+      "y": 560,
+      "w": 680,
+      "h": 500
+    },
+    "eyes": {
+      "x": 460,
+      "y": 580,
+      "w": 620,
+      "h": 224
+    },
+    "mouth": {
+      "x": 640,
+      "y": 820,
+      "w": 260,
+      "h": 140
+    },
+    "cheek": {
+      "x": 480,
+      "y": 770,
+      "w": 560,
+      "h": 150
+    }
+  },
+  "expressions": [
+    "neutral",
+    "shy",
+    "deadpan",
+    "puzzled",
+    "angry"
+  ],
+  "eyes": [
+    "open",
+    "closed"
+  ],
+  "mouths": [
+    "closed",
+    "open"
+  ],
+  "files": {
+    "base.png": "ac55142742fbef50472de64e1e2fa040aa21eda31e01eb5ed38a27bf15a67c20",
+    "neutral.open.closed.png": "9a563cac1c85428440d0096375626fb386a67789688a458d07739c2b5cece86e",
+    "neutral.closed.closed.png": "5a4fefa8cb2a2e53bceaf9c0a65764f563362f98eef7dff4f7e6352ca5be176c",
+    "neutral.open.open.png": "dc7e5bd7cc5b2e0c6c191f15d5173f2f2f129ab05f18d669183565780f1f23b4",
+    "neutral.closed.open.png": "9842b43175148294e557759f47970ce53d82ec4b4a12b583e6f5d0061e2a8cf0"
+  },
+  "generator": {
+    "model": "Z-Image-Turbo-6B-MLX-Q4 (deepsweet)",
+    "seed": 71,
+    "source": "base-z-v3-71.png",
+    "diff_model": "Z-Image-Turbo-6B-MLX-Q4 img2img strength=0.35 + masked compositing",
+    "diff_seed": 71
+  },
+  "char_bbox_canvas": [
+    108,
+    280,
+    1427,
+    2304
+  ]
+}

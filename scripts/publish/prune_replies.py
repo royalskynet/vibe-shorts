@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""每日刪 @paradoxbar.tw 的 Threads 舊回覆，由 launchd com.51mini.threads-prune-replies 每天跑一次。
+"""每日刪 @paradoxbar.tw 的 Threads 舊回覆，由 launchd com.host.threads-prune-replies 每天跑一次。
 
 /me/replies 只有 limit<=5 會成功，limit>=6（含預設 25）一律回 HTTP 500；500 之後約幾秒內
 再打還是 500，所以每個 GET 都要退避重試。每次抓一頁、刪完再抓。
@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts" / "publish"))
-LABEL = "com.51mini.threads-prune-replies"
+LABEL = "com.host.threads-prune-replies"
 USER = "paradoxbar.tw"
 DAILY_CAP = 95
 PAGE = 5  # limit>=6 時 /me/replies 固定 500，別調高

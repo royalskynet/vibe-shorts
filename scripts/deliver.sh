@@ -113,7 +113,8 @@ done
 
 echo
 echo "=== 規格檢查 ==="
-for label in shorts reels threads; do
+LABELS="shorts reels threads"; [ "$TARGETS" = "youtube:youtube" ] && LABELS="youtube"
+for label in $LABELS; do
   f="$OUT/$NAME-$label.mp4"
   plat=$([ "$label" = shorts ] && echo shorts || echo "reels --max-duration 300")
   # 只印出來不擋：true peak 這類 [judgement] 項目由人判斷；格式錯誤會被下面的 precheck 門擋
@@ -122,9 +123,14 @@ for label in shorts reels threads; do
 done
 
 echo
-echo "=== IG 安全封面（網格 3:4 裁切不切到大標）==="
-"$(dirname "$0")/cover.sh" "$SRC" "$OUT/$NAME-cover.jpg"
+if [ "$TARGETS" = "youtube:youtube" ]; then
+  echo "=== YouTube 縮圖（第 0 幀大標）==="
+  "$(dirname "$0")/thumb.sh" "$DIR" "$(cat "$DIR/meta/thumb-t.txt" 2>/dev/null || echo 0)"
+else
+  echo "=== IG 安全封面（網格 3:4 裁切不切到大標）==="
+  "$(dirname "$0")/cover.sh" "$SRC" "$OUT/$NAME-cover.jpg"
+fi
 
 echo
 echo "=== 交付檔 ==="
-ls -lh "$OUT"/*.mp4 "$OUT/$NAME-cover.jpg" | awk '{print $9, $5}'
+ls -lh "$OUT"/*.mp4 "$OUT"/*.jpg | awk '{print $9, $5}'

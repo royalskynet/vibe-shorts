@@ -53,8 +53,10 @@ def mine_channel(tok):
 
 def build_body(film, public):
     film = Path(film).resolve()
-    title_p = film / "meta" / "title-shorts.txt"
-    desc_p = film / "meta" / "caption-shorts.txt"
+    # 橫式片（dist/<名>-youtube.mp4 存在）用 youtube 檔名與 meta
+    yt = (film / "dist" / f"{film.name}-youtube.mp4").exists()
+    title_p = film / "meta" / ("title-youtube.txt" if yt else "title-shorts.txt")
+    desc_p = film / "meta" / ("caption-youtube.txt" if yt else "caption-shorts.txt")
     for p in (title_p, desc_p):
         if not p.is_file():
             raise SystemExit(f"找不到 {p}")
@@ -197,7 +199,8 @@ def main():
     if "--public" in args and not yt_only:
         meta_done(film)
     body = build_body(film, "--public" in args)
-    video = film / "dist" / f"{film.name}-shorts.mp4"
+    yt = (film / "dist" / f"{film.name}-youtube.mp4").exists()
+    video = film / "dist" / (f"{film.name}-youtube.mp4" if yt else f"{film.name}-shorts.mp4")
     if not video.is_file():
         raise SystemExit(f"找不到 {video}，先跑 scripts/deliver.sh")
     if "--dry-run" in args:
@@ -205,7 +208,8 @@ def main():
         return
     r = upload(video, body)
     record_public(film, r)
-    print(f"  已上傳：https://youtube.com/shorts/{r['id']}（{r['status']['privacyStatus']}）")
+    u = f"https://youtube.com/watch?v={r['id']}" if yt else f"https://youtube.com/shorts/{r['id']}"
+    print(f"  已上傳：{u}（{r['status']['privacyStatus']}）")
 
 
 if __name__ == "__main__":
