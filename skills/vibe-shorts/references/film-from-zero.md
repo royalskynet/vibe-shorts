@@ -24,7 +24,7 @@
 
 `scripts/devils.sh films/<片名>` 產 `audit/claims.md`、`audit/devils-advocate.md`（每爭點要有 URL＋摘錄，或標 `NO_EVIDENCE_BACKED_OBJECTION`）。
 
-`audit/verdicts.md` 由主 session 逐爭點寫：engine 宣告、sha256 綁定現稿、每爭點 `VERDICT`（`PRO_WINS`／`CON_WINS`／`SPLIT`／`UNRESOLVED`）＋ `REASON`。稿或來源改過就重跑，sha 對不上門不過。
+`audit/verdicts.md` 由主 session 逐爭點寫：engine 宣告、sha256 綁定現稿、每爭點 `VERDICT`（`PRO_WINS`／`CON_WINS`／`SPLIT`／`UNRESOLVED`）＋ `REASON`。稿或來源改過就重跑，sha 對不上門不過。多輪稽核後 `^VERDICT` 行數要收斂到**當前** pack 的爭點數（門機械比對數量）；舊裁決改成普通列表存檔、不佔行首 `VERDICT:`。
 
 ## 目視自評
 

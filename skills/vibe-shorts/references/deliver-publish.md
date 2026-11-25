@@ -35,7 +35,7 @@ AI 揭露（正本 `docs/COMPLIANCE.md`）：
 - YouTube「是否包含經改造或合成的寫實內容」→ **否**（網點排版，非寫實）。
 - IG／Threads 說明文字要有：**畫面由程式即時渲染，旁白為合成語音（非真人錄製，亦未複製任何人的聲音）。配樂為本片自行生成。** precheck 檢查「合成語音」與「程式」兩詞。
 
-三份說明文字各要有 AI 揭露句、結尾提問、「來源」開頭行，且**內容互不相同**。
+三份說明文字各要有 AI 揭露句、結尾提問、「來源」開頭行，且**內容互不相同**。系列片首行寫「<系列名>｜第 N 集」，集數對齊 `index.html` 的 `EP`；hashtags 行放 shorts／reels（threads 不放）。寫 caption 時對照上一支同系列片逐項核（系列集數、來源、AI 揭露完整句、hashtags、結尾問句），複製範本的 caption 最容易漏改集數。
 
 授權：配樂程式自生成；旁白是 VoiceDesign 合成音色，不對應真人；TTS 模型 Apache-2.0；字體系統點陣化不散布；**衛星底圖只有 EOX s2cloudless 2016 版可商用（CC BY 4.0）**，出處寫進 `SOURCES.md` 與說明欄。`SOURCES.md` 範本 `films/dating-bill/SOURCES.md`。
 
