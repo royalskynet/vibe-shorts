@@ -56,4 +56,4 @@ LIB=$LIB node scripts/seek_check.mjs . --fps 30 --workers 6 --size 1080x1920
 
 「靜止秒」＝該秒平均幀差 < `STILL_THRESHOLD = 1.0`。各基準依據寫在 `rhythm_check.py` 檔頭。新增或放寬 profile 要使用者目視核准。
 
-角色動作正本 `docs/MASCOT.md`。
+角色動作正本 `docs/MASCOT.md`（私有端）。

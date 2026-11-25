@@ -22,11 +22,11 @@ python3 scripts/publish/meta_publish.py films/<片名> --yes   # IG Reels + Thre
 python3 scripts/publish/yt_upload.py   films/<片名> --yes   # YouTube Shorts
 ```
 
-發完把平台連結與時間寫進 `meta/published.json`。設定與權杖見 `docs/PUBLISH-SETUP.md`；權杖值不進 repo、不進對話。YT OAuth 在 Testing 狀態 7 天到期，`scripts/publish/tokens.py` 報到期日。
+發完把平台連結與時間寫進 `meta/published.json`。設定與權杖見私有端 `docs/PUBLISH-SETUP.md`；權杖值不進 repo、不進對話。YT OAuth 在 Testing 狀態 7 天到期，`scripts/publish/tokens.py` 報到期日。
 
 公開網址衛生：路徑用 16+ 位十六進位隨機 token、不用片名、每次換新；只開要發的 mp4（有 `dist/<片名>-cover.jpg` 就加開這張，IG Reels 帶 `cover_url`，Threads 沒封面參數仍用第 0 幀），不暴露資料夾；平台抓完立刻關 funnel 伺服器。
 
-刪已發貼文也要點頭；IG 貼文 API 刪不掉，走網頁（`docs/HANDOFF-threads-delete.md`）。
+刪已發貼文也要點頭；IG 貼文 API 刪不掉，走網頁（私有端 `docs/HANDOFF-threads-delete.md`）。
 
 ## 合規
 

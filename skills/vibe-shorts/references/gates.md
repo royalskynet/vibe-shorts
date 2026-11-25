@@ -27,7 +27,7 @@ python3 scripts/precheck.py films/<片名>      # exit 0 = 全過
 | 說明文字存在 | `meta/caption-{shorts,reels,threads}.txt` 三份都有 |
 | 三份互不相同 | 三份 sha256 全不同 |
 | 結尾提問 | 每份以問號收尾 |
-| AI 揭露 | 每份含「合成語音」與「程式」（`docs/COMPLIANCE.md` 的標準句） |
+| AI 揭露 | 每份含「合成語音」與「程式」（私有端 `docs/COMPLIANCE.md` 的標準句） |
 | 列出來源 | 每份有以「來源」開頭的行 |
 | 公開路徑是隨機 token | `meta/public-path.txt` 是 16+ 位十六進位、不含片名 → 跑 `scripts/publish/public_path.py` |
 
@@ -41,7 +41,7 @@ python3 scripts/precheck.py films/<片名>      # exit 0 = 全過
 | 旁白稿結構 | 鉤子／轉折／落點三段齊＋順序對，落點是最後一段、無提問段（提問只放說明欄）；鉤子首句 ≤ `HOOK_MAX_CHARS = 25` 字且含「你」或問號 | 改 `narration.md` |
 | 無二元對比句 | `narration.md` 逐行不得有「不是X，是Y」「是X，不是Y」「而是」「並非」「與其說…不如說」「看似…實則」「你以為…其實」（`contrast_problems`，測試 `test_precheck_contrast.py`）；「是不是」問句與一般否定放行 | 改 `narration.md`，直接講 Y |
 | 語速（僅單人旁白：`cast.json` 有 host、clawd 空） | `timeline.js` 各句中英數字數 ÷（`TL.dur` − `pace.json` 的 `tail`）≤ `PACE_CPS_MAX = 5.6` 字／秒（無邊探索 4.85–5.53） | 降 `pace.json` 的 `tempo` 或刪字，重跑 `voice.py` |
-| 吉祥物接線 | 有 `mascot/` 目錄時 `index.html` 同時有 `poseAt` 與 `drawImage(` | `index.html` import `poseAt` 並把角色 `drawImage` 到畫布（`docs/MASCOT.md`） |
+| 吉祥物接線 | 有 `mascot/` 目錄時 `index.html` 同時有 `poseAt` 與 `drawImage(` | `index.html` import `poseAt` 並把角色 `drawImage` 到畫布（私有端 `docs/MASCOT.md`） |
 | 內頁大標（僅單人旁白：`cast.json` 有 host、頁面有 `window.TEXTS`） | `scripts/headline_check.mjs` 取首卡之後每卡尾幀的 `window.TEXTS`，框高 ÷ 1.25 < `HEADLINE_PX = 72`；FAIL 訊息「內頁有大標，只留封面」 | 大標只畫在卡 0；內頁只留系列標、插畫（`assets/illust/illust.mjs`）、字幕、出處，畫內數字用 64px 以下 |
 | 台詞非照抄（僅 `dialogue`） | 與 `refs/dialogue-corpus/originals-zh.md` 直譯句相似度 ≤ `COPY_SIM_MAX = 0.6`；< `COPY_MIN_CHARS = 5` 字的句子與圈內梗白名單豁免 | 重寫台詞，只借結構 |
 | 數字都有來源 | `index.html` 的 `FACTS` 每個 key 在 `meta/facts.md` 有來源行；卡片裡 3 位數以上的數字都走 `${FACTS.KEY}` | 補 `facts.md`；卡片改引用 FACTS。對談片稿中沒有 3 位數以上數字會自動豁免 |

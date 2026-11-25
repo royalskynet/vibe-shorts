@@ -9,7 +9,7 @@ description: 營銷號（悖論小酒館 @paradoxbar）短片流水線：建片�
 
 全部程式生成：畫面是 `index.html` 的 `render(t)`，聲音是本機 Qwen3-TTS＋程式合成配樂；不用 AI 生圖、剪輯軟體、外部 TTS API。改片子＝改程式碼與稿子。
 
-進度正本 `PLAN.md`、repo 規則 `CLAUDE.md`、已裁決不重議 `DECISIONS.md`、寫稿細則 `docs/WRITING.md`、品牌色票 `BRAND.md`、配音選型 `VOICE.md`（私有端，技能包不帶）。
+進度正本 `PLAN.md`、repo 規則 `CLAUDE.md`、已裁決不重議 `DECISIONS.md`、寫稿細則 `docs/WRITING.md`（私有端，技能包不帶）、品牌色票 `BRAND.md`、配音選型 `VOICE.md`（私有端，技能包不帶）。
 
 ## 硬規則
 
@@ -34,7 +34,7 @@ description: 營銷號（悖論小酒館 @paradoxbar）短片流水線：建片�
 | 1 建目錄 | `cp -r films/taipei-silence films/<片名>`；清 `out dist qa audit/*.log 舊片.mp4`；`build.sh` 的 `OUT=` 改片名；`scripts/mascot_install.sh films/<片名>`；`scripts/illust_install.sh films/<片名>`；寫 `rhythm-profile`（對談 `dialogue`、地圖 `map`、資料卡留空） | — |
 | 2 寫檔 | `TREATMENT.md`、`narration.md`、`SOURCES.md`、`meta/facts.md`、`index.html`、`mix.py`、`cast.json`、三份 caption（`references/film-from-zero.md`） | `grep -c '^## ' narration.md` ≥ 3；最後一段是落點，沒有提問段 |
 | 2b 口語化 | 照 genie-humanizer 逐句改台灣口語，寫 `audit/humanize.md`：首行 `narration_sha:`＋逐句「原句 → 新句」，改稿要重過重蓋戳 | precheck「口語化（humanize）」OK |
-| 2c B-roll（畫面缺實景時） | `scripts/broll.py search <關鍵字>` 選素材、`scripts/broll.py fetch <url> --out films/<片名>/broll/<名> --license <授權> --credit <作者> --sources films/<片名>/SOURCES.md`、`index.html` 用 `drawBroll`，細節見 `docs/BROLL.md` | `clip.json` 存在且 `SOURCES.md` 有出處行 |
+| 2c B-roll（畫面缺實景時） | `scripts/broll.py search <關鍵字>` 選素材、`scripts/broll.py fetch <url> --out films/<片名>/broll/<名> --license <授權> --credit <作者> --sources films/<片名>/SOURCES.md`、`index.html` 用 `drawBroll`，細節見 `references/broll.md` | `clip.json` 存在且 `SOURCES.md` 有出處行 |
 | 3 反方稽核 | `scripts/devils.sh films/<片名>`，逐爭點寫 `audit/verdicts.md` | exit 0；每爭點有 VERDICT |
 | 3b 稿冷讀 | `scripts/coldread.sh films/<片名> script`，只給稿、不給意圖；`VERDICT: 不通過` 的 `[硬傷]` 回改稿子 | `audit/coldread-script.md`（precheck 印 WARN，不擋） |
 | 3c 改稿後重跑 | `scripts/restamp.sh films/<片名>`：片目錄 `gen.py` 重產文件 → 反方稽核 → 稿冷讀，失敗就停；戳記只由重跑寫入，不手改 sha | 跑完照它印的清單補 verdicts、核稿、片冷讀 |

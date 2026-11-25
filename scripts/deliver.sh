@@ -35,6 +35,16 @@ NAME="$(basename "$SRC" .mp4)"
 OUT="$DIR/dist"
 mkdir -p "$OUT"
 
+# 主播片合規閘（vtuber-host issue #6 F5）：片目錄有 host/ 才算主播片，
+# 要求 docs/COMPLIANCE-HOST.md 存在且有使用者核准的 approved: <日期> 行。
+if [ -d "$DIR/host" ]; then
+  COMP="$(cd "$(dirname "$0")/.." && pwd)/docs/COMPLIANCE-HOST.md"
+  if ! grep -q "^approved: " "$COMP" 2>/dev/null; then
+    echo "主播片發布要先過合規閘：$COMP 不存在或沒有 approved: <日期> 行（要等使用者核准揭露句）" >&2
+    exit 1
+  fi
+fi
+
 # 渲染出來的主片是全範圍 yuvj420p（逐幀 JPEG）。export.py 雖然帶 -pix_fmt yuv420p，
 # 範圍旗標照樣是 pc，check.py 判 FAIL；2026-10-13 IG／Threads container 都 ERROR。
 # 先無損轉成標準範圍再匯出，畫質只差範圍量化那一步。
@@ -48,8 +58,12 @@ if [[ "$SRC_RANGE" == *pc* || "$SRC_RANGE" == yuvj* ]]; then
     -c:v libx264 -qp 0 -preset ultrafast -color_range tv -c:a copy "$IN"
 fi
 
-# preset 對應：Threads 借用 reels
-for target in shorts:shorts reels:reels threads:reels; do
+# preset 對應：Threads 借用 reels；橫式片（meta/format.json landscape）只出 YouTube 一個檔（issue #9）
+TARGETS="shorts:shorts reels:reels threads:reels"
+if [ -f "$DIR/meta/format.json" ] && python3 -c "import json,sys; sys.exit(json.load(open('$DIR/meta/format.json')).get('format')!='landscape')"; then
+  TARGETS="youtube:youtube"
+fi
+for target in $TARGETS; do
   label="${target%%:*}"
   preset="${target##*:}"
   raw="$OUT/$NAME-$label.raw.mp4"
@@ -73,7 +87,8 @@ for target in shorts:shorts reels:reels threads:reels; do
   # reels／threads 改從混音原檔 out/mix.wav 只編一次，loudnorm 壓到 -14 LUFS／TP -2（實測 -2.0）。
   # Shorts 原本沿用 scrub 的 192k，elected-dictator 11-01 實測 -0.7 dBTP（規格 ≤ -1），改成也從 mix.wav 只編一次、192k。
   if [ -f "$DIR/out/mix.wav" ]; then
-    br=$([ "$label" = shorts ] && echo 192k || echo 128k)
+    # youtube 從 mix.wav 只編一次 192k；shorts 192k、reels/threads 128k
+    br=$([ "$label" = reels ] || [ "$label" = threads ] && echo 128k || echo 192k)
     amap=(-i "$DIR/out/mix.wav" -map 0:v -map 1:a); acodec=(-af loudnorm=I=-14:TP=-2:LRA=11 -c:a aac -b:a "$br" -ar 48000 -flags:a +bitexact -shortest)
   elif [ "$label" = shorts ]; then
     amap=(-map 0); acodec=(-c:a copy)

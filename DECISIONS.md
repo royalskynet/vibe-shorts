@@ -225,3 +225,7 @@ cabinet `collectors/mkt_trends.py` 的竄升榜候選命中政治詞會標「政
 - `films/*` 一個都不進公開 `vibe-shorts` repo；唯二例外是 SKILL.md 指名的範本 `films/nerf`（對談範本片）與 `films/taipei-silence`（新片範本）。已發片在公開端的歷史 commit 留著，工作樹清乾淨（公開 `0bc40a9`，刪 46 支 1066 檔）。
 - Live2D／第三方 ripped 素材（`*.moc3`、`*.exp3.json`、`*.physics3.json`、`*.model3.json`、`*.vtube.json`、`*.cc_*.cfg`、`live2dcubismcore*`、`cubism.es.js`）永遠排除。
 - 排除規則正本＝`ops/mirror-excludes.txt`（ops 本身不進公開端），接在公開 `.gitignore` 後面用，指令寫在檔頭。取代 fixindex 12329 的排除段。
+
+## docs/ 不進公開鏡像、技能文件收進 references/（2026-11-25）
+
+使用者：「技能就整併進這技能，不要依賴於還帶有台北這種個資的文件」。`docs/` 整目錄排除出公開端；技能需要的通用文件正本搬到 `skills/vibe-shorts/references/`（BROLL.md → broll.md；四 skill 寫法 → teardown-and-hooks.md），SKILL.md 步 0b／2b／2c 全部改指 references/ 或內聯。references/ 裡仍指向私有端的文件（PUBLISH-SETUP、HANDOFF-threads-delete、MASCOT、COMPLIANCE）標明「私有端」。
