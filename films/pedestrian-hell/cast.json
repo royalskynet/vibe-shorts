@@ -1,8 +1,0 @@
-{
- "_doc": "單人旁白。10-30 使用者嫌 m3 太沉重壓抑，改 m4（assets/voice/m4-design.txt：溫和聊天感男聲）；pace.json tempo 1.0、gap_line 0.6。畫面保留 Clawd 主播。",
- "host": {
-  "ref": "assets/voice/m4-24k.wav",
-  "text": "assets/voice/m4-script.txt"
- },
- "clawd": []
-}

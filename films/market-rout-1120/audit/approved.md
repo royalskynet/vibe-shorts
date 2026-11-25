@@ -1,3 +1,0 @@
-narration_sha: d26b1b6f3f12ed20ecebd1e0d43a2b713e0f28e3a7e4185016bc0d977c86579e
-核准：稿子通過
-時間：2026-11-23 18:44

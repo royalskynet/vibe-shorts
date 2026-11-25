@@ -1,8 +1,0 @@
-{
- "_doc": "單人旁白。10-20 使用者：畫面保留 Clawd 主播；聲音要沉穩專業的台灣男記者、不捲舌、語速明快（不要死氣沉沉）。範本 m2-24k.wav 由 scripts/voice_design.py 生成，聲音描述存 assets/voice/m2-design.txt；pace.json tempo 1.2 再整體加速（音高不變）。 10-20 第七版：使用者要更磁性舒服 → m3（assets/voice/m3-design.txt）。",
- "host": {
-  "ref": "assets/voice/m3-24k.wav",
-  "text": "assets/voice/m-script.txt"
- },
- "clawd": []
-}
