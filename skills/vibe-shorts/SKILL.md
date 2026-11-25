@@ -30,7 +30,7 @@ description: 營銷號（悖論小酒館 @paradoxbar）短片流水線：建片�
 | 步 | 指令／動作 | 驗收 |
 |---|---|---|
 | 0 選題 | `viral-scout`，先查 `refs/` 帳本 | `TREATMENT.md` 有爆款證據行 |
-| 0b 拆對標片 | `.venv/bin/python scripts/reverse.py <對標片.mp4> --out <目錄>` | 產出 `reverse.json`、`REVERSE.md` |
+| 0b 拆對標片 | `.venv/bin/python scripts/reverse.py <對標片.mp4> --out <目錄>`；判讀照 `docs/WRITING.md` §10.1（拆機制不拆表面） | 產出 `reverse.json`、`REVERSE.md` |
 | 1 建目錄 | `cp -r films/taipei-silence films/<片名>`；清 `out dist qa audit/*.log 舊片.mp4`；`build.sh` 的 `OUT=` 改片名；`scripts/mascot_install.sh films/<片名>`；`scripts/illust_install.sh films/<片名>`；寫 `rhythm-profile`（對談 `dialogue`、地圖 `map`、資料卡留空） | — |
 | 2 寫檔 | `TREATMENT.md`、`narration.md`、`SOURCES.md`、`meta/facts.md`、`index.html`、`mix.py`、`cast.json`、三份 caption（`references/film-from-zero.md`） | `grep -c '^## ' narration.md` ≥ 3；最後一段是落點，沒有提問段 |
 | 2b 口語化 | 照 genie-humanizer 逐句改台灣口語，寫 `audit/humanize.md`（首行 `narration_sha:`，WRITING §7 第 10 條） | precheck「口語化（humanize）」OK |
