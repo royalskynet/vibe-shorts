@@ -1,6 +1,6 @@
 # Devil's Advocate Evidence Pack
 
-Report: /Users/you/dev/vibe-shorts-pipeline/films/songshan-airport/audit/claims.md
+Report: /Users/51mini/dev/vibe-shorts-pipeline/films/songshan-airport/audit/claims.md
 Reviewed: 2026-11-11
 Core conclusion as read: 一大差別在順序，先訂目標，還是先有方案。
 

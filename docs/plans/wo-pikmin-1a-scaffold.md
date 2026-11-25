@@ -1,11 +1,11 @@
 ## 任務
 
-工作目錄：`/Users/you/dev/vibe-shorts-pipeline`。只建片目錄，不寫稿、不查資料、不 render、不 git commit。
+工作目錄：`/Users/51mini/dev/vibe-shorts-pipeline`。只建片目錄，不寫稿、不查資料、不 render、不 git commit。
 
 照 `films/taipei-silence/` 複製出 `films/pikmin-bloom/`，依序做：
 
 ```bash
-cd /Users/you/dev/vibe-shorts-pipeline
+cd /Users/51mini/dev/vibe-shorts-pipeline
 rsync -a films/taipei-silence/ films/pikmin-bloom/
 cd films/pikmin-bloom && rm -rf out dist qa audit/*.log *.mp4 narration.md narration-v9-draft.md
 cd ../..
@@ -17,7 +17,7 @@ bash scripts/illust_install.sh films/pikmin-bloom
 ## 驗收
 
 ```bash
-cd /Users/you/dev/vibe-shorts-pipeline
+cd /Users/51mini/dev/vibe-shorts-pipeline
 test -f films/pikmin-bloom/index.html
 test -f films/pikmin-bloom/mix.py
 test -f films/pikmin-bloom/build.sh

@@ -1,6 +1,6 @@
 ## 任務
 
-工作目錄 /Users/you/dev/vibe-shorts-pipeline。背景見計畫 /Users/you/dev/vibe-shorts-pipeline/docs/plans/2026-11-10-marketer-pipeline.md 的 B 段。
+工作目錄 /Users/51mini/dev/vibe-shorts-pipeline。背景見計畫 /Users/51mini/dev/vibe-shorts-pipeline/docs/plans/2026-11-10-marketer-pipeline.md 的 B 段。
 
 ### 1. 新增 scripts/skill_sync.sh
 bash，`set -euo pipefail`。用法：`scripts/skill_sync.sh --root <OpenBot 根> [--dry] --agent <目錄名> [--agent <目錄名>…]`。
@@ -15,7 +15,7 @@ writes!: scripts/skill_sync.sh
 ## 驗收
 
 ```bash
-cd /Users/you/dev/vibe-shorts-pipeline
+cd /Users/51mini/dev/vibe-shorts-pipeline
 T=$(mktemp -d); mkdir -p "$T/Agents/a1"
 bash scripts/skill_sync.sh --root "$T" --agent a1
 diff -r skills/vibe-shorts "$T/Shared/skills/vibe-shorts"

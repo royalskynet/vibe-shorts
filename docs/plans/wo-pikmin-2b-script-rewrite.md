@@ -1,6 +1,6 @@
 ## 任務
 
-工作目錄：`/Users/you/dev/vibe-shorts-pipeline`。**重寫** `films/pikmin-bloom/narration.md` 與相關文字檔（上一版是事實清單，沒有鉤子、不是口語，還混進查證資料沒有的句子，整份作廢）。不改 `index.html`／`mix.py`／`build.sh`，不 render，不 git commit，不跑 `approve.py`、`voice.py`。
+工作目錄：`/Users/51mini/dev/vibe-shorts-pipeline`。**重寫** `films/pikmin-bloom/narration.md` 與相關文字檔（上一版是事實清單，沒有鉤子、不是口語，還混進查證資料沒有的句子，整份作廢）。不改 `index.html`／`mix.py`／`build.sh`，不 render，不 git commit，不跑 `approve.py`、`voice.py`。
 
 先讀：`docs/WRITING.md` §7 與 §8、`docs/寫稿原則.md`、範本 `films/taipei-silence/narration.md`（學它的口吻與節奏：問句鉤子、生活化比喻、「可是／所以」接句；不抄句子）、`films/pikmin-bloom/meta/facts.md`、`films/pikmin-bloom/SOURCES.md`、`films/pikmin-bloom/refs/evidence/F1.txt` 到 `F5.txt`。**不要讀 `refs/viral-text/pikmin-seed.md`**。
 
@@ -39,10 +39,10 @@
 ## 驗收
 
 ```bash
-cd /Users/you/dev/vibe-shorts-pipeline
+cd /Users/51mini/dev/vibe-shorts-pipeline
 python3 - <<'PY'
 import re, sys, difflib, pathlib
-root = pathlib.Path('/Users/you/dev/vibe-shorts-pipeline')
+root = pathlib.Path('/Users/51mini/dev/vibe-shorts-pipeline')
 seed = (root / 'refs/viral-text/pikmin-seed.md').read_text()
 def norm(s): return re.sub(r'[\s，、：；「」『』（）,.!?？！。]', '', s)
 def sents(t):

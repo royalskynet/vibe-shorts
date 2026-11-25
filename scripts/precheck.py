@@ -564,11 +564,16 @@ def first_frame_text(path):
     # 不串接：同一個字兩次都認到不能湊成 2 字。字高仍以整幅高度算，判準不變。
     top = subprocess.run(["ffmpeg", "-v", "error", "-i", "pipe:0", "-vf", "crop=iw:ih*0.3:0:0", "-f", "image2pipe",
                           "-vcodec", "png", "-"], input=png, capture_output=True, check=True).stdout
+    # 170px 大標對 tesseract psm 11 太大（字高超過版面切分上限）整幅認不出；
+    # 縮到 0.25 倍就認得（2026-11-24 bixiang-victims 實測）。字高比對時把縮放除回來。
+    small = subprocess.run(["ffmpeg", "-v", "error", "-i", "pipe:0", "-vf", "crop=iw:ih*0.3:0:0,scale=iw*0.25:ih*0.25",
+                            "-f", "image2pipe", "-vcodec", "png", "-"],
+                           input=png, capture_output=True, check=True).stdout
     best = ""
-    for img in (png, top):
+    for img, hs in ((png, h), (top, h), (small, h * 0.25)):
         r = subprocess.run(["tesseract", "stdin", "-", "-l", "chi_tra+eng", "--psm", "11", "tsv"],
                            input=img, capture_output=True, check=True)
-        txt = cover_big_text(r.stdout.decode("utf-8", "replace"), h)
+        txt = cover_big_text(r.stdout.decode("utf-8", "replace"), hs)
         best = txt if len(txt) > len(best) else best
     return best
 

@@ -1,6 +1,6 @@
 # Devil's Advocate Evidence Pack
 
-Report: /Users/you/dev/vibe-shorts-pipeline/refs/short-drama-research/03-claims.md
+Report: /Users/51mini/dev/vibe-shorts-pipeline/refs/short-drama-research/03-claims.md
 Reviewed: 2026-11-16
 Core conclusion as read: 逐條對照中國廣電總局兩份短劇文件與台辦文件的原文，說明文件寫了什麼、沒寫什麼，再對照台灣端目前有什麼證據。
 

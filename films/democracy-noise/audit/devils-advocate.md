@@ -1,6 +1,6 @@
 # Devil's Advocate Evidence Pack
 
-Report: /Users/you/dev/vibe-shorts-pipeline/films/outrage-loop/audit/claims.md
+Report: /Users/51mini/dev/vibe-shorts-pipeline/films/outrage-loop/audit/claims.md
 Reviewed: 2026-11-05
 Core conclusion as read: 所以我們感覺到的分裂，很可能比真實的分裂大。
 

@@ -1,6 +1,6 @@
 # Devil's Advocate Evidence Pack
 
-Report: /Users/you/dev/vibe-shorts-pipeline/films/codex/audit/claims.md
+Report: /Users/51mini/dev/vibe-shorts-pipeline/films/codex/audit/claims.md
 Reviewed: 2026-10-17
 Core conclusion as read: 因為你刪之前會先問。
 

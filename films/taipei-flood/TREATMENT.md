@@ -1,6 +1,6 @@
 # 台北防災治水（單人旁白科普）初稿，待使用者核
 
-核准：/Users/you/OpenBot/Shared/approved/2026-11-02-taipei-flood.md（docs/SERIES-taipei-issues.md 題 6）。格式照 docs/WRITING.md §7 與系列規則：單人旁白，一支只講一個機制「雨下得比下水道排得快：雨水要先流進側溝跟下水道，抽水站才抽得到；下水道一小時排 78.8 毫米，2026 年 6 月兩場雨一小時 96、100 毫米」；國際案例用日本首都圈外郭放水路（地下神殿，埼玉縣春日部市）；台灣兩種主張排在日本後面，各 5 句。範本稿 films/taipei-rent、films/taipei-childcare（bccd752），寫法對齊 films/taipei-eldercare。
+核准：/Users/51mini/OpenBot/Shared/approved/2026-11-02-taipei-flood.md（docs/SERIES-taipei-issues.md 題 6）。格式照 docs/WRITING.md §7 與系列規則：單人旁白，一支只講一個機制「雨下得比下水道排得快：雨水要先流進側溝跟下水道，抽水站才抽得到；下水道一小時排 78.8 毫米，2026 年 6 月兩場雨一小時 96、100 毫米」；國際案例用日本首都圈外郭放水路（地下神殿，埼玉縣春日部市）；台灣兩種主張排在日本後面，各 5 句。範本稿 films/taipei-rent、films/taipei-childcare（bccd752），寫法對齊 films/taipei-eldercare。
 
 爆款證據：YouTube｜469萬播放｜The B1M「The Insane Scale of Tokyo's Disaster Megaplan」（2320 秒，外郭放水路）｜https://youtu.be/oMk3ihRzPRg；YouTube｜419萬播放｜ABC Science「Tokyo Flood Prevention | Insane underground tunnel system in Japan!」（735 秒）｜https://youtu.be/Rp2l6nFIsZA；YouTube｜233萬播放｜South China Morning Post「Japan's 'underground temple' protecting Tokyo from floods」（163 秒，Shorts 長度，本片轉折段方向）｜https://youtu.be/PVJc0cwIYYc；YouTube｜184萬播放｜Tom Scott「These tunnels stop part of Tokyo flooding」（215 秒）｜https://youtu.be/cfJOW2PtrGk；YouTube｜145萬播放｜公視我們的島「納莉颱風：那一年，台北變成了湖」（979 秒，同題台北）｜https://youtu.be/mES8ZefPojA；YouTube｜83萬播放｜8bitNews「【映像】『地下神殿』に洪水が流れ込む瞬間」（47 秒，同題 Shorts）｜https://youtu.be/GU2x3sSwO9M；IG｜127萬播放｜@boundless__explorer 塞車成因（86 秒，§7 節奏與反直覺第二句）｜https://www.instagram.com/reel/DQfdx-zDEqI/
 

@@ -1,9 +1,9 @@
 # 工單：查證「言論自由的界線：說和做分開管（鉤子：2026-11 羅大佑言論自由爭議）」事實表（films/free-speech-line）
 
-給 60–90 秒繁中知識短片用。只產一個事實表，寫手之後只能用表裡「已查證」的內容寫稿，所以數字錯一個，整支片就錯。`/Users/you/dev/vibe-shorts-pipeline/films/free-speech-line/FACTS.md` 已存在且 `python3 scripts/facts.py check films/free-speech-line` 會過，就什麼都不用做（冪等）。
+給 60–90 秒繁中知識短片用。只產一個事實表，寫手之後只能用表裡「已查證」的內容寫稿，所以數字錯一個，整支片就錯。`/Users/51mini/dev/vibe-shorts-pipeline/films/free-speech-line/FACTS.md` 已存在且 `python3 scripts/facts.py check films/free-speech-line` 會過，就什麼都不用做（冪等）。
 
 ### 查法
-- 搜尋 `python3 /Users/you/dev/ladder-search/scripts/ladder.py search "<關鍵字>"`、讀頁 `… ladder.py read <url>`；YouTube 播放數 `yt-dlp --flat-playlist -J "ytsearch25:<關鍵字>"`，只寫實抓原值。
+- 搜尋 `python3 /Users/51mini/dev/ladder-search/scripts/ladder.py search "<關鍵字>"`、讀頁 `… ladder.py read <url>`；YouTube 播放數 `yt-dlp --flat-playlist -J "ytsearch25:<關鍵字>"`，只寫實抓原值。
 - 一手來源優先（官方新聞稿、法規、論文、主管機關），附日期。二手文章只能當線索，數字要回一手原文核對；對不上以原文為準，並在該條寫明。
 - 每個數字寫清楚口徑：期間（一小時／一天／一週合計）、單位、母數、在哪裡量的。原文沒寫就標「口徑：原文未寫」。
 - 特別找反直覺、能當片子後段爆點的事實（真正理由跟一般人猜的不一樣、驚人數字、規定其實沒有、別國怎麼做）。
@@ -32,7 +32,7 @@
 ## 驗收
 
 ```bash
-cd /Users/you/dev/vibe-shorts-pipeline
+cd /Users/51mini/dev/vibe-shorts-pipeline
 python3 scripts/facts.py check films/free-speech-line
 grep -qF '（free-speech-line）' refs/VIRAL-LEDGER.md
 ```

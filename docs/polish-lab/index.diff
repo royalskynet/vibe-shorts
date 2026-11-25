@@ -1,0 +1,59 @@
+--- /Users/51mini/dev/vibe-shorts-pipeline/films/dune-messiah-trap/index.html	2026-11-20 12:23:27
++++ index.html	2026-11-23 18:33:40
+@@ -19,7 +19,12 @@
+ // 禁止清單（TREATMENT.md）：不畫 2026 候選人、不引 2026 民調、不畫政黨標誌。
+ // 所有動作都是 t 的封閉式（seek_check.mjs 會比亂序算出的同一幀）；循環用取餘數，不累積。
+ import { poseAt, applyPose } from './mascot/clawd-bot-shot.mjs';
+-import { PALETTE, person, prop } from './illust/illust.mjs';
++import { PALETTE, prop as vprop } from './illust/illust.mjs';
++import { person, loadSprites, propSprite, crownSprite, gearSprite } from './illust/sprite.mjs';
++const prop = (g, n, o) => propSprite(g, n, o, vprop);
++await loadSprites('sprites/');
++import { backdrop, finishGrade, hills, floor, motes, godray, camera, loadPlate, plate } from './illust/scene.mjs';
++const PLATE = await loadPlate('plates/desert2.png');
+ const G = window.G, E = G.E, TL = window.TL, W = 1080, H = 1920;
+ const g = document.getElementById('c').getContext('2d', { alpha: false });
+ const { clamp, inv, lerp, mix } = G;
+@@ -130,25 +135,9 @@
+ // ---------- 每張卡的畫面（畫在 y 500–1290；x≥875、y<480 是主播位置） ----------
+ const SAND = '#E8D5B0', SAND_D = '#D8BF93', GREY = '#CFC4B2';
+ const PT = (lt, a, d = 0.6) => E.o3(inv(a, a + d, lt));
+-function dunes() {
+-  g.save(); g.fillStyle = SAND; g.beginPath(); g.moveTo(0, GY + 20);
+-  g.bezierCurveTo(200, GY - 70, 360, GY - 55, 540, GY + 10); g.bezierCurveTo(720, GY - 55, 880, GY - 80, 1080, GY + 10);
+-  g.lineTo(1080, 1292); g.lineTo(0, 1292); g.closePath(); g.fill(); g.restore();
+-}
+-function crown(x, y, s, col = MUST) {
+-  g.save(); g.fillStyle = col; g.beginPath(); g.moveTo(x - s / 2, y); g.lineTo(x - s / 2, y - s * 0.45); g.lineTo(x - s / 4, y - s * 0.22);
+-  g.lineTo(x, y - s * 0.58); g.lineTo(x + s / 4, y - s * 0.22); g.lineTo(x + s / 2, y - s * 0.45); g.lineTo(x + s / 2, y); g.closePath(); g.fill();
+-  g.fillStyle = TERRA; for (const [dx, dy] of [[-0.5, -0.45], [0, -0.58], [0.5, -0.45]]) { g.beginPath(); g.arc(x + dx * s, y + dy * s, s * 0.07, 0, 7); g.fill(); }
+-  g.restore();
+-}
+-function gearBrain(x, y, r, rot = 0, col = TERRA) {
+-  g.save(); g.translate(x, y); g.fillStyle = col;
+-  for (let i = 0; i < 8; i++) { g.save(); g.rotate(rot + i * Math.PI / 4); g.beginPath(); g.roundRect(-r * 0.2, -r * 1.3, r * 0.4, r * 0.5, 4); g.fill(); g.restore(); }
+-  g.beginPath(); g.arc(0, 0, r, 0, 7); g.fill();
+-  g.fillStyle = CREAM; g.beginPath(); g.arc(0, 0, r * 0.42, 0, 7); g.fill();
+-  g.strokeStyle = col; g.lineWidth = r * 0.12; g.beginPath(); g.moveTo(-r * 0.2, 0); g.lineTo(r * 0.2, 0); g.moveTo(0, -r * 0.2); g.lineTo(0, r * 0.2); g.stroke();
+-  g.restore();
+-}
++function dunes() {}
++const crown = (x, y, s) => crownSprite(g, x, y, s);
++const gearBrain = (x, y, r, rot = 0) => gearSprite(g, x, y, r, rot);
+ function pocketFigure(x, s, a = 1) {
+   g.save(); g.globalAlpha *= a; man(x, GY, s, INK, { pose: 'stand', face: 'none', dir: -1 }); g.restore();
+ }
+@@ -359,10 +348,12 @@
+ function drawCard(i, t) {
+   const cd = CARDS[i], lt = t - T0[i];
+   g.fillStyle = CREAM; g.fillRect(0, 0, W, H);
++  plate(g, PLATE, { hz: 0.55, gy: 1262 });
+   series();
+   // 只留封面大標（使用者 11-04）：第 0 卡第 0 幀就完整顯示，其他卡不畫大標副標，畫面當主角
+   if (i === 0) { say(cd.head.slice(0, 4), 540, 300, 170, INK, 1, { id: 'head1', align: 'center' }); say(cd.head.slice(4), 540, 490, 170, INK, 1, { id: 'head2', align: 'center' }); }  // 170px 不描邊：bold 0.05 會糊（11-11 使用者回報）
+-  g.save(); cd.draw(lt); g.restore();
++  g.save(); camera(g, clamp(lt / 6, 0, 1)); cd.draw(lt); g.restore();
++  motes(g, t); finishGrade(g);
+   g.globalAlpha = 1;
+   plain(`來源｜${cd.hud}`, 540, 1530, 28, DIM, { align: 'center', w: 500 });
+ }

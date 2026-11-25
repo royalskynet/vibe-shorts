@@ -2,7 +2,7 @@
 
 # HANDOFF：OpenBot 選題 → 凌晨生片 → YT 私人 → 使用者說「發」→ 三平台（10-29 草擬）
 
-輪子：設定（串既有零件，不新造）。新 session 接手先讀本檔＋`~/.claude/projects/-Users-host/memory/state/openbot-team.md` 最後 6 行。
+輪子：設定（串既有零件，不新造）。新 session 接手先讀本檔＋`~/.claude/projects/-Users-51mini/memory/state/openbot-team.md` 最後 6 行。
 
 **使用者 10-29 定：流程從簡，凡要決定的點（選哪題、稿行不行、發不發）都由 Emperor 在 OpenBot 直接問使用者，回答才往下走。** 不另設核准檔格式之外的機制；下面各步照這條收斂。
 
@@ -29,7 +29,7 @@
 
 ## 10-29 01:50 已接（4／5／6／7）
 - 狀態機 `scripts/autoloop.py`（零 token；status 由程式依檔案＋precheck 判定，不信模型自述）；測試 `tests/test_autoloop.py`（變異兩處驗過會 fail）。
-- launchd：`com.host.vibe-autoloop` 每天 02:00 `night`（建 1 支 script_ok＋寫最多 2 份 approved／script_revise 稿）；`com.host.vibe-autopublish` WatchPaths approved/，只吃 `publish_ok`。plist 在 `launchd/`。
+- launchd：`com.51mini.vibe-autoloop` 每天 02:00 `night`（建 1 支 script_ok＋寫最多 2 份 approved／script_revise 稿）；`com.51mini.vibe-autopublish` WatchPaths approved/，只吃 `publish_ok`。plist 在 `launchd/`。
 - 偏離本檔：不用 nightnav（它綁 dcq goal state.json）；02:00 launchd 直接掃 approved/，零件更少。
 - 生片模型＝Claude headless（Opus 5.5，訂閱 OAuth），`--setting-sources project,local`：user 層的 SUBPROCESS_ENV_SCRUB 會把 -p 權限打回 default（fixindex 10029），user hook 也會在無人時要求改派。skill 由 prompt 指 `~/.claude/skills/vibe-shorts/SKILL.md` 讀。
 - 核稿拆兩晚照專案規則：approved→（夜）script_ready→使用者「稿過」→script_ok→（夜）built＋YT 私人→使用者「發」→publish_ok→即時發三平台→published。
@@ -37,4 +37,4 @@
 - 實測：手放 `approved/2026-10-29-gamble-odds.md`（題 3）。**下一步**：10-29 早上看 `scripts/autoloop.sh status` 是否 script_ready、`logs/autoloop.log`；08:30 Emperor 清單是否列「稿待核」。使用者稿過後隔晚驗 built＋yt_private。
 - 10-29 01:56 使用者定：核准截止 21:00（台灣）。autoloop 依 approved 檔 mtime，晚於最近一個 21:00 的排隔晚（`cutoff()`，測試含變異）；「發」不受限。Emperor 手冊加這條。發布確認＝08:30 清單裡問，不另加 hpush 閘。
 - 選題改爆款第一、題材不限（直銷、政治、幣圈皆可）：Marketer「每週選題」instruction 已換（經 Emperor 代改，Marketer 沒開 Local scripts；DB 核對）。
-- **10-31 使用者定：營銷號提醒改由 Marketer 發**（取代上面 08:30 Emperor 清單的營銷號段）。`ops/fleet/vibe_remind.py`（live 副本在 `~/OpenBot/Shared/fleet/`，零 LLM）每天 08:35 跑 `autoloop.py digest`，只有卡在使用者手上的步驟才經 `fleet/notify.py` 貼進 Marketer 對話串；只剩「進行中」或空就不發。launchd `launchd/com.host.fleet-vibe-remind.plist`。使用者在 Marketer 回「稿過／稿改／發／做題」，Marketer 照人設「營銷號核准」段改 approved 檔；Emperor 08:30 只列 ledger 事項。Operator 不進這條流程（使用者 10-31 撤回）：發布走主 session／既有 API 腳本，刪 IG 貼文與登入牆後爆款數字用 wa-chrome。
+- **10-31 使用者定：營銷號提醒改由 Marketer 發**（取代上面 08:30 Emperor 清單的營銷號段）。`ops/fleet/vibe_remind.py`（live 副本在 `~/OpenBot/Shared/fleet/`，零 LLM）每天 08:35 跑 `autoloop.py digest`，只有卡在使用者手上的步驟才經 `fleet/notify.py` 貼進 Marketer 對話串；只剩「進行中」或空就不發。launchd `launchd/com.51mini.fleet-vibe-remind.plist`。使用者在 Marketer 回「稿過／稿改／發／做題」，Marketer 照人設「營銷號核准」段改 approved 檔；Emperor 08:30 只列 ledger 事項。Operator 不進這條流程（使用者 10-31 撤回）：發布走主 session／既有 API 腳本，刪 IG 貼文與登入牆後爆款數字用 wa-chrome。

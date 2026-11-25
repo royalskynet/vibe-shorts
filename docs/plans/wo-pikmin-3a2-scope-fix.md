@@ -2,7 +2,7 @@
 
 拆單豁免：旁白改字、humanize 的 sha 戳記、claims、說明欄與事實檔的口徑註記互相綁定，分開派會讓 sha 與內容對不上。
 
-工作目錄：`/Users/you/dev/vibe-shorts-pipeline`。反方稽核發現 52% 只涵蓋 App Store 與 Google Play 的估算（官方另有網路商店），稿子要補口徑；另有一句超過 35 字。只做下面的取代，其他句子一字不動。不改 `index.html`／`mix.py`／`build.sh`，不 render，不 git commit，不跑 `approve.py`／`voice.py`／`restamp.sh`。
+工作目錄：`/Users/51mini/dev/vibe-shorts-pipeline`。反方稽核發現 52% 只涵蓋 App Store 與 Google Play 的估算（官方另有網路商店），稿子要補口徑；另有一句超過 35 字。只做下面的取代，其他句子一字不動。不改 `index.html`／`mix.py`／`build.sh`，不 render，不 git commit，不跑 `approve.py`／`voice.py`／`restamp.sh`。
 
 ### 1. `films/pikmin-bloom/narration.md`（整句取代，照字面）
 - 「你課的每一筆錢，都算進這款遊戲的收入裡。」→「而且這款遊戲有一大塊收入，來自台灣玩家。」
@@ -29,7 +29,7 @@
 ## 驗收
 
 ```bash
-cd /Users/you/dev/vibe-shorts-pipeline
+cd /Users/51mini/dev/vibe-shorts-pipeline
 f=films/pikmin-bloom/narration.md
 grep -q 'Pikmin Bloom 的活動公告，會怎麼稱呼台灣？' "$f"
 grep -q '而且這款遊戲有一大塊收入，來自台灣玩家。' "$f"
@@ -42,7 +42,7 @@ if grep -qE '每一筆錢|全球每兩塊|可是官方改了寫法|PocketGamer' 
 if grep -qE '[0-9]' "$f"; then echo '旁白殘留阿拉伯數字'; exit 1; fi
 python3 - <<'PY'
 import re, sys
-nar = open('/Users/you/dev/vibe-shorts-pipeline/films/pikmin-bloom/narration.md').read()
+nar = open('/Users/51mini/dev/vibe-shorts-pipeline/films/pikmin-bloom/narration.md').read()
 body = re.sub(r'^#+.*$', '', nar, flags=re.M)
 norm = lambda s: re.sub(r'[\s，、：；「」『』（）,.!?？！。]', '', s)
 ss = [s for s in re.split(r'[。？！\n]', body) if len(norm(s)) >= 1]

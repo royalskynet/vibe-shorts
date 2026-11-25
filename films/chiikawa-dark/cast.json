@@ -1,0 +1,8 @@
+{
+ "_doc": "悖論小姐測試片：女聲 D（d24k）單人旁白；節奏比照無邊探索 tempo 1.15。",
+ "host": {
+  "ref": "assets/voice/d24k.wav",
+  "text": "assets/voice/script.txt"
+ },
+ "clawd": []
+}

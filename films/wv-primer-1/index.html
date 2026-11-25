@@ -1,0 +1,874 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>沒看過漫威，也看得懂汪達幻視</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}#mascot{display:none}#mascot svg{width:200px;height:200px}</style>
+<script src="engine.js"></script>
+<script src="timeline.js"></script>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<div id="mascot"></div>
+<script type="module">
+// 單人旁白科普長片（16:9，WO-9；WO-14 改多鏡頭；WO-20 換 WO-19 定稿：愛與失去主軸、段名史塔克工業、結尾改小鎮）：米色底＋扁平小人＋插畫庫 illust/illust.mjs。
+// 一段不再只有一個畫面：SPEC 把每段的句子分組，一組一個鏡頭（約每 6–10 秒換），
+// 換鏡頭的時間取自 TL.lines 各句 t0，不寫死秒數；鏡頭間原地交叉淡化。
+// 字幕一卡一個逗號短語（phrases），關鍵詞陶土紅。頂部系列標籤＋段落標籤，片尾系列卡。
+// 劇透提醒句（先停／還沒看）念完後，中央蓋 5 秒倒數卡；這集稿子沒有這種句，倒數卡不會觸發。
+// 所有動作都是 t 的封閉式（seek_check.mjs 亂序重算同一幀）；循環用取餘數，不累積、不讀 Date.now()。
+import { poseAt, applyPose } from './mascot/clawd-bot-shot.mjs';
+import { PALETTE, person, prop } from './illust/illust.mjs';
+const G = window.G, E = G.E, TL = window.TL, W = 1920, H = 1080;
+const g = document.getElementById('c').getContext('2d', { alpha: false });
+const { clamp, inv, lerp, mix } = G;
+
+const CREAM = PALETTE.cream, INK = PALETTE.ink, TERRA = PALETTE.terra, MUST = PALETTE.mustard, COAT = PALETTE.coat;
+const SAGE = PALETTE.sage, MUTE = PALETTE.mute, SOFT = PALETTE.soft, PAPER = PALETTE.paper, DIM = '#8C7B6B';
+const SCAR = '#8E2F3C', SCAR_L = '#C24A52', PUR = '#5E4A75', PUR_L = '#7E68A0', STEEL = '#6E6A75', SKY = '#5B7FBE';
+const LINE_C = PALETTE.line;
+const ZH = (w, px) => `${w} ${px}px "PingFang TC"`;
+const SERIES = '漫威補課｜汪達幻視三部曲', EP = 1, HANDLE = '@paradoxbar';
+const CX = 960, GY = 730;   // 畫面中線、地平線（小人腳底）
+
+// ---------- 字 ----------
+let TXT = [];
+function say(s, x, y, px, col, p, o = {}) {
+  g.save(); g.font = ZH(o.w || 700, px); g.textAlign = o.align || 'left'; g.textBaseline = 'alphabetic';
+  const w = g.measureText(s).width;
+  g.globalAlpha *= E.io(p); g.fillStyle = col; g.fillText(s, x, y);
+  if (o.bold) { g.strokeStyle = col; g.lineWidth = px * o.bold; g.lineJoin = 'round'; g.strokeText(s, x, y); }
+  g.restore();
+  if (o.id) {
+    const x0 = o.align === 'center' ? x - w / 2 : o.align === 'right' ? x - w : x;
+    TXT.push({ id: o.id, text: s, x0, y0: y - px, x1: x0 + w, y1: y + px * 0.25, screen: true });
+  }
+  return w;
+}
+function plain(s, x, y, px, col, o = {}) {
+  g.font = ZH(o.w || 600, px); g.textAlign = o.align || 'left'; g.textBaseline = 'alphabetic';
+  g.fillStyle = col; g.fillText(s, x, y);
+}
+const pop = (lt, a, d = 0.5) => E.o3(inv(a, a + d, lt));
+const loop = (x, n) => ((x % n) + n) % n;
+const rr = (x, y, w, h, r, col) => { g.fillStyle = col; g.beginPath(); g.roundRect(x, y, w, h, r); g.fill(); };
+const man = (x, y, s, body, o = {}) => person(g, { x, y, s, body, ...o });
+// 汪達的棕紅長髮：蓋頭頂後半、繞到下巴後、垂到背中＋臉側一綹垂到胸前。
+// 座標跟 illust.person 同一個 100 格（頭圓心 (0,-84) r12、身體 -73~-33），dir／tilt／pose 的 dy 照原樣複製。
+const HAIR = '#6E4238';
+function whair(x, y, s, o = {}) {
+  const dy = o.pose === 'shrug' ? -1
+    : o.pose === 'walk' ? -Math.abs(Math.cos((o.t || 0) * Math.PI * 2 * (o.speed || 1.6))) * 1.6 : 0;
+  g.save(); g.translate(x, y); g.scale(s / 100, s / 100);
+  if (o.alpha != null) g.globalAlpha *= o.alpha;
+  if (o.tilt) g.rotate(o.tilt);
+  if ((o.dir ?? 1) < 0) g.scale(-1, 1);
+  g.translate(0, dy);
+  g.fillStyle = HAIR;
+  g.beginPath();                        // 主體：頭頂後半 → 後腦 → 垂到背中
+  g.moveTo(9, -92);                     // 前額髮際（眉毛上方，不蓋五官）
+  g.quadraticCurveTo(12, -86, 11, -78); // 右太陽穴順著臉緣下來
+  g.quadraticCurveTo(10, -72, 5, -70);  // 沿下巴收進去
+  g.quadraticCurveTo(-3, -67, -9, -68); // 繞到下巴後面
+  g.lineTo(-10, -48);                   // 後髮內緣垂到背中
+  g.quadraticCurveTo(-14, -44, -17, -50);
+  g.lineTo(-16, -68);                   // 後髮外緣
+  g.quadraticCurveTo(-18, -88, -12, -95);
+  g.quadraticCurveTo(-4, -100, 9, -92); // 越過頭頂接回髮際
+  g.fill();
+  g.beginPath();                        // 臉側髮絲：從太陽穴垂到胸前
+  g.moveTo(10, -82);
+  g.quadraticCurveTo(13.5, -74, 12, -60);
+  g.lineTo(14, -48);
+  g.quadraticCurveTo(12, -43, 8, -48);
+  g.lineTo(8, -62);
+  g.quadraticCurveTo(7, -74, 10, -82);
+  g.fill();
+  g.restore();
+}
+const wanda = (x, y, s, o = {}) => { man(x, y, s, SCAR, o); whair(x, y, s, o); };
+const thanos = (x, y, s, o = {}) => man(x, y, s, PUR, o);
+
+// ---------- 共用道具 ----------
+function gem(x, y, s, col, a = 1) {
+  g.save(); g.globalAlpha *= a;
+  G.poly(g, [[x, y - s], [x + s * 0.72, y], [x, y + s], [x - s * 0.72, y]], col);
+  g.restore();
+}
+function tv(cx, cy, w, h, screen) {
+  rr(cx - w / 2 - 30, cy - h / 2 - 30, w + 60, h + 60, 44, INK);
+  G.seg(g, [cx - 40, cy - h / 2 - 28], [cx - 140, cy - h / 2 - 170], 12, INK);
+  G.seg(g, [cx + 40, cy - h / 2 - 28], [cx + 140, cy - h / 2 - 160], 12, INK);
+  G.disc(g, cx - 140, cy - h / 2 - 170, 12, TERRA); G.disc(g, cx + 140, cy - h / 2 - 160, 12, TERRA);
+  rr(cx - w / 2 + 80, cy + h / 2 + 30, 36, 34, 10, INK); rr(cx + w / 2 - 116, cy + h / 2 + 30, 36, 34, 10, INK);
+  rr(cx - w / 2, cy - h / 2, w, h, 26, screen);
+}
+const burst = (x, y, r, col, n = 10) => {
+  g.fillStyle = col; g.beginPath();
+  for (let i = 0; i < n * 2; i++) {
+    const a = i * Math.PI / n - Math.PI / 2, R = i % 2 ? r * 0.45 : r;
+    const px = x + Math.cos(a) * R, py = y + Math.sin(a) * R;
+    i ? g.lineTo(px, py) : g.moveTo(px, py);
+  }
+  g.closePath(); g.fill();
+};
+const missile = (x, y, rot, s) => {
+  g.save(); g.translate(x, y); g.rotate(rot);
+  rr(-s * 0.4, -s * 2.4, s * 0.8, s * 3.0, s * 0.4, STEEL);
+  rr(-s * 0.4, -s * 2.4, s * 0.8, s * 0.62, s * 0.3, TERRA);
+  G.poly(g, [[-s * 0.4, s * 0.4], [-s * 1.15, s * 1.3], [-s * 0.4, s * 1.12]], MUTE);
+  G.poly(g, [[s * 0.4, s * 0.4], [s * 1.15, s * 1.3], [s * 0.4, s * 1.12]], MUTE);
+  g.restore();
+};
+const scepter = (x, y, s, rot = 0) => {
+  g.save(); g.translate(x, y); g.rotate(rot);
+  G.seg(g, [0, s], [0, -s * 1.6], s * 0.24, INK);
+  gem(0, -s * 1.9, s * 0.5, MUST);
+  g.restore();
+};
+const vman = (x, y, s, o = {}) => {
+  man(x, y, s, TERRA, o);
+  const d = (o.dir ?? 1) < 0 ? -1 : 1;
+  G.disc(g, x + d * s * 0.017, y - s * 0.885, s * 0.035, MUST);
+};
+const uhead = (x, y, s, lt) => {
+  rr(x - s * 0.7, y + s * 0.6, s * 1.4, s * 0.35, s * 0.14, mix(STEEL, INK, 0.3));
+  rr(x - s, y - s * 0.85, s * 2, s * 1.5, s * 0.45, STEEL);
+  g.save(); g.globalAlpha = 0.65 + 0.35 * Math.sin(lt * 3.1);
+  G.poly(g, [[x - s * 0.6, y - s * 0.3], [x - s * 0.14, y - s * 0.19], [x - s * 0.58, y - s * 0.08]], SCAR_L);
+  G.poly(g, [[x + s * 0.6, y - s * 0.3], [x + s * 0.14, y - s * 0.19], [x + s * 0.58, y - s * 0.08]], SCAR_L);
+  g.restore();
+  G.seg(g, [x - s * 0.35, y + s * 0.35], [x + s * 0.35, y + s * 0.35], s * 0.07, INK);
+};
+const bolt = (x, y, s, col = MUST) =>
+  G.poly(g, [[x, y], [x + s * 0.7, y - s * 1.05], [x + s * 0.2, y - s * 0.95], [x + s * 0.95, y - s * 2.1],
+    [x + s * 0.28, y - s * 0.78], [x + s * 0.62, y - s * 0.88]], col);
+const dots = (x0, y0, n, dx, dy, r, col, seed = 7) => {
+  const R = G.rng(seed);
+  for (let i = 0; i < n; i++) G.disc(g, x0 + i * dx + R() * dx * 0.6, y0 + (R() - 0.5) * dy, r, col);
+};
+const kids = (x, y, s, c1, c2, o = {}) => { man(x, y, s, c1, { face: 'worried', ...o }); man(x + s * 0.9, y, s * 0.92, c2, { dir: -1, face: 'worried' }); if (c2 === SCAR) whair(x + s * 0.9, y, s * 0.92, { dir: -1 }); };
+
+// ---------- 鏡頭（畫在 y 120–730；右上角是主播） ----------
+// --- 開場 ---
+function sh00(lt) {
+  // 三部曲三張卡；前 7 秒蓋大標
+  const cols = [SCAR, PUR, SKY];
+  for (let i = 0; i < 3; i++) {
+    const x = CX + (i - 1) * 430;
+    rr(x - 150, 240, 300, 330, 28, mix(cols[i], PAPER, 0.6));
+    G.disc(g, x, 405, 60, cols[i]);
+    man(x, GY, 195, cols[i], { face: 'none' });
+  }
+  if (lt < 7) {
+    const a = 1 - inv(6.2, 7, lt);
+    g.save(); g.globalAlpha = a;
+    g.fillStyle = 'rgba(245,239,230,0.92)'; g.fillRect(0, 0, W, H);
+    say('汪達幻視三部曲', CX, 500, 150, INK, 1, { id: 'head1', align: 'center', bold: 0.04 });
+    plain('沒看過漫威，也看得懂', CX, 590, 56, DIM, { align: 'center', w: 600 });
+    g.restore();
+  }
+}
+function sh01(lt) {
+  // 第一集＝觀劇前情：大票卡＋播放框
+  rr(CX - 460, 280, 790, 320, 30, PAPER);
+  rr(CX - 460, 280, 26, 320, 12, TERRA);
+  rr(CX - 390, 330, 220, 150, 18, SKY);
+  G.poly(g, [[CX - 320, 360], [CX - 320, 450], [CX - 245, 405]], PAPER);
+  say('EP.1', CX + 60, 430, 120, INK, 1, { id: 'ep1', align: 'center' });
+  plain('觀劇前情', CX + 60, 500, 46, DIM, { align: 'center' });
+  man(1470, GY, 255, COAT, { pose: 'point', aim: -0.45, face: 'smile' });
+}
+function sh02(lt) {
+  // 不用補二十幾部電影：一大疊卡打叉 → 只要一個故事
+  for (let i = 0; i < 6; i++) rr(300 + i * 26, 300 + i * 40, 200, 150, 18, mix(MUTE, PAPER, i / 7));
+  G.seg(g, [270, 300], [560, 590], 26, SCAR_L); G.seg(g, [560, 300], [270, 590], 26, SCAR_L);
+  prop(g, 'card', { x: 1150, y: 440, w: 300, h: 380, fill: PAPER });
+  wanda(1150, 430, 150, { face: 'smile', shadow: false });
+  man(1420, GY, 240, COAT, { pose: 'point', aim: -0.5, dir: -1 });
+}
+function sh03(lt) {
+  // 主軸：愛與失去 → 一個人怎麼在陪伴裡找回自己（遠處問號）
+  wanda(520, GY, 280, { face: 'worried' });
+  g.setLineDash([14, 18]); G.seg(g, [720, 695], [1120, 695], 6, LINE_C); g.setLineDash([]);
+  wanda(1200, GY, 235, { face: 'smile' });
+  vman(1410, GY, 235, { dir: -1, face: 'smile' });
+  G.disc(g, 1305, 480, 15, SCAR_L);
+  prop(g, 'question', { x: 1650, y: 340, s: 150, color: TERRA });
+}
+
+// --- 一顆寶石 ---
+function sh10(lt) {
+  // 大爆炸，六顆寶石散出來
+  burst(CX, 430, 190, mix(MUST, PAPER, 0.3));
+  burst(CX, 430, 110, MUST, 8);
+  const cols = [SKY, MUST, SCAR_L, PUR, '#C77B3A', SAGE];
+  for (let i = 0; i < 6; i++) {
+    const a = i * Math.PI / 3 + 0.35;
+    gem(CX + Math.cos(a) * 430, 430 + Math.sin(a) * 270, 42, cols[i]);
+  }
+}
+function sh11(lt) {
+  // 心靈寶石特寫：黃寶石發光
+  G.ring(g, CX, 420, 190 + Math.sin(lt * 2.2) * 12, 10, mix(MUST, CREAM, 0.4));
+  G.ring(g, CX, 420, 150, 6, mix(MUST, CREAM, 0.2));
+  gem(CX, 420, 105, MUST);
+  say('心靈寶石', CX, 640, 52, INK, 1, { id: 'mind', align: 'center' });
+}
+function sh12(lt) {
+  // 外星權杖：斜放，頂端鑲著寶石
+  rr(CX - 500, 230, 1000, 420, 30, mix(STEEL, CREAM, 0.55));
+  scepter(CX, 470, 130, -0.7);
+  G.ring(g, CX - 160, 335, 70 + Math.sin(lt * 2.4) * 8, 6, mix(MUST, PAPER, 0.3));
+}
+function sh13(lt) {
+  // 九頭蛇據點：碉堡＋旗＋實驗台
+  rr(340, 380, 420, 350, 14, mix(STEEL, INK, 0.25));
+  rr(340, 380, 420, 60, 14, mix(STEEL, INK, 0.45));
+  for (let i = 0; i < 4; i++) rr(370 + i * 100, 480, 46, 60, 8, mix(SKY, INK, 0.4));
+  prop(g, 'flag', { x: 550, y: 380, s: 120, color: mix(SAGE, INK, 0.4), t: lt });
+  // 想奴役全世界：地球被一圈鎖鏈勒住
+  G.disc(g, 1520, 330, 82, mix(SKY, CREAM, 0.55));
+  g.save(); g.setLineDash([12, 9]); g.strokeStyle = mix(INK, STEEL, 0.3); g.lineWidth = 7;
+  g.beginPath(); g.ellipse(1520, 330, 112, 42, -0.35, 0, Math.PI * 2); g.stroke(); g.restore();
+  rr(1000, 560, 360, 40, 16, INK);
+  gem(1180, 520, 46, MUST);
+  man(1030, GY, 230, STEEL, { pose: 'point', aim: -0.5 });
+  man(1330, GY, 230, STEEL, { dir: -1 });
+}
+function sh14(lt) {
+  // 只有雙胞胎活下來：兩人站著，後面倒下的人影淡淡排開
+  [0.2, 0.14, 0.09].forEach((a, i) =>
+    man(560 + i * 230, GY, 240, MUTE, { alpha: a, tilt: 1.35, shadow: false }));
+  wanda(1080, GY, 275, { face: 'worried' });
+  man(1260, GY, 260, SKY, { dir: -1, face: 'worried' });
+}
+
+// --- 史塔克工業 ---
+function sh20(lt) {
+  // 東尼·史塔克：還不是英雄，是背後一排飛彈的軍火商；淡淡的未來英雄影
+  man(1560, GY, 210, mix(TERRA, MUST, 0.35), { alpha: 0.28, face: 'none', shadow: false });
+  for (let i = 0; i < 4; i++) missile(1080 + i * 140, 500, 0, 60 + i * 4);
+  man(660, GY, 330, COAT, { pose: 'point', aim: -0.15, face: 'smile' });
+  prop(g, 'speech', { x: 700, y: 330, s: 110, w: 130, h: 74, tail: 'left' });
+}
+function sh21(lt) {
+  // 飛彈打穿公寓：破掉的家＋爆點
+  g.save(); g.translate(700, GY); g.rotate(-0.12); g.translate(-700, -GY);
+  prop(g, 'house', { x: 700, y: GY, s: 260 });
+  g.restore();
+  burst(880, 400, 130, mix(SCAR_L, MUST, 0.4));
+  burst(880, 400, 74, SCAR_L, 8);
+  man(540, GY, 230, MUTE, { tilt: 1.4, alpha: 0.45, shadow: false });
+  man(660, GY, 215, mix(MUTE, SOFT, 0.5), { tilt: -1.4, alpha: 0.45, shadow: false });
+  kids(1230, GY, 165, SKY, SCAR);
+}
+function sh22(lt) {
+  // 兩個孩子眼睜睜看著：斜插瓦礫的武器，彈身印著 STARK 商標，彈頭燈一閃一閃
+  const bx = 1040, by = 545;
+  missile(bx, by, -0.5, 105);
+  g.save(); g.translate(bx, by); g.rotate(-0.5); g.rotate(Math.PI / 2);
+  g.font = ZH(800, 30); g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillStyle = PAPER; g.fillText('STARK', 96, 0);
+  g.restore();
+  const blink = 0.5 + 0.5 * Math.sin(lt * 6);
+  g.save(); g.translate(bx, by); g.rotate(-0.5);
+  G.disc(g, -42 - 60, -105 * 2.4 + 10, 8 + 12 * blink, SCAR_L);
+  g.restore();
+  [[840, 700], [950, 726], [1110, 716], [1200, 736], [740, 726]].forEach(([x, y], k) =>
+    G.poly(g, [[x, y], [x + 70, y - 26 - k * 5], [x + 150, y]], mix(MUTE, SOFT, (k % 3) / 3)));
+  kids(620, GY, 175, SKY, SCAR, {});
+}
+function sh23(lt) {
+  // 被困在瓦礫堆裡整整兩天：夜裡兄妹靠著飛彈，月亮掛著
+  G.disc(g, 1420, 260, 90, mix(MUST, PAPER, 0.5));
+  G.disc(g, 1450, 240, 82, CREAM);
+  [[320, 230], [480, 300], [700, 220], [900, 280]].forEach(([x, y]) => G.disc(g, x, y, 5, MUTE));
+  missile(860, 560, -0.45, 95);
+  kids(600, GY, 170, SKY, SCAR);
+}
+
+// --- 奧創 ---
+function shY15(lt) {
+  // 快轉二〇一五年：大字年分，雙胞胎已經長大成人
+  say('2015', 640, 480, 210, INK, 1, { id: 'y15', align: 'center' });
+  rr(460, 520, 360, 9, 4, TERRA);
+  wanda(1200, GY, 285, { face: 'none' });
+  man(1420, GY, 270, SKY, { dir: -1 });
+}
+function sh30(lt) {
+  // 復仇者搶回權杖，雙胞胎趁亂逃走
+  scepter(560, 560, 120, 0.12);
+  prop(g, 'flag', { x: 560, y: 300, s: 90, color: SKY, t: lt });
+  wanda(1130, GY, 240, { pose: 'walk', t: lt, speed: 1.2 });
+  man(1320, GY, 225, SKY, { pose: 'walk', t: lt + 0.3, speed: 1.2 });
+}
+function sh31(lt) {
+  // 汪達對東尼施幻覺：讓他看見全滅的未來
+  wanda(560, GY, 290, { pose: 'point', aim: -0.55 });
+  g.save(); g.globalAlpha = 0.75; G.ring(g, 1140, 320, 130, 10, SCAR_L); g.restore();
+  [0.5, 0.34, 0.2].forEach((a, i) =>
+    man(1060 + i * 90, 430, 120 - i * 8, MUTE, { alpha: a, tilt: (i % 2 ? -1 : 1) * 1.3, shadow: false }));
+  man(1140, GY, 290, COAT, { dir: -1, face: 'worried' });
+}
+function shFear(lt) {
+  // 外星人入侵的創傷：天上不斷掉下火光碎片，東尼一個人抬頭看
+  const R = G.rng(31);
+  for (let i = 0; i < 9; i++) {
+    const x = 420 + R() * 1080, y = 140 + R() * 280;
+    G.seg(g, [x, y], [x - 52, y + 130], 8, mix(SCAR_L, MUST, R() * 0.6));
+    G.disc(g, x - 52, y + 130, 8, MUST);
+  }
+  [[520, 600], [800, 620], [1330, 590]].forEach(([x, y]) => burst(x, y, 30, mix(MUTE, PAPER, 0.55), 8));
+  man(960, GY, 330, COAT, { face: 'worried', tilt: -0.06 });
+}
+function sh32(lt) {
+  // 罩住全世界的鋼鐵裝甲：地球上一個大罩子
+  G.disc(g, 660, 450, 190, mix(SKY, CREAM, 0.45));
+  g.save(); g.globalAlpha = 0.5; G.ring(g, 660, 450, 265, 26, STEEL); g.restore();
+  G.seg(g, [530, 430], [790, 470], 10, mix(SAGE, INK, 0.3));
+}
+function shStruct(lt) {
+  // 寶石裡存在一個意識結構：寶石特寫亮起電路紋路；兩人瞞著全隊做程式
+  gem(560, 430, 150, MUST);
+  g.save(); g.strokeStyle = mix(PAPER, CREAM, 0.4); g.lineWidth = 6; g.lineJoin = 'round';
+  [[500, 390, 560, 340], [560, 340, 640, 380], [540, 470, 560, 520], [560, 520, 620, 480], [620, 480, 640, 380], [500, 390, 540, 470]]
+    .forEach(([x1, y1, x2, y2]) => G.seg(g, [x1, y1], [x2, y2], 6, mix(PAPER, CREAM, 0.4)));
+  [[500, 390], [560, 340], [640, 380], [540, 470], [560, 520], [620, 480]]
+    .forEach(([x, y]) => G.disc(g, x, y, 9, PAPER));
+  g.restore();
+  prop(g, 'document', { x: 1330, y: 480, s: 190 });
+  man(1180, GY, 240, COAT, { face: 'none' });
+  man(1460, GY, 240, SAGE, { dir: -1 });
+}
+function sh33(lt) {
+  // 奧創醒來：鋼色大頭、紅眼發光
+  uhead(CX, 430, 190, lt);
+  man(600, GY, 280, COAT, { face: 'worried' });
+  man(1330, GY, 280, SAGE, { dir: -1, face: 'worried' });
+}
+function sh34(lt) {
+  // 摧毀賈維斯＋機器人軍隊＋招攬那對恨透東尼的雙胞胎
+  g.save(); g.globalAlpha = 0.5; G.disc(g, 520, 420, 110, MUST); g.restore();
+  G.seg(g, [460, 360], [590, 490], 12, SCAR_L); G.seg(g, [590, 360], [460, 490], 12, SCAR_L);
+  for (let i = 0; i < 5; i++) man(830 + i * 150, GY, 185, STEEL, { shadow: false });
+  wanda(1600, GY, 190, { face: 'worried' });
+  man(1745, GY, 178, SKY, { dir: -1, face: 'worried' });
+}
+function sh35(lt) {
+  // 完美身體：躺著的身體，額頭鑲心靈寶石
+  rr(560, 540, 760, 110, 55, mix(PAPER, SOFT, 0.5));
+  rr(600, 500, 680, 90, 45, mix(MUTE, PAPER, 0.55));
+  G.disc(g, 780, 505, 16, MUST);
+  G.ring(g, 780, 505, 30 + Math.sin(lt * 2.4) * 5, 5, mix(MUST, CREAM, 0.3));
+  wanda(560, GY, 240, { face: 'worried' });
+  man(1360, GY, 240, SKY, { dir: -1, face: 'worried' });
+}
+function sh36(lt) {
+  // 汪達偷讀思想，看見清空地球 → 倒戈搶身體
+  uhead(600, 420, 150, lt);
+  wanda(980, GY, 280, { dir: -1, pose: 'point', aim: -0.8, face: 'worried' });
+  g.save(); g.globalAlpha = 0.65; G.seg(g, [890, 430], [730, 380], 8, SCAR_L); g.restore();
+  burst(700, 370, 60, mix(SCAR_L, PAPER, 0.3), 8);
+  rr(1180, 560, 420, 80, 40, mix(MUTE, PAPER, 0.55));
+  man(1390, GY, 230, SKY, { dir: -1, pose: 'point', aim: -0.3 });
+}
+function shTake(lt) {
+  // 幫復仇者搶走那具身體：雙胞胎抬著艙體往外走
+  rr(840, 540, 560, 100, 50, mix(PAPER, SOFT, 0.5));
+  rr(880, 506, 480, 80, 40, mix(MUTE, PAPER, 0.55));
+  G.disc(g, 1030, 512, 14, MUST);
+  wanda(790, GY, 245, { pose: 'armsUp', face: 'worried' });
+  man(1470, GY, 245, SKY, { pose: 'armsUp', dir: -1 });
+  man(560, GY, 250, COAT, { pose: 'walk', t: lt, speed: 1.1 });
+}
+
+// --- 幻視誕生 ---
+function sh40(lt) {
+  // 賈維斯沒死，藏在網路裡：發光節點連線
+  const nd = [[560, 350], [760, 480], [960, 330], [1160, 500], [1360, 360], [840, 620], [1140, 220]];
+  nd.forEach(([x, y], i) => nd.slice(i + 1).forEach(([x2, y2], j) =>
+    (i + j) % 3 === 0 && G.seg(g, [x, y], [x2, y2], 4, mix(MUTE, CREAM, 0.3))));
+  nd.forEach(([x, y], i) => G.disc(g, x, y, i === 3 ? 26 : 15, i === 3 ? MUST : MUTE));
+  G.ring(g, 1160, 500, 48 + Math.sin(lt * 2.6) * 6, 5, mix(MUST, CREAM, 0.3));
+}
+function sh41(lt) {
+  // 賈維斯裝進身體，索爾一槌雷電
+  rr(700, 540, 560, 100, 50, mix(PAPER, SOFT, 0.5));
+  rr(740, 505, 480, 80, 40, mix(MUTE, PAPER, 0.5));
+  G.disc(g, 900, 510, 14, MUST);
+  bolt(1010, 480, 90);
+  bolt(1150, 500, 60, mix(MUST, PAPER, 0.4));
+  man(1450, GY, 280, SKY, { pose: 'armsUp', dir: -1 });
+}
+function sh42(lt) {
+  // 三樣東西組成幻視：三個零件匯入站立的幻視
+  g.save(); g.globalAlpha = 0.12 + 0.05 * Math.sin(lt * 1.8);
+  G.poly(g, [[CX - 170, 130], [CX + 170, 130], [CX + 60, GY], [CX - 60, GY]], MUST);
+  g.restore();
+  [[520, 'g'], [CX, 'b'], [1400, 'f']].forEach(([x, k]) => {
+    if (k === 'g') gem(x, 330, 50, MUST);
+    if (k === 'b') rr(x - 55, 290, 110, 90, 24, mix(MUTE, PAPER, 0.4));
+    if (k === 'f') G.disc(g, x, 330, 48, COAT);
+    G.seg(g, [x, 400], [CX, 560], 6, LINE_C);
+  });
+  vman(CX, GY, 340, { face: 'none' });
+}
+function shMix(lt) {
+  // 腦袋裡賈維斯跟奧創都混在裡面，但他兩者都不是
+  g.save(); g.globalAlpha = 0.45;
+  G.disc(g, 520, 400, 115, MUST);
+  uhead(1400, 400, 130, lt);
+  g.restore();
+  vman(CX, GY, 340, { face: 'none' });
+  g.save(); g.globalAlpha = 0.5;
+  G.seg(g, [620, 420], [840, 490], 6, mix(MUST, CREAM, 0.3));
+  G.seg(g, [1300, 420], [1080, 490], 6, mix(STEEL, CREAM, 0.3));
+  g.restore();
+  prop(g, 'question', { x: CX, y: 300, s: 130, color: TERRA });
+}
+function sh42b(lt) {
+  // 醒來不久，他舉起了雷神之槌
+  vman(CX - 120, GY, 320, { pose: 'armsUp', face: 'none' });
+  const hx = CX - 70, hy = 310;
+  rr(hx - 46, hy - 34, 92, 68, 12, mix(STEEL, PAPER, 0.25));
+  rr(hx - 10, hy + 30, 20, 90, 8, COAT);
+  man(CX + 260, GY, 270, SKY, { dir: -1, face: 'worried' });
+}
+function shSide(lt) {
+  // 不屬於任何一方，卻站在生命這邊：幻視張手護住一排人，奧創的頭暗掉
+  g.save(); g.globalAlpha = 0.4; uhead(420, 430, 140, lt); g.restore();
+  G.seg(g, [300, 590], [540, 590], 16, mix(INK, CREAM, 0.4));
+  vman(940, GY, 330, { pose: 'armsUp', face: 'none' });
+  [COAT, SAGE, SKY, SCAR].forEach((c, i) => c === SCAR ? wanda(1270 + i * 135, GY, 185, { face: 'smile' }) : man(1270 + i * 135, GY, 185, c, { face: 'smile' }));
+}
+function sh43(lt) {
+  // 城市升上天空：一整塊地連房子浮起來
+  g.save(); g.translate(CX, 560); g.rotate(-0.08);
+  G.poly(g, [[-430, 0], [430, 0], [300, 150], [-260, 170]], mix(MUTE, INK, 0.3));
+  g.restore();
+  prop(g, 'house', { x: 800, y: 505, s: 150 });
+  prop(g, 'house', { x: 1060, y: 480, s: 190 });
+  [[560, 660], [1350, 640], [1180, 690]].forEach(([x, y], i) =>
+    G.poly(g, [[x, y], [x + 46, y - 20 - i * 8], [x + 96, y]], mix(MUTE, SOFT, i / 3)));
+}
+function sh44(lt) {
+  // 皮特羅用身體擋下全部子彈
+  wanda(1230, GY, 250, { dir: -1, face: 'worried' });
+  man(950, GY, 290, SKY, { pose: 'armsUp' });
+  for (let i = 0; i < 8; i++) {
+    const y = 380 + i * 38;
+    G.seg(g, [420, y], [560 + (i % 3) * 40, y + 6], 7, mix(STEEL, INK, 0.3));
+    G.disc(g, 560 + (i % 3) * 40, y + 6, 6, INK);
+  }
+}
+function sh45(lt) {
+  // 汪達在遠處感覺哥哥死了：她手按胸口，哥哥的影子淡掉
+  wanda(CX - 160, GY, 300, { face: 'worried', tilt: 0.08 });
+  G.disc(g, CX - 145, 505, 15, SCAR_L);
+  man(CX + 230, GY, 265, mix(SKY, CREAM, 0.45), { alpha: 0.28, tilt: 0.5, shadow: false });
+  G.seg(g, [CX - 80, 520], [CX + 120, 470], 5, mix(SCAR_L, CREAM, 0.3));
+}
+
+// --- 相戀 ---
+function shMeet(lt) {
+  // 新復仇者：一排隊友在中間，汪達跟幻視各站最邊邊，她背後是淡掉的家人
+  [COAT, SAGE, SKY, '#C77B3A'].forEach((c, i) => man(790 + i * 140, GY, 215, c, { face: 'none' }));
+  [0.22, 0.14].forEach((a, i) =>
+    man(430 + i * 90, GY, 200, mix(MUTE, CREAM, i / 2), { alpha: a, shadow: false }));
+  wanda(590, GY, 265, { face: 'worried' });
+  vman(1440, GY, 265, { dir: -1, face: 'worried' });
+}
+function sh50(lt) {
+  // 兩個最孤單的人，慢慢走近：隔著一段距離對望
+  wanda(560, GY, 280, { face: 'smile' });
+  vman(1360, GY, 280, { dir: -1, face: 'smile' });
+  g.setLineDash([14, 18]); G.seg(g, [700, 700], [1220, 700], 6, LINE_C); g.setLineDash([]);
+  G.disc(g, CX, 380, 16, SCAR_L);
+}
+function sh53(lt) {
+  // 通緝犯偷偷相見：通緝令貼在牆上，兩人隔牆探頭
+  rr(880, 260, 160, 470, 8, mix(MUTE, INK, 0.2));
+  prop(g, 'document', { x: 960, y: 360, s: 130, cross: true, title: '' });
+  wanda(700, GY, 265, { face: 'worried' });
+  vman(1210, GY, 265, { dir: -1, face: 'worried' });
+}
+function shPub(lt) {
+  // 偷偷相見在愛丁堡同一間酒館：暖光的小屋窗裡，兩人靠在一起
+  rr(700, 300, 520, 430, 18, mix(COAT, INK, 0.4));
+  G.poly(g, [[660, 310], [960, 190], [1260, 310]], mix(COAT, INK, 0.55));
+  rr(745, 335, 90, 60, 10, mix(MUTE, INK, 0.45));
+  rr(760, 420, 400, 310, 14, mix(MUST, PAPER, 0.4));
+  wanda(895, 722, 205, { face: 'smile', shadow: false });
+  vman(1040, 722, 205, { dir: -1, face: 'none', shadow: false });
+  G.disc(g, 962, 560, 13, mix(SCAR_L, PAPER, 0.3));
+  G.disc(g, 962, 548, 5, MUST);
+}
+
+// --- 無限之戰 ---
+function shArrive(lt) {
+  // 就在這時候薩諾斯來了：巨大紫影壓下來，兩人抬頭
+  g.save(); g.globalAlpha = 0.3 + 0.12 * Math.sin(lt * 1.6);
+  G.disc(g, CX, 330, 260, mix(PUR, INK, 0.45));
+  g.restore();
+  thanos(CX, 420, 300, { face: 'none', shadow: false });
+  wanda(660, GY, 245, { face: 'worried' });
+  vman(1210, GY, 255, { dir: -1, face: 'worried' });
+}
+function shSac(lt) {
+  // 幻視指著自己額頭的寶石，要汪達連他一起毀掉
+  vman(680, GY, 330, { pose: 'point', aim: -0.9, face: 'none' });
+  G.ring(g, 686, 438, 40 + Math.sin(lt * 2.6) * 6, 6, mix(MUST, CREAM, 0.3));
+  wanda(1360, GY, 280, { dir: -1, face: 'worried', tilt: 0.1 });
+  g.save(); g.globalAlpha = 0.6;
+  g.setLineDash([10, 12]); G.seg(g, [1270, 430], [800, 445], 5, mix(SCAR_L, CREAM, 0.4));
+  g.setLineDash([]); g.restore();
+}
+function sh60(lt) {
+  // 泰坦星人口擠爆→荒廢：滿滿的人站在快裂開的星球上
+  G.disc(g, 700, 480, 240, mix(MUTE, SOFT, 0.4));
+  const R = G.rng(11);
+  for (let i = 0; i < 26; i++) {
+    const a = R() * Math.PI * 2, rr2 = Math.sqrt(R()) * 200;
+    man(700 + Math.cos(a) * rr2, 480 + Math.sin(a) * rr2, 60, i % 3 ? COAT : MUTE, { shadow: false, alpha: 0.9 });
+  }
+  G.seg(g, [560, 620], [700, 480], 9, INK); G.seg(g, [700, 480], [860, 640], 9, INK);
+  thanos(1360, GY, 360, { dir: -1, face: 'none' });
+}
+function sh61(lt) {
+  // 抹掉一半生命：左半站著的人，右半化成灰點
+  G.disc(g, 700, 460, 230, mix(PAPER, SOFT, 0.5));
+  for (let i = 0; i < 8; i++) man(560 + (i % 4) * 75, 400 + Math.floor(i / 4) * 110, 85, COAT, { shadow: false });
+  const R = G.rng(23);
+  for (let i = 0; i < 40; i++) G.disc(g, 730 + R() * 170, 330 + R() * 260, 6 + R() * 6, mix(MUTE, INK, R() * 0.5));
+  const cols = [SKY, MUST, SCAR_L, PUR, '#C77B3A', SAGE];
+  for (let i = 0; i < 6; i++) gem(1200 + (i % 3) * 120, 380 + Math.floor(i / 3) * 150, 40, cols[i]);
+}
+function sh62(lt) {
+  // 額頭上最後一顆寶石：幻視特寫
+  man(760, GY + 40, 430, TERRA, { face: 'none' });
+  G.disc(g, 767, 360, 22, MUST);
+  G.ring(g, 767, 360, 44 + Math.sin(lt * 2.4) * 6, 6, mix(MUST, CREAM, 0.3));
+  const cols = [SKY, SCAR_L, PUR, '#C77B3A', SAGE];
+  cols.forEach((c, i) => gem(1250, 300 + i * 95, 30, c, 0.75));
+  wanda(1360, GY, 240, { dir: -1, pose: 'point', aim: -0.7, face: 'worried' });
+}
+function shInv(lt) {
+  // 薩諾斯大軍入侵：黑壓壓一排排士兵壓過來
+  g.save(); g.globalAlpha = 0.28 + 0.08 * Math.sin(lt * 1.6);
+  G.disc(g, CX, 300, 230, mix(PUR, INK, 0.5)); g.restore();
+  for (let r = 0; r < 3; r++) {
+    const s = 110 + r * 55, y = 480 + r * 120, a = 0.3 + r * 0.3;
+    for (let i = 0; i < 9; i++)
+      man(300 + i * 165 + (r % 2) * 80, y, s, mix(INK, PUR, 0.3), { shadow: false, alpha: a, face: 'none' });
+  }
+}
+function sh63(lt) {
+  // 幻視看著汪達，說沒關係：兩人近距離對望，一圈柔光
+  g.save(); g.globalAlpha = 0.3 + 0.08 * Math.sin(lt * 1.8);
+  G.disc(g, CX, 380, 150, mix(MUST, PAPER, 0.5)); g.restore();
+  vman(830, GY, 330, { face: 'none' });
+  wanda(1120, GY, 300, { dir: -1, face: 'worried', tilt: 0.06 });
+  G.disc(g, 1124, 512, 7, mix(SKY, PAPER, 0.45));
+}
+function sh64(lt) {
+  // 汪達流著淚，用魔法摧毀幻視額頭的寶石：紅色光束打上去，寶石碎開
+  wanda(600, GY, 320, { pose: 'point', aim: -0.3, face: 'worried' });
+  G.disc(g, 596, 478, 8, mix(SKY, PAPER, 0.35));
+  vman(1330, GY, 330, { dir: -1, face: 'none' });
+  const gx = 1336, gy = 438;
+  g.save();
+  g.globalAlpha = 0.65 + 0.3 * Math.sin(lt * 7);
+  G.seg(g, [740, 415], [gx - 34, gy - 4], 10, SCAR_L);
+  G.seg(g, [750, 465], [gx - 38, gy + 8], 7, mix(SCAR_L, PAPER, 0.3));
+  g.restore();
+  G.poly(g, [[gx, gy - 34], [gx + 7, gy - 3], [gx + 26, gy]], SCAR_L);
+  G.poly(g, [[gx, gy - 34], [gx - 26, gy], [gx - 5, gy + 2]], mix(SCAR_L, INK, 0.3));
+  G.poly(g, [[gx + 26, gy], [gx + 7, gy - 3], [gx, gy + 36]], mix(SCAR_L, INK, 0.15));
+  G.poly(g, [[gx - 26, gy], [gx - 5, gy + 2], [gx, gy + 36]], SCAR_L);
+  burst(gx, gy, 62, mix(MUST, SCAR_L, 0.4), 8);
+}
+function sh65(lt) {
+  // 時間寶石轉回去，幻視站起來又被扯下寶石
+  g.save(); g.globalAlpha = 0.55;
+  G.ring(g, 900, 430, 150, 14, SAGE);
+  G.poly(g, [[900, 268], [872, 310], [930, 312]], SAGE);
+  g.restore();
+  vman(880, GY, 330, { face: 'none' });
+  thanos(1360, GY, 380, { dir: -1, pose: 'point', aim: -0.55 });
+  gem(1050, 350, 34, MUST);
+  G.seg(g, [1180, 400], [1080, 360], 10, PUR);
+}
+function sh67(lt) {
+  // 彈指，宇宙一半生命化成灰
+  thanos(560, GY, 380, { pose: 'point', aim: -1.2 });
+  burst(920, 330, 70, mix(MUST, PAPER, 0.3), 8);
+  for (let i = 0; i < 4; i++) {
+    const x = 1120 + i * 180;
+    man(x, GY, 230, i % 2 ? MUTE : COAT, { alpha: i % 2 ? 0.3 : 0.85, shadow: false });
+    const R = G.rng(40 + i);
+    for (let j = 0; j < 8; j++) G.disc(g, x + 40 + R() * 90, 480 + R() * 200, 5 + R() * 5, MUTE);
+  }
+}
+function shBlip(lt) {
+  // 這件事後來叫做彈指事件：大卡亮出四個字，四周還飄著餘灰
+  const R = G.rng(9);
+  for (let i = 0; i < 14; i++) {
+    const x = 420 + R() * 1080, y = 560 + R() * 160;
+    G.disc(g, x + Math.sin(lt * 1.2 + i) * 8, y - loop(lt * 14 + i * 11, 60), 4 + R() * 4, MUTE);
+  }
+  rr(CX - 330, 300, 660, 220, 28, PAPER);
+  g.strokeStyle = LINE_C; g.lineWidth = 4;
+  g.beginPath(); g.roundRect(CX - 330, 300, 660, 220, 28); g.stroke();
+  say('彈指事件', CX, 455, 96, INK, 1, { id: 'blip', align: 'center' });
+  rr(CX - 30, 482, 60, 5, 3, TERRA);
+}
+function shClock(lt) {
+  // 消失的人整整消失了五年、對他們只是一眨眼：鐘面指針狂轉，人影淡淡的
+  man(560, GY, 240, COAT, { alpha: 0.35, face: 'none', shadow: false });
+  man(1360, GY, 240, SAGE, { alpha: 0.35, face: 'none', shadow: false });
+  G.ring(g, CX, 420, 170, 16, INK);
+  for (let i = 0; i < 12; i++) {
+    const a = i * Math.PI / 6;
+    G.disc(g, CX + Math.cos(a) * 148, 420 + Math.sin(a) * 148, 6, i === 0 ? TERRA : MUTE);
+  }
+  const hA = lt * 9 - Math.PI / 2, mA = lt * 40 - Math.PI / 2;
+  G.seg(g, [CX, 420], [CX + Math.cos(hA) * 84, 420 + Math.sin(hA) * 84], 12, INK);
+  G.seg(g, [CX, 420], [CX + Math.cos(mA) * 124, 420 + Math.sin(mA) * 124], 8, TERRA);
+  G.disc(g, CX, 420, 14, SCAR);
+  plain('五年', CX, 700, 64, DIM, { align: 'center', w: 800 });
+}
+function shHome(lt) {
+  // 世界已經過了五年：左邊是留下的人，右邊的人慢慢淡進來，中間小樹長高了
+  const grow = clamp(lt / 4, 0, 1);
+  G.seg(g, [CX, GY], [CX, GY - 50 - grow * 150], 16 - grow * 5, COAT);
+  G.disc(g, CX, GY - 100 - grow * 150, 34 + grow * 80, mix(SAGE, PAPER, 0.25));
+  man(560, GY, 250, MUTE, { dir: 1 });
+  man(390, GY, 230, STEEL, { dir: 1 });
+  const a = 0.3 + 0.65 * clamp(lt / 3, 0, 1);
+  man(1360, GY, 250, SKY, { dir: -1, alpha: a, face: 'smile' });
+  man(1540, GY, 230, SCAR_L, { dir: -1, alpha: a, face: 'smile' });
+}
+function sh68(lt) {
+  // 五年後人都回來了，幻視不在：人群裡留著一個空位
+  [COAT, SAGE, SKY, SCAR].forEach((c, i) => c === SCAR ? wanda(560 + i * 200, GY, 240, { face: 'smile' }) : man(560 + i * 200, GY, 240, c, { face: 'smile' }));
+  g.save(); g.setLineDash([16, 14]); g.strokeStyle = MUTE; g.lineWidth = 6;
+  g.beginPath(); g.ellipse(1410, 520, 90, 200, 0, 0, Math.PI * 2); g.stroke(); g.restore();
+  prop(g, 'question', { x: 1410, y: 420, s: 120, color: MUTE });
+}
+function shAlone(lt) {
+  // 別人都在團圓，只有她什麼都沒有：兩兩相依的人群，她一個人站在最邊邊
+  [[520, COAT, SAGE], [880, SKY, MUST], [1240, '#C77B3A', PUR]].forEach(([x, c1, c2]) => {
+    man(x, GY, 200, c1, { face: 'smile' });
+    man(x + 110, GY, 190, c2, { dir: -1, face: 'smile' });
+  });
+  wanda(1620, GY, 250, { dir: -1, face: 'worried' });
+}
+
+// --- 收尾 ---
+function sh70(lt) {
+  // 她去了哪裡、做了什麼：一個人、一條往遠處去的路
+  g.setLineDash([18, 20]);
+  g.strokeStyle = LINE_C; g.lineWidth = 8; g.beginPath();
+  g.moveTo(620, GY); g.quadraticCurveTo(1000, 560, 1460, 300); g.stroke();
+  g.setLineDash([]);
+  wanda(620, GY, 290, { face: 'worried' });
+  prop(g, 'question', { x: 1480, y: 290, s: 150, color: TERRA });
+}
+function shTown(lt) {
+  // 一整個小鎮突然出現，神秘力量籠罩：從外面看一排房子被發光的霧罩罩住
+  // WO-20：不畫裡面的人、不畫電視、不畫黑白畫面
+  [[560, 170], [780, 220], [1010, 180], [1230, 210], [1420, 160]].forEach(([x, s]) =>
+    prop(g, 'house', { x, y: GY, s }));
+  const R = G.rng(51);
+  g.save(); g.fillStyle = mix(SCAR_L, MUST, 0.3); g.globalAlpha = 0.26 + 0.08 * Math.sin(lt * 1.6);
+  g.beginPath(); g.ellipse(CX, GY + 10, 600, 420, 0, Math.PI, 0); g.fill();
+  for (let i = 0; i < 10; i++) {
+    const a = Math.PI + R() * Math.PI, r0 = 0.55 + R() * 0.4;
+    G.disc(g, CX + Math.cos(a + Math.sin(lt * 0.5 + i) * 0.06) * 600 * r0,
+      GY + 10 + Math.sin(a) * 420 * r0, 14 + R() * 16, mix(PAPER, SCAR_L, 0.5));
+  }
+  g.restore();
+  g.strokeStyle = mix(SCAR_L, PAPER, 0.4); g.lineWidth = 10; g.globalAlpha = 0.75;
+  g.beginPath(); g.ellipse(CX, GY + 10, 600, 420, 0, Math.PI, 0); g.stroke(); g.globalAlpha = 1;
+}
+function sh71(lt) {
+  // 現在可以開播了：電視上的播放鍵亮起來
+  tv(CX - 170, 430, 620, 400, PAPER);
+  g.save(); g.globalAlpha = 0.75 + 0.25 * Math.sin(lt * 2.2);
+  G.poly(g, [[CX - 230, 330], [CX - 230, 530], [CX - 80, 430]], SCAR);
+  g.restore();
+  man(1420, GY, 260, COAT, { pose: 'point', aim: -0.35, dir: -1, face: 'smile' });
+}
+
+// ---------- 鏡頭表：[涵蓋句數, 畫面]，句數照 TL.lines 順序切 ----------
+const SPEC = [
+  [3, sh00], [2, sh01], [1, sh02], [2, sh03],
+  [3, sh10], [2, sh11], [2, sh12], [3, sh13], [3, sh14],
+  [2, sh20], [3, sh21], [2, sh22], [1, sh23],
+  [2, shY15], [2, sh30], [3, sh31], [2, shFear], [1, sh32], [2, shStruct], [3, sh33], [4, sh34], [2, sh35], [2, sh36], [2, shTake],
+  [3, sh40], [2, sh41], [2, shMix], [1, sh42], [1, sh42b], [3, shSide], [3, sh43], [2, sh44], [4, sh45],
+  [3, shMeet], [2, sh50], [2, sh53], [3, shPub],
+  [1, shArrive], [2, sh60], [2, sh61], [2, sh62], [1, shInv], [3, shSac], [1, sh63], [2, sh64], [4, sh65], [2, sh67], [1, shBlip], [2, shClock], [2, shHome], [3, sh68], [2, shAlone],
+  [3, sh70], [3, shTown], [2, sh71],
+];
+// 每段字幕要標紅的關鍵詞（對齊 SECS 順序）
+const HL = [
+  ['汪達幻視', '三部曲', '陪伴'], ['心靈寶石', '寶石', '九頭蛇'], ['史塔克', '鋼鐵人', '商標'],
+  ['奧創', '幻覺', '賈維斯'], ['幻視', '賈維斯', '皮特羅'], ['汪達', '幻視', '陪伴'],
+  ['薩諾斯', '寶石', '泰坦', '彈指'], ['汪達幻視', '阿嘉莎', '小鎮'],
+];
+
+// ---------- 段落分組（標籤、主播視線用）＋鏡頭分組（畫面切換用） ----------
+const SECS = [], LSEC = [];
+TL.lines.forEach(l => {
+  const s = SECS[SECS.length - 1];
+  if (!s || s.name !== l.section) SECS.push({ name: l.section, t0: l.t0, t1: l.t1 });
+  else s.t1 = l.t1;
+  LSEC.push(SECS.length - 1);
+});
+const N = SECS.length;
+if (N !== HL.length) throw new Error(`timeline.js 有 ${N} 段，HL ${HL.length} 組，對不上`);
+const T0 = SECS.map((s, i) => i === 0 ? 0 : s.t0 - 0.2);
+const DUR = TL.dur;
+const END0 = TL.lines[TL.lines.length - 1].t1 + 0.3;   // 片尾系列卡
+const SHOTS = [];
+{
+  let li = 0;
+  for (const [n, fn] of SPEC) {
+    if (li + n > TL.lines.length) throw new Error(`SPEC 超出句數（共 ${TL.lines.length} 句）`);
+    SHOTS.push({ t0: li === 0 ? 0 : TL.lines[li].t0 - 0.05, fn, sec: LSEC[li] });
+    li += n;
+  }
+  if (li !== TL.lines.length) throw new Error(`SPEC 用掉 ${li} 句，稿有 ${TL.lines.length} 句`);
+}
+const shotAt = t => { let i = 0; while (i + 1 < SHOTS.length && t >= SHOTS[i + 1].t0) i++; return i; };
+const PH = TL.lines.flatMap((l, i) => (l.phrases || [{ text: l.text, t0: l.t0, t1: l.t1 }]).map(p => ({ ...p, sec: LSEC[i] })));
+
+// ---------- 劇透倒數卡：提醒句念完（t1）後的空檔蓋 5 秒倒數 ----------
+const WARNS = TL.lines.filter(l => /先停|還沒看/.test(l.text))
+  .map(l => ({ t0: l.t1 + 0.2, t1: l.t1 + 5.7, show: (l.text.match(/《([^》]+)》/) || [])[1] || '' }));
+function countdown(t) {
+  const w = WARNS.find(w => t >= w.t0 && t < w.t1);
+  if (!w) return;
+  const num = Math.max(1, 5 - Math.floor((t - w.t0) / 1.1));
+  g.save(); g.fillStyle = 'rgba(21,17,28,0.55)'; g.fillRect(0, 0, W, H); g.restore();
+  rr(CX - 466, 284, 932, 592, 44, SCAR);
+  rr(CX - 450, 300, 900, 560, 34, PAPER);
+  say('劇透警告', CX, 450, 92, SCAR, 1, { id: 'spoiler', align: 'center', bold: 0.05 });
+  plain(String(num), CX, 730, 300, INK, { align: 'center', w: 800 });
+  plain(`還沒看《${w.show}》的人，現在可以先關掉`, CX, 815, 42, DIM, { align: 'center', w: 600 });
+}
+
+// ---------- 頂部標籤 ----------
+function series(secName) {
+  plain(SERIES, CX, 70, 34, DIM, { align: 'center', w: 600 });
+  rr(CX - 30, 90, 60, 5, 3, TERRA);
+  plain(secName, 96, 70, 30, MUTE, { w: 600 });
+}
+
+// ---------- 字幕：下方 1/4，一卡一個逗號短語，關鍵詞陶土紅 ----------
+function caption(t) {
+  const j = PH.findIndex((p, k) => t >= p.t0 - 0.05 && t < Math.min(p.t1 + 0.25, PH[k + 1] ? PH[k + 1].t0 - 0.05 : Infinity));
+  if (j < 0 || t >= END0) return;
+  const p = PH[j], hl = HL[p.sec] || [];
+  const px = 48, maxW = 1400;
+  g.font = ZH(700, px);
+  const rows = g.measureText(p.text).width <= maxW ? [p.text] : [p.text.slice(0, Math.ceil(p.text.length / 2)), p.text.slice(Math.ceil(p.text.length / 2))];
+  const y0 = 950 - (rows.length - 1) * 33;
+  rr(CX - 30, y0 - 82, 60, 6, 3, INK);
+  rows.forEach((r, k) => rich(r, CX, y0 + k * 68, px, hl));
+}
+function rich(s, cx, y, px, hl) {
+  const mark = Array(s.length).fill(false);
+  for (const w of hl) { let i = s.indexOf(w); while (i >= 0) { for (let k = 0; k < w.length; k++) mark[i + k] = true; i = s.indexOf(w, i + 1); } }
+  g.font = ZH(700, px); g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+  let x = cx - g.measureText(s).width / 2;
+  for (let k = 0; k < s.length; k++) { g.fillStyle = mark[k] ? TERRA : INK; g.fillText(s[k], x, y); x += g.measureText(s[k]).width; }
+}
+
+// ---------- 片尾系列卡 ----------
+function endCard(t) {
+  g.fillStyle = CREAM; g.fillRect(0, 0, W, H);
+  const lt = t - END0;
+  say(SERIES, CX, 400, 68, INK, 1, { id: 'end-series', align: 'center', bold: 0.03 });
+  rr(CX - 30, 432, 60, 5, 3, SAGE);
+  [[SKY, CX - 260, 'armsUp'], [SCAR, CX, 'stand'], [PUR, CX + 260, 'armsUp']].forEach(([c, x, pose], k) => {
+    const o = { pose, face: 'smile', tilt: Math.sin(lt * 2 + k) * 0.04 };
+    c === SCAR ? wanda(x, 780, 260, o) : man(x, 780, 260, c, o);
+  });
+  plain(HANDLE, CX, 920, 40, DIM, { align: 'center', w: 600 });
+}
+
+// ---------- 主播 Paradox（Clawd Bot）：右上角 ----------
+const svgText = await fetch('./mascot/clawd-bot.svg').then(r => { if (!r.ok) throw new Error('取不到 mascot/clawd-bot.svg'); return r.text(); });
+const host = document.getElementById('mascot'); host.innerHTML = svgText;
+const ROOT = host.querySelector('svg'); if (!ROOT) throw new Error('mascot svg 解析失敗');
+const TRACK = { fps: 24, states: [{ t: 0, state: 'idle' }], looks: SECS.map((s, i) => ({ t: T0[i], x: -0.5, y: 0.5 })), pokes: [] };
+function poseHost(t) {
+  applyPose(ROOT, poseAt(t, TRACK));
+  if (!TL.lines.some(l => t >= l.t0 && t <= l.t1)) return;
+  const a = 0.25 + 0.75 * Math.abs(Math.sin(t * 13.5)) * (0.55 + 0.45 * Math.abs(Math.sin(t * 4.3 + 1)));
+  ROOT.querySelector('#mouth').setAttribute('d', `M-5,8 Q0,${(9 + a * 5).toFixed(2)} 5,8`);
+}
+const MASCOT = { x: 1690, y: 90, s: 190 };
+let mascotTok = 0;
+function finish(t) {
+  caption(t);
+  poseHost(t);
+  const tok = ++mascotTok, img = new Image();
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(ROOT));
+  return img.decode().then(() => {
+    if (tok !== mascotTok) return;
+    g.drawImage(img, MASCOT.x, MASCOT.y, MASCOT.s, MASCOT.s);
+  });
+}
+
+// ---------- 主迴圈 ----------
+// 換鏡頭＝原地交叉淡化 XF 秒：鏡頭起點取自 TL.lines 的 t0（SPEC 分組），render(t) 只依賴 t。
+const XF = 0.45;
+const snap = Object.assign(document.createElement('canvas'), { width: W, height: H });
+function render(t) {
+  t = clamp(t, 0, DUR); TXT = [];
+  if (t >= END0) {
+    const k = E.io(inv(END0, END0 + XF, t));
+    if (k < 1) { drawShot(SHOTS.length - 1, t); snap.getContext('2d').drawImage(g.canvas, 0, 0); TXT = []; }
+    endCard(t);
+    if (k < 1) { g.globalAlpha = 1 - k; g.drawImage(snap, 0, 0); g.globalAlpha = 1; }
+    return finish(t);
+  }
+  const i = shotAt(t), lt = t - SHOTS[i].t0;
+  const k = i && lt < XF ? E.io(lt / XF) : 1;
+  if (k < 1) { drawShot(i - 1, t); snap.getContext('2d').drawImage(g.canvas, 0, 0); TXT = []; }
+  drawShot(i, t);
+  if (k < 1) { g.globalAlpha = 1 - k; g.drawImage(snap, 0, 0); g.globalAlpha = 1; }
+  countdown(t);
+  return finish(t);
+}
+function drawShot(i, t) {
+  const sh = SHOTS[i];
+  g.fillStyle = CREAM; g.fillRect(0, 0, W, H);
+  series(SECS[sh.sec].name);
+  g.save(); sh.fn(t - sh.t0, t); g.restore();
+  g.globalAlpha = 1;
+}
+
+// ---------- 對外契約 ----------
+window.DUR = DUR;
+window.render = render;
+window.TEXTS = t => { render(t); return TXT.filter(b => b.screen); };
+window.CUES = PH.map(p => ({ t0: p.t0, t1: p.t1, text: p.text }));
+window.SHAKES = [];
+window.EV = [{ t: 0, type: 'bed', len: DUR }];   // 只留配樂（calm 片型），不加換段音效
+window.VOICE = TL.lines.map((l, j) => ({ t: l.t0, file: `out/voice/${String(j + 1).padStart(2, '0')}.wav` }));
+
+// 字型：這段程式碼本身就含畫面上所有字，整段拿去預載
+const allText = document.querySelector('script[type=module]').textContent + TL.lines.map(l => l.text).join('') + '0123456789,%';
+await Promise.all([800, 700, 600].map(w => document.fonts.load(ZH(w, 58), allText)));
+await document.fonts.ready;
+for (const sh of SHOTS) render(sh.t0 + 0.3);
+render(0);
+window.READY = true;
+</script>
+</body>
+</html>

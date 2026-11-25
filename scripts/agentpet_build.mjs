@@ -16,7 +16,7 @@ const CELL_W = 192, CELL_H = 208, COLS = 8;
 const ROWS = [['idle', 6], ['running-right', 8], ['running-left', 8], ['waving', 4], ['jumping', 5],
   ['failed', 8], ['waiting', 6], ['running', 6], ['review', 6]];
 // ponytail: playwright-core 借 lemo-opuscar 的 node_modules；那邊移走就改這行或在本 repo 裝一份
-const { chromium } = createRequire('/Users/you/dev/lemo-opuscar/package.json')('playwright-core');
+const { chromium } = createRequire('/Users/51mini/dev/lemo-opuscar/package.json')('playwright-core');
 const CHROME = process.env.PLAYWRIGHT_CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
 const svg = readFileSync(join(ROOT, 'assets/mascot/clawd-bot/clawd-bot.svg'), 'utf8')

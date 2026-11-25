@@ -1,6 +1,6 @@
 # Devil's Advocate Evidence Pack
 
-Report: /Users/you/dev/vibe-shorts-pipeline/films/nvidia-founder-return/audit/claims.md
+Report: /Users/51mini/dev/vibe-shorts-pipeline/films/nvidia-founder-return/audit/claims.md
 Reviewed: 2026-11-17
 Core conclusion as read: 所以這兩位投資人要的是時間，調查查清楚以前，先別關上黃仁勳回任的門。
 

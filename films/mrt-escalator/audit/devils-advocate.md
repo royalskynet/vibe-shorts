@@ -1,6 +1,6 @@
 # Devil's Advocate Evidence Pack
 
-Report: /Users/you/dev/vibe-shorts-pipeline/films/mrt-escalator/audit/claims.md
+Report: /Users/51mini/dev/vibe-shorts-pipeline/films/mrt-escalator/audit/claims.md
 Reviewed: 2026-11-07
 Core conclusion as read: 為了載更多人才定的規矩，在長梯上一週反而少載三千多人。
 

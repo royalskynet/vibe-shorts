@@ -42,7 +42,7 @@ Threads 要另開一個應用程式。官方文件只寫「建立應用程式並
 IG 和 Threads 的 **OAuth 重新導向 URI** 都填這一個：
 
 ```
-https://host.tailnet.ts.net/oauth
+https://51minidemac-mini.tail5498f5.ts.net/oauth
 ```
 
 這是這台機器的 Tailscale 網址，只有你的裝置連得到。授權完瀏覽器會說連不上，那是正常的——授權碼就在網址列裡。

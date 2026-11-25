@@ -1,6 +1,6 @@
 # 街上沒垃圾桶，為什麼日本乾淨、台北在抱怨？（單人旁白科普）初稿，待使用者核
 
-核准：/Users/you/OpenBot/Shared/approved/2026-10-31-no-trash-can.md（proposal /Users/you/OpenBot/Shared/marketer-topics-2026-10-29/proposal.md 題 3）。格式照 docs/WRITING.md §7：m3 男聲單人旁白，一支只講一個機制「街上垃圾桶留不留得住，看家裡的垃圾好不好丟」，拆成日本、台北兩步，轉折收在兩地的差別與定時定點。
+核准：/Users/51mini/OpenBot/Shared/approved/2026-10-31-no-trash-can.md（proposal /Users/51mini/OpenBot/Shared/marketer-topics-2026-10-29/proposal.md 題 3）。格式照 docs/WRITING.md §7：m3 男聲單人旁白，一支只講一個機制「街上垃圾桶留不留得住，看家裡的垃圾好不好丟」，拆成日本、台北兩步，轉折收在兩地的差別與定時定點。
 
 爆款證據：YouTube｜537萬播放｜「How Japan Keeps Clean」（782 秒長片，同題日本沒垃圾桶，本片機制來源）｜https://youtu.be/BOGMkgnc2YY；YouTube｜179萬播放｜「How is Taiwan beating everyone at plastics recycling?」（621 秒長片，台灣垃圾車與隨袋徵收）｜https://youtu.be/-YnYwWiSiuE；YouTube｜139萬播放｜「Musical Trash Truck in Taiwan」（95 秒短片，台灣追垃圾車）｜https://youtu.be/DRvgmLLlhp0；YouTube｜58.8萬播放｜「台灣垃圾車登上國際 德電視台讚全亞洲模範」（89 秒短片）｜https://youtu.be/pnboehFdHFI；YouTube｜32.9萬播放｜「Wonder why there are no trash bins in Tokyo's subway?」（沙林事件撤桶）｜https://youtu.be/GhHodc5EgCE
 

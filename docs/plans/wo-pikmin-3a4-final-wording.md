@@ -2,7 +2,7 @@
 
 拆單豁免：旁白改字、humanize 的 sha 戳記、claims 與說明欄互相綁定，分開派會讓 sha 與內容對不上。
 
-工作目錄：`/Users/you/dev/vibe-shorts-pipeline`。第三輪稽核指出：52% 只限 2026 上半年（另一篇報導稱五年累計台灣占比 18%），鉤子要帶期間；「收入」與「消費」口徑混用，全文統一成來源（PocketGamer.biz）用的「消費估算」。只做下面的取代與一次搬移，其他句子一字不動。不改 `index.html`／`mix.py`／`build.sh`，不 render，不 git commit，不跑 `approve.py`／`voice.py`／`restamp.sh`。
+工作目錄：`/Users/51mini/dev/vibe-shorts-pipeline`。第三輪稽核指出：52% 只限 2026 上半年（另一篇報導稱五年累計台灣占比 18%），鉤子要帶期間；「收入」與「消費」口徑混用，全文統一成來源（PocketGamer.biz）用的「消費估算」。只做下面的取代與一次搬移，其他句子一字不動。不改 `index.html`／`mix.py`／`build.sh`，不 render，不 git commit，不跑 `approve.py`／`voice.py`／`restamp.sh`。
 
 ### 1. `films/pikmin-bloom/narration.md`（照字面）
 - 「而且這款遊戲約有一半的商店消費，來自台灣玩家。」→「而且二〇二六年上半年，這款遊戲約一半的消費估算，來自台灣。」
@@ -24,7 +24,7 @@
 ## 驗收
 
 ```bash
-cd /Users/you/dev/vibe-shorts-pipeline
+cd /Users/51mini/dev/vibe-shorts-pipeline
 f=films/pikmin-bloom/narration.md
 grep -q '而且二〇二六年上半年，這款遊戲約一半的消費估算，來自台灣。' "$f"
 grep -q '台灣消費估算約一千八百五十萬美元' "$f"
@@ -33,7 +33,7 @@ if grep -qE '收入|商店消費|台灣玩家' "$f"; then echo '舊口徑殘留'
 if grep -qE '[0-9]' "$f"; then echo '旁白殘留阿拉伯數字'; exit 1; fi
 python3 - <<'PY'
 import re, sys
-nar = open('/Users/you/dev/vibe-shorts-pipeline/films/pikmin-bloom/narration.md').read()
+nar = open('/Users/51mini/dev/vibe-shorts-pipeline/films/pikmin-bloom/narration.md').read()
 body = re.sub(r'^#+.*$', '', nar, flags=re.M)
 norm = lambda s: re.sub(r'[\s，、：；「」『』（）,.!?？！。]', '', s)
 lines = [l for l in nar.split('\n')]

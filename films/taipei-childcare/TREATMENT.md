@@ -2,7 +2,7 @@
 
 > 10-30 定稿已核（核准檔 status script_ok）。下方「從爆款借了什麼」「寫法決定」是初稿時的紀錄；旁白以 narration.md、出處以 SOURCES.md 第 13–22 列為準，分鏡表已照定稿重寫。
 
-核准：/Users/you/OpenBot/Shared/approved/2026-10-29-taipei-childcare.md（docs/SERIES-taipei-issues.md 題 3）。格式照 docs/WRITING.md §7 與系列範本 films/pedestrian-hell（34ae24b）：m3 男聲單人旁白，一支只講一個機制「公托位子要有人顧，顧寶寶的人不夠，位子就加不快」，拆成照顧比、薪水兩步；國際案例用日本待機兒童；台灣兩段照「有人說／也有人說」各 5 句。
+核准：/Users/51mini/OpenBot/Shared/approved/2026-10-29-taipei-childcare.md（docs/SERIES-taipei-issues.md 題 3）。格式照 docs/WRITING.md §7 與系列範本 films/pedestrian-hell（34ae24b）：m3 男聲單人旁白，一支只講一個機制「公托位子要有人顧，顧寶寶的人不夠，位子就加不快」，拆成照顧比、薪水兩步；國際案例用日本待機兒童；台灣兩段照「有人說／也有人說」各 5 句。
 
 爆款證據：YouTube｜130萬播放｜CNBC「Why Daycare Is So Expensive In America」（長片，本片機制來源：托育靠人力、照顧比把成本跟人綁在一起、托育人員薪水低）｜https://youtu.be/JQNLWyQKLj4；YouTube｜1588萬播放｜Kurzgesagt「SOUTH KOREA IS OVER」（長片，同題少子化，生養成本與托育）｜https://youtu.be/Ufmu1WD2TSk；YouTube｜51萬播放｜Vox「Why the US doesn't have universal child care (anymore)」（長片，公共托育怎麼來）｜https://youtu.be/AThIwfYfNrM；YouTube｜16萬播放｜志祺七七「What's Wrong with the Child Care Policies in Taiwan?」（長片，同題台灣）｜https://youtu.be/070EPmdFzbo；IG｜127萬播放｜@boundless__explorer 塞車成因（86 秒，§7 節奏與反直覺第二句）｜https://www.instagram.com/reel/DQfdx-zDEqI/
 

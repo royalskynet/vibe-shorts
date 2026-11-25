@@ -1,0 +1,619 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>起訴 1544 個被害人，判決只剩 485 個</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}#mascot{display:none}#mascot svg{width:340px;height:340px}</style>
+<script src="engine.js"></script>
+<script src="timeline.js"></script>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<div id="mascot"></div>
+<script type="module">
+// 單人旁白科普，畫面照無邊探索（refs/boundless/ANALYSIS.md §3）：
+// 全片同一張米色底、不硬切；扁平小人＋四色；一句一個畫面狀態（CARDS），字幕一卡一個逗號短語（timeline.js 的 phrases）；
+// 頂部系列標籤，片尾系列卡。被害人＝芥末黃，被剔除＝灰，起訴／關鍵數字＝陶土紅，認定留下＝鼠尾草綠。
+// 11-04 版型：小人與道具用共用插畫庫 illust/illust.mjs；只封面有大標，其餘卡畫面當主角。
+// 禁止清單（TREATMENT.md）：不畫當事人臉、不念姓名、不用評價詞、不畫公司商標。
+// 所有動作都是 t 的封閉式（seek_check.mjs 會比亂序算出的同一幀）；循環用取餘數，不累積。
+import { poseAt, applyPose } from './mascot/clawd-bot-shot.mjs';
+import { PALETTE, person, prop } from './illust/illust.mjs';
+const G = window.G, E = G.E, TL = window.TL, W = 1080, H = 1920;
+const g = document.getElementById('c').getContext('2d', { alpha: false });
+const { clamp, inv, lerp, mix } = G;
+
+const CREAM = PALETTE.cream, INK = PALETTE.ink, TERRA = PALETTE.terra, MUST = PALETTE.mustard, COAT = PALETTE.coat;
+const SAGE = '#7FA57A', MUTE = '#9C8B76', SOFT = '#EBE1D2', DIM = '#8C7B6B', MUST_D = '#9A6F1C', SAGE_D = '#557A51';
+const ZH = (w, px) => `${w} ${px}px "PingFang TC"`;
+const SERIES = '看懂幣想案', EP = 1, HANDLE = '@paradoxbar';
+const GY = 1270;
+
+// 會出現在畫面上的事實數字集中在這裡，每一個都要在 meta/facts.md 有一行附來源。
+const FACTS = {
+  INDICTED: 1544,   // F1 鏡報：起訴被害人
+  WITNESSES: 513,   // F2 TVBS：傳喚證人
+  PROVEN: 485,      // F2 TVBS：一審認定被害人
+  YEARS: 22,        // F4：合併應執行 22 年
+  STORES: 45,       // F2、F3：全台實體門市
+  MONTHS: 3,        // F2：傳喚期間 01-22～04-16
+  DEFENDANTS: 14,   // F11 士檢新聞稿：起訴被告數
+};
+const fmt = n => n.toLocaleString('en-US');
+
+// ---------- 字 ----------
+let TXT = [];
+function say(s, x, y, px, col, p, o = {}) {
+  g.save(); g.font = ZH(o.w || 700, px); g.textAlign = o.align || 'left'; g.textBaseline = 'alphabetic';
+  const w = g.measureText(s).width;
+  g.globalAlpha *= E.io(p); g.fillStyle = col; g.fillText(s, x, y);
+  if (o.bold) { g.strokeStyle = col; g.lineWidth = px * o.bold; g.lineJoin = 'round'; g.strokeText(s, x, y); }
+  g.restore();
+  if (o.id) {
+    const x0 = o.align === 'center' ? x - w / 2 : o.align === 'right' ? x - w : x;
+    TXT.push({ id: o.id, text: s, x0, y0: y - px, x1: x0 + w, y1: y + px * 0.25, screen: true });
+  }
+  return w;
+}
+function plain(s, x, y, px, col, o = {}) {
+  g.font = ZH(o.w || 600, px); g.textAlign = o.align || 'left'; g.textBaseline = 'alphabetic';
+  g.fillStyle = col; g.fillText(s, x, y);
+}
+const pop = (lt, a, d = 0.5) => E.o3(inv(a, a + d, lt));
+const loop = (x, n) => ((x % n) + n) % n;
+const rr = (x, y, w, h, r, col) => { g.fillStyle = col; g.beginPath(); g.roundRect(x, y, w, h, r); g.fill(); };
+const man = (x, y, s, body, o = {}) => person(g, { x, y, s, body, ...o });
+const fig = (s, x, y, col, p = 1, id) => say(s, x, y, 64, col, p, { id, align: 'center', bold: 0.03 });
+// 超大數字（畫面主角）：比 fig 更大一級，仍小於封面大標
+const big = (s, x, y, col, p = 1, id) => say(s, x, y, 150, col, p, { id, align: 'center', bold: 0.03 });
+const mid = (s, x, y, col, p = 1, id) => say(s, x, y, 68, col, p, { id, align: 'center', bold: 0.03 });
+
+// ---------- 40 人方陣：顏色照人數分配，換狀態時逐人換色 ----------
+const PERM = (() => { const r = G.rng(11), a = [...Array(40).keys()]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; })();
+const POSE_MIX = (() => { const r = G.rng(23); return Array.from({ length: 40 }, () => { const v = r(); return v < 0.62 ? ['stand', 1] : v < 0.72 ? ['armsUp', 1] : v < 0.82 ? ['point', r() < 0.5 ? 1 : -1] : v < 0.91 ? ['think', 1] : ['shrug', 1]; }); })();
+function cols(spec) { const out = Array(40).fill(SOFT); let k = 0; for (const [c, n] of spec) for (let m = 0; m < n; m++) out[PERM[k++]] = c; return out; }
+const C_ALL = cols([[MUST, 20], [TERRA, 12], [SAGE, 8]]);
+// 485/1544 ≈ 31%，40 人留 12 人彩色，其餘變灰
+const C_KEEP = cols([[MUST, 7], [SAGE, 5], [MUTE, 28]]);
+function crowd(o) {
+  const s = 120, nc = 8, dx = 116, dy = 146;
+  const x0 = 540 - dx * (nc - 1) / 2 - dx * 0.25, y0 = o.y0;
+  for (let k = 0; k < 40; k++) {
+    const r = Math.floor(k / nc), c = k % nc;
+    const x = x0 + c * dx + (r % 2 ? dx * 0.5 : 0), y = y0 + r * dy;
+    const pk = o.from ? E.io(inv(0.1 + (k / 40) * 0.6, 0.5 + (k / 40) * 0.6, o.lt)) : 1;
+    const col = o.from ? mix(o.from[k], o.to[k], pk) : o.to[k];
+    const out = o.to[k] === MUTE;
+    const [pose, dir] = out ? ['shrug', 1] : POSE_MIX[k];
+    const bob = Math.sin((o.lt || 0) * 1.7 + k * 0.9) * 4;
+    man(x, y + bob, s, col, { pose, dir, face: 'none' });
+  }
+}
+
+// 文件：白紙在米底幾乎沒有墨，統一加彩色書脊＋深色內文線，藏字檢查才看得到
+function doc(x, y, s, o = {}) {
+  rr(x - s * 0.44, y - s * 0.58, s * 0.13, s * 1.12, 8, o.tab || INK);
+  prop(g, 'document', { x, y, s, lineColor: DIM, ...o });
+  rr(x - s * 0.30, y + s * 0.38, s * 0.60, s * 0.09, 6, o.tab || INK);
+}
+
+// 店：house 道具＋招牌字
+function shop(x, y, s, label, o = {}) {
+  prop(g, 'house', { x, y, s, roof: o.roof || TERRA, wall: o.wall });
+  if (label) { rr(x - s * 0.33, y - s * 0.62, s * 0.66, s * 0.2, 10, INK); plain(label, x, y - s * 0.5, s * 0.13, CREAM, { align: 'center', w: 700 }); }
+}
+
+// ---------- 每張卡的畫面（畫在 y 500–1290；x≥875、y<480 是主播位置） ----------
+function c1(lt) { crowd({ y0: 690, to: C_ALL, lt }); }
+
+function c2(lt) {
+  // 起訴書文件蓋上，1544 大數字浮出
+  const q = E.o3(inv(0.1, 0.8, lt));
+  doc(300, 950 + Math.sin(lt * 1.2 + 1) * 7, 360, { tab: INK, lines: 4, tilt: -0.08, alpha: q });
+  doc(370, 890 + Math.sin(lt * 1.2) * 8, 480, { tab: TERRA, title: '起訴書', titlePx: 11, lines: 5, alpha: q });
+  // 起訴印章
+  g.globalAlpha = q; g.strokeStyle = TERRA; g.lineWidth = 14;
+  g.beginPath(); g.arc(640, 730, 74, 0, Math.PI * 2); g.stroke();
+  plain('起訴', 640, 746, 46, TERRA, { align: 'center', w: 800 });
+  g.globalAlpha = 1;
+  mid(fmt(FACTS.INDICTED), 760, 950, TERRA, inv(0.7, 1.3, lt), 'fig-indicted');
+  plain('個被害人', 760, 1020, 44, INK, { align: 'center', w: 600 });
+  // 底下一排報案人剪影
+  for (let k = 0; k < 8; k++) {
+    const off = loop(lt * 50 + k * 130, 1160);
+    man(60 + off, GY, 170, [MUST, TERRA, SAGE][k % 3], { pose: 'walk', t: lt + k, dir: 1, face: 'none', shadow: false });
+  }
+}
+
+function c3(lt) {
+  plain('法院認定被告要負責的', 540, 560, 44, SAGE, { align: 'center', w: 800 });
+  crowd({ y0: 720, from: C_ALL, to: C_KEEP, lt });
+}
+
+function c4(lt) {
+  // 一間店＋招牌「幣想」，旁邊標 45 家門市
+  shop(430, GY, 560, '幣想');
+  man(770, GY, 300, COAT, { pose: 'point', dir: -1, aim: -0.3, face: 'none' });
+  fig(`全台 ${FACTS.STORES} 家門市`, 700, 700, INK, inv(0.8, 1.3, lt), 'fig-stores');
+}
+
+function c5(lt) {
+  // 檢方版本：被害人帶現金走進店裡，錢從店後流出
+  shop(680, GY, 460, '幣想');
+  for (let k = 0; k < 3; k++) {
+    const off = loop(lt * 70 + k * 220, 660);
+    const x = 60 + off, gone = x > 560;
+    if (gone) continue;
+    man(x, GY, 210, MUST, { pose: 'walk', t: lt + k, dir: 1, face: 'none', shadow: false });
+    // 手上的錢袋
+    g.fillStyle = MUST_D; g.beginPath(); g.arc(x + 34, GY - 60, 22, 0, Math.PI * 2); g.fill();
+    plain('$', x + 34, GY - 48, 30, CREAM, { align: 'center', w: 800 });
+  }
+  // 店後的錢往右外流（虛線箭頭）
+  const q = pop(lt, 0.8, 0.6);
+  if (q > 0) {
+    g.globalAlpha = q; g.strokeStyle = TERRA; g.lineWidth = 12; g.setLineDash([18, 14]); g.lineDashOffset = -lt * 60; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(880, 900); g.lineTo(1030, 900); g.stroke(); g.setLineDash([]); g.lineDashOffset = 0;
+    g.beginPath(); g.moveTo(1000, 870); g.lineTo(1034, 900); g.lineTo(1000, 930); g.stroke();
+    plain('洗錢', 970, 840, 44, TERRA, { align: 'center', w: 800 });
+    g.globalAlpha = 1;
+  }
+}
+
+function c6(lt) {
+  // 漏斗：許多小人被倒進同一間店
+  const q = E.o3(inv(0.15, 1.6, lt));
+  // 上方散落的被害人
+  const R = G.rng(7);
+  for (let k = 0; k < 14; k++) {
+    const x = 120 + R() * 840, y = 560 + R() * 240, a = q;
+    g.globalAlpha = a; man(x, y, 120, MUST, { pose: 'stand', shadow: false });
+  }
+  g.globalAlpha = 1;
+  // 漏斗線條：收斂到店面
+  g.strokeStyle = DIM; g.lineWidth = 10; g.lineCap = 'round';
+  g.globalAlpha = q;
+  g.beginPath(); g.moveTo(220, 880); g.lineTo(500, 1060); g.stroke();
+  g.beginPath(); g.moveTo(860, 880); g.lineTo(580, 1060); g.stroke();
+  g.globalAlpha = 1;
+  shop(540, GY, 380, '幣想');
+  fig('通通算進來', 540, 500, TERRA, inv(0.9, 1.4, lt), 'fig-all-in');
+}
+
+function c7(lt) {
+  // 律師主張警局筆錄不能當證據：筆錄上打問號（不是法院排除）
+  doc(380, 880, 460, { tab: INK, title: '警詢筆錄', titlePx: 10, lines: 6 });
+  const q = pop(lt, 0.5, 0.4);
+  if (q > 0) {
+    prop(g, 'question', { x: 380, y: 860, s: 300 * q, color: TERRA });
+    plain('律師主張', 380, 1180, 56, TERRA, { align: 'center', w: 700 });
+  }
+  man(830, GY, 340, COAT, { pose: 'point', dir: -1, aim: -0.35, face: 'none' });
+}
+
+function c8(lt) {
+  // 小人排隊依序走進法院門（大門用 INK 色房屋表示）
+  shop(820, GY, 440, '法院', { roof: INK });
+  for (let k = 0; k < 6; k++) {
+    const off = loop(lt * 60 + k * 130, 780);
+    const x = 60 + off, entering = x > 640;
+    if (entering) continue;
+    g.globalAlpha = 1 - (k === 5 ? 0 : 0);
+    man(x, GY, 210, MUST, { pose: 'walk', t: lt + k, dir: 1, face: 'none', shadow: false });
+  }
+  g.globalAlpha = 1;
+}
+
+function c9(lt) {
+  // 513 大數字＋日曆格（近三個月）
+  mid(fmt(FACTS.WITNESSES), 340, 760, TERRA, inv(0.15, 0.7, lt), 'fig-witnesses');
+  plain('人出庭作證', 340, 830, 44, INK, { align: 'center', w: 600 });
+  // 日曆：三列方格，逐格填色
+  const n = 90, colsN = 15, cell = 42, gx = 640, gy = 620;
+  prop(g, 'card', { x: 800, y: 870, w: 400, h: 460 });
+  g.strokeStyle = DIM; g.lineWidth = 8;
+  g.strokeRect(800 - 200 + 6, 870 - 230 + 6, 388, 448);
+  for (let k = 0; k < n; k++) {
+    const r = Math.floor(k / colsN), c = k % colsN;
+    const filled = k / n < E.io(inv(0.3, 1.8, lt));
+    rr(gx + c * cell * 0.62, gy + r * cell * 0.62, cell * 0.5, cell * 0.5, 6, filled ? SAGE : '#C9BBA4');
+  }
+  man(170, GY, 300, MUST, { pose: 'walk', t: lt, dir: 1, face: 'none' });
+  plain(`將近 ${FACTS.MONTHS} 個月`, 800, 1180, 54, DIM, { align: 'center', w: 600 });
+}
+
+function cSplit(lt) {
+  // 律師的異議，法院沒有全收：一疊筆錄，部分被打勾、部分打叉
+  rr(40, 1180, 1000, 26, 12, DIM);   // 桌面
+  for (let k = 0; k < 6; k++) {
+    const x = 115 + k * 170, keep = k % 3 !== 0, dy = (k % 2) * 100;
+    doc(x, 880 + dy, 210, { tab: keep ? COAT : TERRA, lines: 4, tilt: Math.sin(lt * 1.3 + k) * 0.04 });
+    const q = pop(lt, 0.3 + k * 0.25, 0.3);
+    if (q > 0) {
+      g.globalAlpha = q; g.strokeStyle = keep ? COAT : TERRA; g.lineWidth = 16; g.lineCap = 'round';
+      const y = 740 + dy;
+      if (keep) { g.beginPath(); g.moveTo(x - 40, y + 20); g.lineTo(x - 12, y + 48); g.lineTo(x + 44, y - 26); g.stroke(); }
+      else { g.beginPath(); g.moveTo(x - 38, y - 4); g.lineTo(x + 38, y + 72); g.moveTo(x + 38, y - 4); g.lineTo(x - 38, y + 72); g.stroke(); }
+      g.globalAlpha = 1;
+    }
+  }
+}
+
+function cStd(lt) {
+  // 認定標準：錢經過幣想＋被騙才付 → 才算被害人
+  man(110, GY, 240, MUTE, { pose: 'stand', dir: 1, face: 'none' });
+  man(190, GY, 280, MUTE, { pose: 'stand', dir: 1, face: 'none' });
+  man(300, GY, 340, MUST, { pose: 'stand', dir: 1, face: 'none' });
+  shop(780, GY, 280, '幣想');
+  g.strokeStyle = DIM; g.lineWidth = 14; g.setLineDash([16, 12]); g.lineDashOffset = -lt * 50; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(400, 940); g.lineTo(620, 940); g.stroke(); g.setLineDash([]); g.lineDashOffset = 0;
+  g.beginPath(); g.moveTo(590, 910); g.lineTo(624, 940); g.lineTo(590, 970); g.stroke();
+  // 兩個條件勾
+  const items = [['錢經過幣想', 0.5], ['被騙才付', 1.1]];
+  items.forEach(([t, d], k) => {
+    const y = 660 + k * 90, q = pop(lt, d, 0.35);
+    if (q > 0) {
+      g.globalAlpha = q; g.strokeStyle = COAT; g.lineWidth = 16; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(390, y); g.lineTo(414, y + 24); g.lineTo(456, y - 28); g.stroke();
+      plain(t, 480, y + 12, 56, INK, { align: 'left', w: 700 });
+      g.globalAlpha = 1;
+    }
+  });
+}
+
+function cFile(lt) {
+  // 沒被傳到的人：法院翻卷宗審
+  doc(380, 1060, 380, { tab: INK, lines: 4, tilt: -0.06 });
+  doc(540, 860, 560, { tab: INK, title: '卷宗', titlePx: 11, lines: 6 });
+  man(150, GY, 320, COAT, { pose: 'think', dir: 1, face: 'none' });
+  // 旁邊一疊待審的卷
+  doc(880, 1080, 300, { tab: INK, lines: 4, tilt: 0.07 });
+  doc(930, 990, 260, { tab: DIM, lines: 3, tilt: 0.05 });
+  const p = E.io(inv(0.3, 1.4, lt));
+  // 放大鏡掃過文件
+  const mx = lerp(430, 680, p);
+  g.strokeStyle = INK; g.lineWidth = 16;
+  g.beginPath(); g.arc(mx, 860, 110, 0, Math.PI * 2); g.stroke();
+  g.beginPath(); g.moveTo(mx + 80, 938); g.lineTo(mx + 148, 1006); g.stroke();
+  plain('照卷審', mx, 880, 48, DIM, { align: 'center', w: 700 });
+}
+
+function c10(lt) {
+  // 小人跟店之間的連線一條條斷掉
+  shop(860, GY, 340, '幣想');
+  for (let k = 0; k < 5; k++) {
+    const x = 120 + k * 130, cut = E.io(inv(0.2 + k * 0.22, 0.7 + k * 0.22, lt));
+    man(x, GY, 220, k === 4 ? MUST : mix(MUST, MUTE, cut), { pose: 'stand', face: 'none' });
+    // 連線：cut=0 實線到門市；cut→1 線段縮短消失
+    const x1 = x + 30, x2 = lerp(830, x1 + 60, cut);
+    if (x2 > x1 + 8) {
+      g.strokeStyle = mix(TERRA, MUTE, cut); g.lineWidth = 14; g.setLineDash([20, 14]); g.lineDashOffset = -lt * 50;
+      g.beginPath(); g.moveTo(x1, GY - 120); g.lineTo(x2, GY - 120); g.stroke(); g.setLineDash([]); g.lineDashOffset = 0;
+    }
+  }
+}
+
+function c11(lt) {
+  // 自己決定去門市：人自己走向幣想，人跟被告之間的責任線被打叉
+  prop(g, 'card', { x: 540, y: 880, w: 860, h: 620 });
+  shop(830, 1130, 330, '幣想');
+  // 自己走去的人＋一個已經在門口的
+  const w = E.io(inv(0.1, 1.2, lt));
+  man(lerp(160, 400, w), 1130, 230, MUST, { pose: 'walk', t: lt, dir: 1, face: 'none' });
+  man(680, 1130, 210, MUST, { pose: 'stand', face: 'none' });
+  plain('自己決定去的', 270, 640, 46, DIM, { align: 'center', w: 800 });
+  // 被告在上方，人跟被告的責任線被打叉
+  rr(430, 612, 220, 66, 10, INK);
+  plain('被告', 540, 657, 44, CREAM, { align: 'center', w: 800 });
+  const cut = E.io(inv(0.5, 1.1, lt));
+  g.strokeStyle = mix(TERRA, MUTE, cut); g.lineWidth = 10; g.setLineDash([16, 12]); g.lineCap = 'round';
+  g.beginPath(); g.moveTo(680, 950); g.lineTo(540, 692); g.stroke(); g.setLineDash([]);
+  const q = pop(lt, 1.0, 0.3);
+  if (q > 0) {
+    g.globalAlpha = q; g.strokeStyle = TERRA; g.lineWidth = 14;
+    g.beginPath(); g.moveTo(590, 790); g.lineTo(640, 840); g.stroke();
+    g.beginPath(); g.moveTo(640, 790); g.lineTo(590, 840); g.stroke();
+    plain('不歸責', 730, 825, 50, TERRA, { align: 'center', w: 800 });
+    g.globalAlpha = 1;
+  }
+}
+
+function c12(lt) {
+  // 485 大數字＋留下的彩色小群
+  g.strokeStyle = SAGE; g.lineWidth = 26; g.lineCap = 'round';
+  g.beginPath(); g.arc(540, 760, 230, -0.4, Math.PI * 2 * E.io(inv(0.1, 1.0, lt)) - 0.4); g.stroke();
+  mid(fmt(FACTS.PROVEN), 540, 800, SAGE, inv(0.15, 0.8, lt), 'fig-proven');
+  plain('個被害人', 540, 870, 44, INK, { align: 'center', w: 600 });
+  const R = G.rng(5);
+  for (let k = 0; k < 12; k++) {
+    const x = 200 + (k % 6) * 140, y = GY + Math.sin(lt * 1.6 + k) * 5;
+    man(x, y - Math.floor(k / 6) * 180, 190, k % 3 ? MUST : SAGE, { pose: 'stand', face: 'none', shadow: false });
+  }
+  rr(140, GY + 30, 800, 16, 8, SAGE);
+}
+
+function c13(lt) {
+  // 判決書＋紅色印章＋22 年浮出
+  doc(380, 880, 460, { tab: SAGE, title: '判決書', titlePx: 11, lines: 5 });
+  const q = pop(lt, 0.6, 0.35);
+  if (q > 0) {
+    g.globalAlpha = q; g.strokeStyle = TERRA; g.lineWidth = 16;
+    g.beginPath(); g.arc(500, 1080, 104, 0, Math.PI * 2); g.stroke();
+    g.fillStyle = TERRA; g.globalAlpha = q * 0.15;
+    g.beginPath(); g.arc(500, 1080, 104, 0, Math.PI * 2); g.fill();
+    g.globalAlpha = q;
+    plain('有罪', 500, 1100, 56, TERRA, { align: 'center', w: 800 });
+    g.globalAlpha = 1;
+  }
+  mid(`${FACTS.YEARS} 年`, 780, 950, INK, inv(0.8, 1.35, lt), 'fig-years');
+  plain('合併執行', 780, 1020, 44, DIM, { align: 'center', w: 600 });
+  man(970, GY, 280, COAT, { pose: 'think', dir: -1, face: 'none' });
+}
+
+function c14(lt) {
+  // 兩張文件並排：起訴 1544 vs 判決 485
+  const a = pop(lt, 0.1, 0.5);
+  doc(270, 850, 380, { tab: TERRA, title: '新聞標題', titlePx: 10, lines: 2 });
+  mid(fmt(FACTS.INDICTED), 270, 920, TERRA, a, 'fig-vs1');
+  doc(810, 850, 380, { tab: SAGE, title: '判決書', titlePx: 11, lines: 2 });
+  mid(fmt(FACTS.PROVEN), 810, 920, SAGE, a, 'fig-vs2');
+  // 箭頭：從左到右，掉了大半
+  g.strokeStyle = DIM; g.lineWidth = 18; g.lineCap = 'round';
+  g.globalAlpha = a; g.setLineDash([24, 16]); g.lineDashOffset = -lt * 50;
+  g.beginPath(); g.moveTo(480, 850); g.lineTo(620, 850); g.stroke(); g.setLineDash([]);
+  g.lineDashOffset = 0;
+  g.beginPath(); g.moveTo(596, 822); g.lineTo(624, 850); g.lineTo(596, 878); g.stroke();
+  g.globalAlpha = 1;
+  // 兩個口徑的色條
+  rr(150, 1180, 240, 20, 8, TERRA); rr(690, 1180, 240, 20, 8, SAGE);
+  // 中間的落差圓點
+  g.fillStyle = DIM; g.beginPath(); g.arc(540, 700, 46, 0, Math.PI * 2); g.fill();
+  plain('vs', 540, 714, 36, CREAM, { align: 'center', w: 800 });
+}
+
+function cKYC(lt) {
+  // 法院認定：審查題庫文件被遞給暗色小人
+  doc(350, 880, 440, { tab: INK, title: '審查題庫', titlePx: 12, lines: 5 });
+  const p = E.io(inv(0.4, 1.4, lt));
+  // 文件副本往右滑向暗色小人
+  const dx = lerp(350, 700, p);
+  g.globalAlpha = p;
+  doc(dx, 880, 440, { tab: TERRA, lines: 5 });
+  g.globalAlpha = 1;
+  man(880, GY, 340, COAT, { pose: 'stand', dir: -1, face: 'none' });
+  plain('詐團', 1000, 1000, 46, INK, { align: 'center', w: 800 });
+  prop(g, 'speech', { x: 860, y: 620, s: 300, tail: 'right', color: INK, fill: '#F2ECE2', text: '題目先給你', px: 20, alpha: pop(lt, 1.0) });
+}
+
+function cTalk(lt) {
+  // 辯方說：定罪靠的主要是別人說的話 — 判決書上只剩一個說話泡泡＋問號
+  doc(330, 890, 470, { tab: SAGE, title: '判決書', titlePx: 10, lines: 5 });
+  const q = pop(lt, 0.4, 0.5);
+  if (q > 0) {
+    prop(g, 'speech', { x: 750, y: 720, s: 400, tail: 'right', color: INK, fill: '#F2ECE2', text: '他人陳述', px: 18, alpha: q });
+    prop(g, 'question', { x: 620, y: 960, s: 250 * q, color: TERRA });
+    plain('辯方說', 750, 1130, 52, TERRA, { align: 'center', w: 800 });
+  }
+  man(900, GY, 300, COAT, { pose: 'point', dir: -1, aim: -0.3, face: 'none' });
+}
+
+function cShop(lt) {
+  // 14 名被告裡，有人只是開了一間加盟店
+  fig(`${FACTS.DEFENDANTS} 名被告`, 540, 640, INK, inv(0.1, 0.6, lt), 'fig-defs');
+  const pick = 6;
+  for (let k = 0; k < FACTS.DEFENDANTS; k++) {
+    const x = 80 + k * 70, y = 880 + (k % 2) * 44;
+    man(x, y, 120, k === pick ? MUST : MUTE, { pose: 'stand', face: 'none', shadow: false });
+  }
+  const q = pop(lt, 0.45, 0.4);
+  if (q > 0) {
+    g.globalAlpha = q;
+    g.strokeStyle = TERRA; g.lineWidth = 10;
+    g.beginPath(); g.arc(80 + pick * 70, 845, 92, 0, Math.PI * 2); g.stroke();
+    g.globalAlpha = 1;
+    shop(820, GY - 40, 380, '加盟店');
+    man(540, GY - 30, 270, MUST, { pose: 'stand', face: 'none' });
+  }
+}
+
+const C_GRAY = Array(40).fill(MUTE);
+
+function cNews(lt) {
+  // 大家記住的還是 1544：報紙大標壓在灰色人群上（人群只畫三排，底下留給字幕）
+  const s = 120, nc = 8, dx = 116, dy = 146;
+  const x0 = 540 - dx * (nc - 1) / 2 - dx * 0.25;
+  for (let k = 0; k < 24; k++) {
+    const r = Math.floor(k / nc), c = k % nc;
+    const x = x0 + c * dx + (r % 2 ? dx * 0.5 : 0), y = 940 + r * dy;
+    const pk = E.io(inv(0.1 + (k / 24) * 0.6, 0.5 + (k / 24) * 0.6, lt));
+    const col = mix(C_ALL[k], C_GRAY[k], pk);
+    const [pose, dir] = C_GRAY[k] === MUTE ? ['shrug', 1] : POSE_MIX[k];
+    man(x, y + Math.sin(lt * 1.7 + k * 0.9) * 4, s, col, { pose, dir, face: 'none' });
+  }
+  const q = pop(lt, 0.3, 0.5);
+  if (q > 0) {
+    g.globalAlpha = q;
+    doc(540, 500, 800, { tab: TERRA, title: '新聞標題', titlePx: 9, lines: 0 });
+    mid(`${fmt(FACTS.INDICTED)} 名受害者`, 540, 570, TERRA, 0.85, 'fig-news');
+    g.globalAlpha = 1;
+  }
+}
+
+function cSilent(lt, title, tab, you, drop = 0, label = '你') {
+  // 名單＋沉默人群（…對話框）；you=true 時名單上出現 label、人群裡一個人亮起來
+  // drop=N 時左邊 N 個人不畫：一卡一卡人被帶走，沉默越來越薄
+  doc(280, 800, 480, { tab, title, titlePx: 11, lines: 5 });
+  if (you) {
+    const q = pop(lt, 0.3, 0.35);
+    if (q > 0) {
+      g.globalAlpha = q;
+      rr(105, 865, 350, 84, 10, '#F2D9C8');
+      plain(label, 280, 926, 68, TERRA, { align: 'center', w: 800 });
+      g.globalAlpha = 1;
+    }
+  }
+  for (let k = drop; k < 6; k++) {
+    const x = 110 + k * 150, y = 1250 + (k % 2) * 70;
+    const isYou = you && k === 3;
+    man(x, y, 170, isYou ? MUST : MUTE, { pose: isYou ? 'stand' : 'shrug', face: 'none', shadow: false });
+    if (isYou) { g.strokeStyle = TERRA; g.lineWidth = 9; g.beginPath(); g.arc(x, y - 60, 128, 0, Math.PI * 2); g.stroke(); }
+  }
+  const q = pop(lt, 0.5, 0.4);
+  if (q > 0) {
+    prop(g, 'speech', { x: 820, y: 730, s: 260, tail: 'left', color: INK, fill: '#F2ECE2', alpha: q });
+    if (you) prop(g, 'question', { x: 860, y: 990, s: 230 * q, color: TERRA });
+  }
+}
+const cList1 = lt => {
+  cSilent(lt, '共產黨人', TERRA, false);
+  const q = pop(lt, 0.15, 0.5);
+  if (q > 0) { g.globalAlpha = q; plain('—— 尼莫拉〈起初他們來了〉', 90, 745, 34, INK, { align: 'left' }); g.globalAlpha = 1; }
+};
+const cList2 = lt => cSilent(lt, '猶太人', INK, false, 1);
+const cList3 = lt => cSilent(lt, '工會成員', INK, false, 2);
+const cList4 = lt => cSilent(lt, '', INK, true, 3, '我');
+
+// head：卡名。只有封面（第 0 卡）畫成大標。
+const CARDS = [
+  { head: `${fmt(FACTS.INDICTED)} → ${fmt(FACTS.PROVEN)}`, hud: '示意圖', hl: ['罪大惡極'], draw: c1 },
+  { head: '起訴人數', hud: '鏡報', hl: ['一千五百四十四個被害人'], draw: c2 },
+  { head: '只剩這些', hud: 'TVBS', hl: ['幣想被害人', '四百八十五'], draw: c3 },
+  { head: '幣想科技', hud: 'TVBS／壹蘋', hl: ['幣想科技', '四十五家'], draw: c4 },
+  { head: '檢方說法', hud: 'TVBS／壹蘋', hl: ['收被害人的現金', '洗錢'], draw: c5 },
+  { head: '算成被害人', hud: '鏡報／中央社', hl: ['錢流進它的門市', '全列為它的被害人'], draw: c6 },
+  { head: '筆錄不算', hud: '鏡報', hl: ['警局的筆錄', '沒有經過對質', '不能當證據'], draw: c7 },
+  { head: '車輪戰', hud: 'TVBS', hl: ['五百一十三人', '將近三個月'], draw: c9 },
+  { head: '一份一份看', hud: '判決轉載', hl: ['其他證據補強', '一份一份認定'], draw: cSplit },
+  { head: '照卷審', hud: '判決轉載', hl: ['卷裡的資料'], draw: cFile },
+  { head: '對不上', hud: '壹蘋', hl: ['在幣想門市買過幣'], draw: c10 },
+  { head: '自己決定', hud: '判決轉載', hl: ['自己決定去幣想門市', '不能算被告的責任'], draw: c11 },
+  { head: '怎麼認定', hud: '判決轉載', hl: ['錢要真的經過幣想', '被騙才付'], draw: cStd },
+  { head: '認定人數', hud: 'TVBS', hl: ['全部審完', '四百八十五人'], draw: c12 },
+  { head: '二十二年', hud: '華視／壹蘋', hl: ['二十二年'], draw: c13 },
+  { head: '認定洩題', hud: '判決轉載', hl: ['審查題目', '洩給詐團'], draw: cKYC },
+  { head: '只靠說的', hud: '判決轉載', hl: ['辯方說', '別人說的話'], draw: cTalk },
+  { head: '加盟店', hud: '士檢新聞稿', hl: ['十四名被告', '間加盟店'], draw: cShop },
+  { head: '兩個數字', hud: '鏡報／TVBS', hl: ['一千五百四十四', '四百八十五'], draw: c14 },
+  { head: '與我無關', hud: '示意圖', hl: ['聳動標題', '罪有應得', '與我無關'], draw: cNews },
+  { head: '起初', hud: '示意圖', hl: ['共產黨人', '沉默'], draw: cList1 },
+  { head: '接著', hud: '示意圖', hl: ['猶太人', '沉默'], draw: cList2 },
+  { head: '後來', hud: '示意圖', hl: ['工會成員', '沉默'], draw: cList3 },
+  { head: '最後', hud: '示意圖', hl: ['抓我', '為我說話'], draw: cList4 },
+];
+const N = CARDS.length;
+if (TL.lines.length !== N) throw new Error(`timeline.js 有 ${TL.lines.length} 句，卡片 ${N} 張，對不上`);
+const DUR = TL.dur;
+const T0 = TL.lines.map((l, i) => i === 0 ? 0 : l.t0 - 0.2);
+const END0 = TL.lines[N - 1].t1 + 0.3;
+const cardAt = t => { let i = 0; while (i + 1 < N && t >= T0[i + 1]) i++; return i; };
+const PH = TL.lines.flatMap((l, i) => (l.phrases || [{ text: l.text, t0: l.t0, t1: l.t1 }]).map(p => ({ ...p, card: i })));
+
+// ---------- 頂部系列標籤 ----------
+function series() {
+  plain(`${SERIES}｜系列`, 540, 150, 34, DIM, { align: 'center', w: 600 });
+  rr(510, 172, 60, 5, 3, TERRA);
+}
+
+// ---------- 字幕：一卡一個逗號短語，關鍵詞陶土紅，上方一條短橫線 ----------
+function caption(t) {
+  const j = PH.findIndex((p, k) => t >= p.t0 - 0.05 && t < Math.min(p.t1 + 0.25, PH[k + 1] ? PH[k + 1].t0 - 0.05 : Infinity));
+  if (j < 0 || t >= END0) return;
+  const p = PH[j], hl = CARDS[p.card].hl || [];
+  const px = 58, maxW = 900;
+  g.font = ZH(700, px);
+  const rows = g.measureText(p.text).width <= maxW ? [p.text] : [p.text.slice(0, Math.ceil(p.text.length / 2)), p.text.slice(Math.ceil(p.text.length / 2))];
+  const y0 = 1400 - (rows.length - 1) * 36;
+  rr(510, y0 - 92, 60, 6, 3, INK);
+  rows.forEach((r, k) => rich(r, 540, y0 + k * 74, px, hl));
+}
+function rich(s, cx, y, px, hl) {
+  const mark = Array(s.length).fill(false);
+  for (const w of hl) { let i = s.indexOf(w); while (i >= 0) { for (let k = 0; k < w.length; k++) mark[i + k] = true; i = s.indexOf(w, i + 1); } }
+  g.font = ZH(700, px); g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+  let x = cx - g.measureText(s).width / 2;
+  for (let k = 0; k < s.length; k++) { g.fillStyle = mark[k] ? TERRA : INK; g.fillText(s[k], x, y); x += g.measureText(s[k]).width; }
+}
+
+// ---------- 片尾系列卡 ----------
+function endCard(t) {
+  g.fillStyle = CREAM; g.fillRect(0, 0, W, H);
+  const lt = t - END0;
+  say(SERIES, 540, 640, 68, INK, 1, { id: 'end-series', align: 'center', bold: 0.03 });
+  say(`第 ${EP} 集`, 540, 720, 44, TERRA, 1, { id: 'end-ep', align: 'center' });
+  rr(510, 752, 60, 5, 3, SAGE);
+  [[TERRA, 330, 'armsUp'], [MUST, 540, 'stand'], [SAGE, 750, 'armsUp']].forEach(([c, x, pose], k) => man(x, 1150, 260, c, { pose, face: 'smile', tilt: Math.sin(lt * 2 + k) * 0.04 }));
+  plain(HANDLE, 540, 1260, 40, DIM, { align: 'center', w: 600 });
+}
+
+// ---------- 主播 Paradox（Clawd Bot）：右上角 ----------
+const svgText = await fetch('./mascot/clawd-bot.svg').then(r => { if (!r.ok) throw new Error('取不到 mascot/clawd-bot.svg'); return r.text(); });
+const host = document.getElementById('mascot'); host.innerHTML = svgText;
+const ROOT = host.querySelector('svg'); if (!ROOT) throw new Error('mascot svg 解析失敗');
+const TRACK = { fps: 30, states: [{ t: 0, state: 'idle' }], looks: CARDS.map((c, i) => ({ t: T0[i], x: -0.5, y: 0.5 })), pokes: [] };
+function poseHost(t) {
+  applyPose(ROOT, poseAt(t, TRACK));
+  if (!TL.lines.some(l => t >= l.t0 && t <= l.t1)) return;
+  const a = 0.25 + 0.75 * Math.abs(Math.sin(t * 13.5)) * (0.55 + 0.45 * Math.abs(Math.sin(t * 4.3 + 1)));
+  ROOT.querySelector('#mouth').setAttribute('d', `M-5,8 Q0,${(9 + a * 5).toFixed(2)} 5,8`);
+}
+const MASCOT = { x: 875, y: 260, s: 224 };
+let mascotTok = 0;
+function finish(t) {
+  caption(t);
+  poseHost(t);
+  const tok = ++mascotTok, img = new Image();
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(ROOT));
+  return img.decode().then(() => {
+    if (tok !== mascotTok) return;
+    g.drawImage(img, MASCOT.x, MASCOT.y, MASCOT.s, MASCOT.s);
+  });
+}
+
+// ---------- 主迴圈 ----------
+const XF = 0.5;
+const snap = Object.assign(document.createElement('canvas'), { width: W, height: H });
+function render(t) {
+  t = clamp(t, 0, DUR); TXT = [];
+  if (t >= END0) {
+    const k = E.io(inv(END0, END0 + XF, t));
+    if (k < 1) { drawCard(N - 1, t); snap.getContext('2d').drawImage(g.canvas, 0, 0); TXT = []; }
+    endCard(t);
+    if (k < 1) { g.globalAlpha = 1 - k; g.drawImage(snap, 0, 0); g.globalAlpha = 1; }
+    return finish(t);
+  }
+  const i = cardAt(t), lt = t - T0[i];
+  const k = i && lt < XF ? E.io(lt / XF) : 1;
+  if (k < 1) { drawCard(i - 1, t); snap.getContext('2d').drawImage(g.canvas, 0, 0); TXT = []; }
+  drawCard(i, t);
+  if (k < 1) { g.globalAlpha = 1 - k; g.drawImage(snap, 0, 0); g.globalAlpha = 1; }
+  return finish(t);
+}
+function drawCard(i, t) {
+  const cd = CARDS[i], lt = t - T0[i];
+  g.fillStyle = CREAM; g.fillRect(0, 0, W, H);
+  series();
+  if (i === 0) say(cd.head, 540, 370, 170, INK, 1, { id: 'head1', align: 'center' });
+  g.save(); cd.draw(lt); g.restore();
+  g.globalAlpha = 1;
+  plain(`來源｜${cd.hud}`, 540, 1530, 28, DIM, { align: 'center', w: 500 });
+}
+
+// ---------- 對外契約 ----------
+window.DUR = DUR;
+window.render = render;
+window.TEXTS = t => { render(t); return TXT.filter(b => b.screen); };
+window.CUES = PH.map(p => ({ t0: p.t0, t1: p.t1, text: p.text }));
+window.EV = [{ t: 0, type: 'bed', len: DUR }, { t: T0[15] + 0.9, type: 'stamp' }];   // 卡16 判決定讞落下
+window.SHAKES = window.EV.filter(e => e.type === 'stamp').map(e => e.t);   // seek_check 逐筆比對 EV，沒匯出＝沒查
+window.VOICE = TL.lines.map((l, j) => ({ t: l.t0, file: `out/voice/${String(j + 1).padStart(2, '0')}.wav` }));
+
+// 字型：這段程式碼本身就含畫面上所有字，整段拿去預載
+const allText = document.querySelector('script[type=module]').textContent + TL.lines.map(l => l.text).join('') + '0123456789,%';
+await Promise.all([700, 600].map(w => document.fonts.load(ZH(w, 58), allText)));
+await document.fonts.ready;
+for (let i = 0; i < N; i++) render(T0[i] + 0.6);
+render(0);
+window.READY = true;
+</script>
+</body>
+</html>

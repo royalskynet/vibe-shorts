@@ -22,8 +22,9 @@
 | `scripts/trend_zh.py` | 中文熱度來源 | 無 |
 | `scripts/breakdown.py` | 拆片：鏡頭表、逐字稿、前 3 秒鉤子 | [yt-dlp](https://github.com/yt-dlp/yt-dlp)、ffmpeg；逐字稿降級用 [mlx-whisper](https://github.com/ml-explore/mlx-examples) |
 | `scripts/ref_analyze.py` | 拉片：切點、鏡長中位數、拼圖 | ffmpeg |
+| `scripts/outlier.py` | 帳號內離群倍數（單支播放 ÷ 近 N 支中位數；TikTok `@handle`、YouTube `/channel/<UC…>/shorts`） | [yt-dlp](https://github.com/yt-dlp/yt-dlp) ≥ 2026.11.23；公式借鏡 ScrapeCreators outlier-post-finder（MIT） |
 | `scripts/viral_text.py` | 文字題的爆款訊號 | 無 |
-| `tests/test_breakdown.py`、`tests/test_ref_analyze.py` | 最小自檢（不連網） | 無 |
+| `tests/test_breakdown.py`、`tests/test_ref_analyze.py`、`tests/test_outlier.py` | 最小自檢（不連網） | 無 |
 | `scripts/benchmarks.py` | YouTube Data API 頭部與中位數（約 3500 配額） | **私有端**：沿用 `scripts/publish/tokens.py` 的 OAuth |
 
 ## 下游（證據怎麼被用）

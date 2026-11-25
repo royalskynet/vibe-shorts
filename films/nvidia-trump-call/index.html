@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>川普為什麼親自把黃仁勳談回來</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}#mascot{display:none}#mascot svg{width:340px;height:340px}</style>
+<script src="engine.js"></script>
+<script src="timeline.js"></script>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<div id="mascot"></div>
+<script type="module">
+// 單人旁白科普，畫面照無邊探索（refs/boundless/ANALYSIS.md §3）：全片同一張米色底、不硬切；
+// 扁平小人＋四色；一句一個畫面狀態（CARDS），字幕一卡一個逗號短語（timeline.js 的 phrases）；
+// 頂部系列標籤，片尾系列卡。角色用色：黃仁勳＝芥末黃、川普＝陶土紅、習近平＝深棕、其他人灰。
+// 禁止清單（TREATMENT.md）：不畫真人臉（一律扁平小人＋名牌）、不畫國旗、不提醜聞細節、
+// 不重複同系列數字（11 天、5,700 億、回任漲一兆、無異議通過）。
+// 所有動作都是 t 的封閉式（seek_check.mjs 會比亂序算出的同一幀）；循環用取餘數，不累積。
+import { poseAt, applyPose } from './mascot/clawd-bot-shot.mjs';
+import { PALETTE, person, prop } from './illust/illust.mjs';
+const G = window.G, E = G.E, TL = window.TL, W = 1080, H = 1920;
+const g = document.getElementById('c').getContext('2d', { alpha: false });
+const { clamp, inv, lerp, mix } = G;
+
+const CREAM = PALETTE.cream, INK = PALETTE.ink, TERRA = PALETTE.terra, MUST = PALETTE.mustard, COAT = PALETTE.coat;
+const SAGE = '#7FA57A', BLUE = '#6F8FB0', MUTE = '#B3A797', SOFT = '#EBE1D2', DIM = '#8C7B6B';
+const MUST_D = '#9A6F1C', RED = '#B0432F', SKY = '#D9E4E9';
+const ZH = (w, px) => `${w} ${px}px "PingFang TC"`;
+const SERIES = '新聞背後的帳', EP = 4, HANDLE = '@paradoxbar';
+const GY = 1270;   // 畫面地平線：小人腳底；字幕短橫線在 1308
+
+// 會出現在畫面上的事實數字集中在這裡，不要在別處重寫一次。每一個都要在 meta/facts.md 有一行附來源。
+const FACTS = {
+  MAT_MIN: 2,          // F2 腳踏墊兩分鐘被山寨
+  MOVIE_DAY: 1,        // F2 電影上映一天滿街盜版
+  GEN_NEXT: 3,         // F2 川普說黃仁勳腦中已想下三代
+  THE_WORD: '最聰明的天才',   // F3 習近平反覆用的詞
+  THE_LINE: '拚命幹活，全世界沒人打得過你',  // F5 川普電話裡唯一的要求
+};
+const fmt = n => n.toLocaleString('en-US');
+
+// ---------- 字 ----------
+let TXT = [];
+function say(s, x, y, px, col, p, o = {}) {
+  g.save(); g.font = ZH(o.w || 700, px); g.textAlign = o.align || 'left'; g.textBaseline = 'alphabetic';
+  const w = g.measureText(s).width;
+  g.globalAlpha *= E.io(p); g.fillStyle = col; g.fillText(s, x, y);
+  if (o.bold) { g.strokeStyle = col; g.lineWidth = px * o.bold; g.lineJoin = 'round'; g.strokeText(s, x, y); }
+  g.restore();
+  if (o.id) {
+    const x0 = o.align === 'center' ? x - w / 2 : o.align === 'right' ? x - w : x;
+    TXT.push({ id: o.id, text: s, x0, y0: y - px, x1: x0 + w, y1: y + px * 0.25, screen: true });
+  }
+  return w;
+}
+function plain(s, x, y, px, col, o = {}) {
+  g.font = ZH(o.w || 600, px); g.textAlign = o.align || 'left'; g.textBaseline = 'alphabetic';
+  g.fillStyle = col; g.fillText(s, x, y);
+}
+const pop = (lt, a, d = 0.5) => E.o3(inv(a, a + d, lt));
+const loop = (x, n) => ((x % n) + n) % n;
+const rr = (x, y, w, h, r, col) => { g.fillStyle = col; g.beginPath(); g.roundRect(x, y, w, h, r); g.fill(); };
+const man = (x, y, s, body, o = {}) => person(g, { x, y, s, body, ...o });
+const fig = (s, x, y, col, p = 1, id) => say(s, x, y, 64, col, p, { id, align: 'center', bold: 0.03 });
+const tag = (s, x, y, col = INK) => plain(s, x, y, 40, col, { align: 'center', w: 700 });
+
+// ---------- 小道具 ----------
+// 晶片：外殼＋左右腳位＋內部線路
+function chip(x, y, s, col = INK, inner = SOFT) {
+  const k = s / 100;
+  g.save(); g.translate(x, y); g.scale(k, k);
+  rr(-70, -70, 140, 140, 14, col);
+  for (let i = 0; i < 5; i++) { rr(-88, -50 + i * 26, 18, 10, 4, col); rr(70, -50 + i * 26, 18, 10, 4, col); }
+  rr(-46, -46, 92, 92, 8, inner);
+  g.strokeStyle = TERRA; g.lineWidth = 6; g.lineCap = 'round'; g.beginPath();
+  g.moveTo(-30, -30); g.lineTo(4, -30); g.lineTo(4, 0); g.lineTo(30, 0);
+  g.moveTo(-30, 10); g.lineTo(-8, 10); g.lineTo(-8, 32);
+  g.moveTo(12, 30); g.lineTo(30, 30); g.lineTo(30, 12);
+  g.stroke();
+  g.restore();
+}
+// 簡單飛機：機身＋尾翼＋機翼（x, y 機頭中心，k 縮放）
+function plane(x, y, k, col = '#F2E7D3', line = INK) {
+  g.save(); g.translate(x, y); g.scale(k, k);
+  g.fillStyle = col; g.strokeStyle = line; g.lineWidth = 10; g.lineJoin = 'round';
+  g.beginPath(); g.moveTo(190, 0); g.quadraticCurveTo(240, -28, 210, -60); g.lineTo(-60, -60); g.lineTo(-150, -60); g.lineTo(-190, -30); g.lineTo(-210, 20); g.quadraticCurveTo(-160, 34, -120, 34); g.lineTo(150, 34); g.quadraticCurveTo(230, 30, 190, 0); g.closePath(); g.fill(); g.stroke();
+  g.beginPath(); g.moveTo(-160, -58); g.lineTo(-200, -110); g.lineTo(-160, -110); g.lineTo(-110, -58); g.closePath(); g.fill(); g.stroke();
+  g.beginPath(); g.moveTo(-20, -20); g.lineTo(60, 90); g.lineTo(110, 90); g.lineTo(50, -30); g.closePath(); g.fill(); g.stroke();
+  g.restore();
+}
+// 大樓（辦公室）：體＋窗格＋門洞
+function office(x, y, w, h, name) {
+  rr(x - w / 2, y - h, w, h, 24, SOFT);
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 3; c++) rr(x - w / 2 + 40 + c * (w - 80) / 3, y - h + 50 + r * (h - 200) / 4, (w - 140) / 3, 70, 10, '#FBF3E4');
+  rr(x - 46, y - 190, 92, 190, 16, INK);
+  if (name) tag(name, x, y - h + 30);
+}
+// 登機門：門框＋後面機身
+function gate(x, y, w, h, col = INK) {
+  g.strokeStyle = col; g.lineWidth = 18; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(x - w / 2, y); g.lineTo(x - w / 2, y - h); g.lineTo(x + w / 2, y - h); g.lineTo(x + w / 2, y); g.stroke();
+}
+// 手（簡化）：從一側伸出的粗圓臂＋掌
+function hand(x, y, len, ang, col) {
+  g.save(); g.translate(x, y); g.rotate(ang);
+  g.strokeStyle = col; g.lineWidth = 56; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(0, 0); g.lineTo(len - 40, 0); g.stroke();
+  G.disc(g, len, 0, 42, col);
+  g.restore();
+}
+// 一排高樓剪影（y 是地面線，樓往上長）
+function skyline(x, y, s, col = INK) {
+  const k = s / 100;
+  g.save(); g.translate(x, y); g.scale(k, k);
+  [[-140, -120, 60, 120], [-70, -180, 56, 180], [-4, -100, 60, 100], [64, -160, 56, 160], [130, -90, 50, 90]].forEach(([bx, by, bw, bh]) => {
+    rr(bx, by, bw, -by, 6, col);
+  });
+  for (let i = 0; i < 8; i++) rr(-130 + i * 32, -60, 12, 12, 2, '#FBF3E4');
+  g.restore();
+}
+
+// ---------- 每張卡的畫面（畫在 y 500–1290；x≥875、y<480 是主播位置） ----------
+function c1(lt) {
+  // 黃仁勳走出輝達大樓；另一頭白宮裡川普探身指向他
+  office(270, GY, 380, 660, '輝達');
+  man(300, GY, 380, MUST, { pose: 'walk', dir: 1, t: lt });
+  tag('黃仁勳', 300, GY + 56);
+  prop(g, 'house', { x: 820, y: GY, s: 560, wall: '#FBF3E4' });
+  const lean = pop(lt, 0.5, 0.8);
+  man(810, GY, 320, TERRA, { pose: 'point', dir: -1, aim: -0.5 - lean * 0.2, face: 'worried' });
+  tag('川普', 810, GY + 56);
+}
+function c2(lt) {
+  // 電視裡的川普受訪：螢幕＋下方新聞字幕條
+  rr(140, 560, 800, 640, 30, '#3A2E26');
+  rr(170, 590, 740, 580, 20, '#F2E7D3');
+  man(540, 1170, 500, TERRA, { pose: 'point', dir: -1, face: 'smile' });
+  prop(g, 'speech', { x: 760, y: 700, s: 150, tail: 'left', fill: '#FFFFFF', text: '談成的', px: 24 });
+  rr(200, 1040, 680, 100, 16, INK);
+  plain('「交易是我談成的」', 540, 1108, 54, '#F2E7D3', { align: 'center', w: 800 });
+  rr(430, 1200, 220, 30, 12, DIM);
+  tag('電視專訪', 540, 530, DIM);
+}
+function c3(lt) {
+  // 小股價線被壓在角落，後面翻開的是一本大帳
+  prop(g, 'card', { x: 250, y: 860, w: 320, h: 340 });
+  g.strokeStyle = INK; g.lineWidth = 8; g.strokeRect(110, 700, 280, 320);
+  g.strokeStyle = TERRA; g.lineWidth = 14; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath();
+  [[140, 940], [190, 880], [240, 920], [295, 960], [355, 985]].forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y));
+  g.stroke();
+  tag('股價', 250, 680, DIM);
+  // 大帳本：墨框白頁＋陶土行線，佔右邊 2/3
+  g.save(); g.translate(700, 900); g.rotate(0.03);
+  rr(-250, -320, 500, 640, 22, INK);
+  rr(-234, -304, 468, 608, 16, '#FBF3E4');
+  plain('另一筆帳', 0, -240, 48, INK, { align: 'center', w: 800 });
+  g.strokeStyle = MUTE; g.lineWidth = 14; g.lineCap = 'round';
+  for (let r = 0; r < 3; r++) { g.beginPath(); g.moveTo(-180, -140 + r * 110); g.lineTo(180 - r * 50, -140 + r * 110); g.stroke(); }
+  g.strokeStyle = TERRA; g.lineWidth = 16; g.beginPath(); g.moveTo(-180, 190); g.lineTo(140, 190); g.stroke();
+  g.restore();
+  G.disc(g, 910, 590, 62, MUST);
+  prop(g, 'bulb', { x: 910, y: 510, s: 100, on: pop(lt, 0.4, 0.6), t: lt });
+}
+function c4(lt) {
+  // 左：腳踏墊兩分鐘被山寨；右：影碟一天滿街盜版
+  const p1 = pop(lt, 0.3, 0.8), p2 = pop(lt, 0.9, 0.8);
+  rr(110, 1020, 300, 170, 28, SAGE);
+  rr(140, 1050, 240, 110, 20, '#6B8B68');
+  tag('腳踏墊', 260, 1240);
+  for (let k = 0; k < 3; k++) {
+    g.globalAlpha = 0.25 + 0.18 * k * p1;
+    rr(400 + k * 12, 1020 - k * 26, 300, 170, 28, SAGE);
+    g.globalAlpha = 1;
+  }
+  fig(`${FACTS.MAT_MIN} 分鐘`, 430, 940, TERRA, p1);
+  G.disc(g, 800, 950, 130, '#D9D2C4');
+  G.disc(g, 800, 950, 34, CREAM);
+  tag('電影', 800, 1150);
+  for (let k = 0; k < 4; k++) {
+    g.globalAlpha = 0.3 * p2;
+    G.disc(g, 690 + k * 75, 1130, 55, '#D9D2C4'); G.disc(g, 690 + k * 75, 1130, 15, CREAM);
+    g.globalAlpha = 1;
+  }
+  fig(`${FACTS.MOVIE_DAY} 天`, 800, 800, TERRA, p2);
+}
+function c5(lt) {
+  // 晶片放大成線路迷宮；小人拿影印機只能印出亂碼
+  chip(360, 900, 300);
+  // 影印機
+  rr(690, 1030, 300, 170, 20, SOFT); rr(710, 960, 260, 80, 16, MUTE);
+  rr(760, 1180, 160, 16, 6, DIM);
+  // 印出來的紙＋亂碼
+  const q = pop(lt, 0.5, 0.9);
+  if (q > 0) {
+    g.save(); g.translate(760, 1210); g.rotate(-0.06);
+    rr(-110, 0, 220, 150, 8, '#FBF3E4');
+    g.strokeStyle = MUTE; g.lineWidth = 8; g.lineCap = 'round';
+    for (let r = 0; r < 4; r++) { g.beginPath(); g.moveTo(-80, 34 + r * 32); for (let x = -80; x < 80; x += 14) g.lineTo(x, 34 + r * 32 + Math.sin(x * 0.4 + r) * 8); g.stroke(); }
+    g.restore();
+  }
+  man(950, GY, 300, DIM, { pose: 'shrug', dir: -1, face: 'worried' });
+  prop(g, 'question', { x: 950, y: GY - 400, s: 80, color: DIM });
+}
+function c6(lt) {
+  // 晶片一層層疊成塔；最上面三層漂進黃仁勳腦袋裡
+  for (let i = 0; i < 3; i++) chip(400, 1150 - i * 190, 190 - i * 12);
+  man(800, GY, 420, MUST, { pose: 'think', dir: -1, face: 'smile' });
+  tag('黃仁勳', 800, GY + 56);
+  for (let k = 0; k < FACTS.GEN_NEXT; k++) {
+    const q = pop(lt, 0.4 + k * 0.35, 0.5);
+    if (q > 0) chip(lerp(400, 800, q), lerp(590 - k * 6, 560 - k * 74, q), 90 * q + 26, INK, '#FBF3E4');
+  }
+  fig('下三代', 800, 430, TERRA, pop(lt, 1.2, 0.5));
+}
+function c7(lt) {
+  // 訪中：飛機劃過，長桌兩側川普與習近平對坐
+  plane(300 + pop(lt, 0, 1.4) * 60, 600, 1.1, '#F2E7D3');
+  g.strokeStyle = DIM; g.lineWidth = 10; g.lineCap = 'round';
+  for (let k = 0; k < 3; k++) { g.beginPath(); g.moveTo(120 + k * 40, 660 + k * 40); g.lineTo(260 + k * 40, 660 + k * 40); g.stroke(); }
+  rr(120, 1060, 840, 34, 12, '#8A6A55');
+  rr(140, 1094, 800, GY - 1094, 10, '#A5835D');
+  g.fillStyle = 'rgba(59,47,42,0.12)'; g.fillRect(140, 1094, 800, 22);
+  man(290, GY, 420, TERRA, { pose: 'stand', dir: 1 });
+  man(790, GY, 420, COAT, { pose: 'stand', dir: -1 });
+  prop(g, 'speech', { x: 540, y: 890, s: 150, tail: 'none', fill: '#FBF3E4', stroke: INK });
+  tag('川普', 290, GY + 56); tag('習近平', 790, GY + 56);
+  tag('訪中', 610, 620);
+}
+function c8(lt) {
+  // 習近平提到他：同一個詞像蓋章一樣蓋三次
+  man(250, GY, 460, COAT, { pose: 'point', dir: 1, aim: -0.3 });
+  tag('習近平', 250, GY + 56);
+  rr(140, 1120, 800, 26, 10, '#A5835D');   // 桌面線
+  for (let k = 0; k < 3; k++) {
+    const q = pop(lt, 0.2 + k * 0.4, 0.3);
+    if (q <= 0) continue;
+    g.save(); g.translate(670, 660 + k * 170); g.rotate((k - 1) * 0.07);
+    g.globalAlpha = q;
+    rr(-250, -70, 500, 140, 24, '#FBF3E4');
+    g.strokeStyle = TERRA; g.lineWidth = 12; g.strokeRect(-250, -70, 500, 140);
+    plain(FACTS.THE_WORD, 0, 22, 56, TERRA, { align: 'center', w: 800 });
+    g.restore();
+  }
+}
+function c9(lt) {
+  // 「最聰明的天才」壓在黃仁勳身上：他就是那個詞指的人
+  g.save(); g.shadowColor = 'rgba(59,47,42,0.18)'; g.shadowBlur = 30; g.shadowOffsetY = 12;
+  G.disc(g, 540, 900, 300, '#F2E7D3'); g.restore();
+  man(540, GY + 60, 680, MUST, { pose: 'stand', face: 'smile' });
+  tag('黃仁勳', 730, 1090);
+  g.strokeStyle = TERRA; g.lineWidth = 10; g.lineCap = 'round';
+  for (let k = 0; k < 5; k++) { const a = -Math.PI * 0.8 + k * Math.PI * 0.4; g.beginPath(); g.moveTo(540 + Math.cos(a) * 340, 900 + Math.sin(a) * 340); g.lineTo(540 + Math.cos(a) * 390, 900 + Math.sin(a) * 390); g.stroke(); }
+  fig('全世界這個產業裡', 540, 620, INK, pop(lt, 0.3, 0.6));
+  fig(FACTS.THE_WORD, 540, 720, TERRA, pop(lt, 0.8, 0.6), 'fig-word');
+}
+function c10(lt) {
+  // 川普攤開一張紙開始推演：算式一條條寫出來
+  g.save(); g.translate(430, 620); g.rotate(-0.05); rr(0, 0, 540, 560, 18, SOFT); g.restore();   // 底下那張
+  rr(380, 640, 540, 560, 18, INK);                       // 紙的墨框
+  rr(392, 652, 516, 536, 14, '#FBF3E4');
+  g.strokeStyle = INK; g.lineWidth = 14; g.lineCap = 'round';
+  for (let r = 0; r < 4; r++) {
+    const q = pop(lt, 0.3 + r * 0.35, 0.4);
+    if (q <= 0) continue;
+    g.globalAlpha = q; g.beginPath();
+    g.moveTo(440, 780 + r * 105); g.lineTo(440 + 380 * q, 780 + r * 105); g.stroke();
+    g.globalAlpha = 1;
+  }
+  plain('如果…？', 440, 740, 48, TERRA, { w: 800 });
+  man(200, GY, 400, TERRA, { pose: 'think', dir: 1 });
+  tag('川普', 200, GY + 56);
+}
+function c11(lt) {
+  // 黃仁勳被逼著走向登機門，門後機身寫著「北京」
+  rr(580, 540, 450, 540, 24, SKY);                    // 登機窗外
+  g.strokeStyle = INK; g.lineWidth = 10; g.strokeRect(580, 540, 450, 540);
+  plane(810, 720, 0.75, '#E4EBF0');
+  plain('北京', 810, 720, 48, INK, { align: 'center', w: 800 });
+  const gy = GY - 140;                                 // 整幕抬離字幕帶
+  gate(580, gy, 460, 680);
+  rr(80, gy, 980, 20, 8, DIM);                         // 地面線
+  const go = E.io(inv(0.2, 2.2, lt));
+  man(lerp(240, 470, go), gy, 400, MUST, { pose: 'walk', dir: 1, t: lt });
+  tag('黃仁勳', lerp(240, 470, go), gy + 46);
+  hand(60, 920, 180 + go * 60, -0.15, TERRA);          // 後面那隻推手
+}
+function c12(lt) {
+  // 對面開的價：整座城市捧出來，招牌寫華為
+  rr(540, 660, 460, 130, 20, INK);                     // 招牌
+  plain('華為', 770, 752, 84, '#FBF3E4', { align: 'center', w: 800 });
+  g.strokeStyle = INK; g.lineWidth = 8;
+  g.beginPath(); g.moveTo(700, 790); g.lineTo(700, 830); g.moveTo(840, 790); g.lineTo(840, 830); g.stroke();
+  const lift = pop(lt, 0.3, 0.9);
+  g.save(); g.translate(0, (1 - lift) * 60); g.globalAlpha = Math.max(0, lift);
+  skyline(370, 1130, 190, INK);
+  rr(100, 1130, 600, 34, 12, '#8A6A55');               // 托盤
+  g.restore(); g.globalAlpha = 1;
+  hand(90, 1210, 150, -0.5, COAT); hand(620, 1210, 150, -2.7, COAT);
+  tag('北京', 390, 1216);
+  man(880, GY, 360, DIM, { pose: 'armsUp', dir: -1, face: 'smile' });
+}
+function c13(lt) {
+  // 美國幾年的領先，一夜歸零：天變黑、長條消下去
+  const dark = E.io(inv(0.2, 1.6, lt));
+  g.fillStyle = `rgba(38,44,60,${0.6 * dark})`; g.fillRect(0, 0, W, H);
+  G.disc(g, 840, 640, 84, '#F2E7D3');                  // 月亮
+  G.disc(g, 812, 615, 22, SOFT); G.disc(g, 862, 660, 16, SOFT);
+  for (let k = 0; k < 6; k++) { const R = G.rng(31); const sx = 120 + R() * 840, sy = 520 + R() * 200; g.globalAlpha = 0.5 + 0.5 * Math.sin(lt * 3 + k); G.disc(g, sx, sy, 7, '#F2E7D3'); }
+  g.globalAlpha = 1;
+  // 兩條長條框：美國的從有到無，對手的還在
+  g.strokeStyle = INK; g.lineWidth = 10;
+  g.strokeRect(280, 800, 220, 380); g.strokeRect(580, 800, 220, 380);
+  const h = lerp(360, 0, dark);
+  if (h > 0) rr(290, 1180 - h, 200, h, 10, TERRA);
+  rr(590, 840, 200, 340, 10, '#6F8FB0');
+  rr(240, 1180, 600, 18, 8, INK);                       // 地面線
+  // 夜色城市剪影鋪底（樓頂不進字幕帶）
+  if (dark > 0) {
+    g.globalAlpha = dark;
+    skyline(160, 1920, 200, INK); skyline(540, 1920, 210, INK); skyline(880, 1900, 200, INK);
+    g.globalAlpha = 1;
+  }
+  const zx = E.io(inv(1.0, 1.7, lt));                    // 空框打紅叉：歸零
+  if (zx > 0) {
+    g.globalAlpha = zx; g.strokeStyle = RED; g.lineWidth = 26; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(300, 830); g.lineTo(480, 1150); g.moveTo(480, 830); g.lineTo(300, 1150); g.stroke();
+    g.globalAlpha = 1;
+  }
+  fig('一夜歸零', 390, 700, RED, pop(lt, 0.9, 0.5), 'fig-zero');
+}
+function c14(lt) {
+  // 結論大字：把人逼走＝最大威脅；登機門變紅警示
+  const blink = loop(lt, 1.0) < 0.55;
+  gate(790, 1170, 340, 520, blink ? RED : MUTE);
+  G.disc(g, 790, 590, 34, blink ? RED : MUTE);
+  g.strokeStyle = blink ? RED : MUTE; g.lineWidth = 14; g.lineCap = 'round';
+  for (let k = 0; k < 3; k++) { g.beginPath(); g.moveTo(650 + k * 120, 1170); g.lineTo(700 + k * 120, 1100); g.stroke(); }   // 門下警示斜紋
+  man(790, 1170, 300, MUST, { pose: 'stand', dir: -1 });
+  rr(110, 700, 560, 240, 26, INK);
+  fig('把人逼走', 390, 790, '#F2E7D3', pop(lt, 0.2, 0.5));
+  fig('才是最大的威脅', 390, 890, RED, pop(lt, 0.8, 0.6), 'fig-threat');
+}
+function c15(lt) {
+  // 簽字那晚的電話：兩端各一個人，話從川普這頭飄過去
+  rr(80, 1160, 920, 26, 10, '#A5835D');               // 桌面線
+  man(230, GY, 430, TERRA, { pose: 'point', dir: 1, aim: -0.3 });
+  tag('川普', 230, GY + 56);
+  man(850, GY, 430, MUST, { pose: 'stand', dir: -1, face: 'smile' });
+  tag('黃仁勳', 850, GY + 56);
+  prop(g, 'phone', { x: 540, y: 900, s: 300 });
+  for (let k = 0; k < 3; k++) {
+    const r = 190 + loop(lt * 120 + k * 60, 170);
+    g.globalAlpha = 1 - (r - 190) / 170;
+    g.strokeStyle = TERRA; g.lineWidth = 12; g.lineCap = 'round';
+    g.beginPath(); g.arc(540, 900, r, -0.4, 0.4); g.stroke();
+    g.globalAlpha = 1;
+  }
+  fig(FACTS.THE_LINE, 540, 640, TERRA, pop(lt, 0.6, 0.8));
+}
+function c16(lt) {
+  // 一手牌：最上面那張畫著晶片，差點被抽走，被按住
+  for (let k = 3; k >= 0; k--) {
+    g.save(); g.translate(430 + k * 36, 1010 - k * 16); g.rotate((k - 1.5) * 0.05);
+    rr(-160, -230, 320, 460, 20, INK);
+    rr(-148, -218, 296, 436, 16, '#FBF3E4');
+    g.restore();
+  }
+  chip(500, 1020, 190);
+  tag('美國手上的牌', 540, 1250);
+  const hold = pop(lt, 0.8, 0.7);
+  hand(960, 880 - hold * 60, 300, Math.PI - 0.5, COAT);   // 上面按住的手
+  g.strokeStyle = TERRA; g.lineWidth = 12; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(800, 620); g.lineTo(880, 540); g.moveTo(860, 660); g.lineTo(930, 600); g.stroke();
+}
+
+// head：卡名。只有封面（第 0 卡）畫成大標，其他卡不畫（使用者 11-04：只留封面大標，precheck「內頁大標」門）。
+const CARDS = [
+  { head: '總統坐不住', hud: '示意圖', hl: ['執行長走人', '總統'], draw: c1 },
+  { head: '交易是我談成的', hud: 'CNBC 專訪', hl: ['親口說', '交易'], draw: c2 },
+  { head: '更大的帳', hud: 'CNBC 專訪', hl: ['更大的帳'], draw: c3 },
+  { head: '抄得走的', hud: 'CNBC 專訪', hl: ['兩分鐘', '盜版'], draw: c4 },
+  { head: '抄不走的', hud: 'CNBC 專訪', hl: ['抄不來'], draw: c5 },
+  { head: '裝在腦子裡', hud: 'CNBC 專訪', hl: ['腦子裡'], draw: c6 },
+  { head: '訪中的一句話', hud: 'CNBC 專訪', hl: ['一句話'], draw: c7 },
+  { head: '同一個詞', hud: 'CNBC 專訪', hl: ['同一個詞'], draw: c8 },
+  { head: '最聰明的天才', hud: 'CNBC 專訪', hl: ['最聰明的天才'], draw: c9 },
+  { head: '順著推演', hud: 'CNBC 專訪', hl: ['推演'], draw: c10 },
+  { head: '飛北京的班機', hud: 'CNBC 專訪', hl: ['飛北京', '開什麼價'], draw: c11 },
+  { head: '對面開的價', hud: 'CNBC 專訪', hl: ['北京城', '華為'], draw: c12 },
+  { head: '一夜歸零', hud: 'CNBC 專訪', hl: ['歸零'], draw: c13 },
+  { head: '最大的威脅', hud: 'CNBC 專訪', hl: ['逼走', '最大的威脅'], draw: c14 },
+  { head: '那晚的電話', hud: 'CNBC 專訪', hl: ['拚命幹活', '打得過'], draw: c15 },
+  { head: '最厚的一張牌', hud: '示意圖', hl: ['最厚的一張牌'], draw: c16 },
+];
+const N = CARDS.length;
+if (TL.lines.length !== N) throw new Error(`timeline.js 有 ${TL.lines.length} 句，卡片 ${N} 張，對不上`);
+const DUR = TL.dur;
+const T0 = TL.lines.map((l, i) => i === 0 ? 0 : l.t0 - 0.2);
+const END0 = TL.lines[N - 1].t1 + 0.3;   // 片尾系列卡
+const cardAt = t => { let i = 0; while (i + 1 < N && t >= T0[i + 1]) i++; return i; };
+const PH = TL.lines.flatMap((l, i) => (l.phrases || [{ text: l.text, t0: l.t0, t1: l.t1 }]).map(p => ({ ...p, card: i })));
+
+// ---------- 頂部系列標籤 ----------
+function series() {
+  plain(`${SERIES}｜系列`, 540, 150, 34, DIM, { align: 'center', w: 600 });
+  rr(510, 172, 60, 5, 3, TERRA);
+}
+
+// ---------- 字幕：一卡一個逗號短語，關鍵詞陶土紅，上方一條短橫線 ----------
+function caption(t) {
+  const j = PH.findIndex((p, k) => t >= p.t0 - 0.05 && t < Math.min(p.t1 + 0.25, PH[k + 1] ? PH[k + 1].t0 - 0.05 : Infinity));
+  if (j < 0 || t >= END0) return;
+  const p = PH[j], hl = CARDS[p.card].hl || [];
+  const px = 58, maxW = 900;
+  g.font = ZH(700, px);
+  const rows = g.measureText(p.text).width <= maxW ? [p.text] : [p.text.slice(0, Math.ceil(p.text.length / 2)), p.text.slice(Math.ceil(p.text.length / 2))];
+  const y0 = 1400 - (rows.length - 1) * 36;
+  rr(510, y0 - 92, 60, 6, 3, INK);
+  rows.forEach((r, k) => rich(r, 540, y0 + k * 74, px, hl));
+}
+function rich(s, cx, y, px, hl) {
+  const mark = Array(s.length).fill(false);
+  for (const w of hl) { let i = s.indexOf(w); while (i >= 0) { for (let k = 0; k < w.length; k++) mark[i + k] = true; i = s.indexOf(w, i + 1); } }
+  g.font = ZH(700, px); g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+  let x = cx - g.measureText(s).width / 2;
+  for (let k = 0; k < s.length; k++) { g.fillStyle = mark[k] ? TERRA : INK; g.fillText(s[k], x, y); x += g.measureText(s[k]).width; }
+}
+
+// ---------- 片尾系列卡 ----------
+function endCard(t) {
+  g.fillStyle = CREAM; g.fillRect(0, 0, W, H);
+  const lt = t - END0;
+  say(SERIES, 540, 640, 68, INK, 1, { id: 'end-series', align: 'center', bold: 0.03 });
+  say(`第 ${EP} 集`, 540, 720, 44, TERRA, 1, { id: 'end-ep', align: 'center' });
+  rr(510, 752, 60, 5, 3, SAGE);
+  [[TERRA, 330, 'point'], [MUST, 540, 'stand'], [COAT, 750, 'armsUp']].forEach(([c, x, pose], k) => man(x, 1150, 260, c, { pose, face: 'smile', tilt: Math.sin(lt * 2 + k) * 0.04 }));
+  plain(HANDLE, 540, 1260, 40, DIM, { align: 'center', w: 600 });
+}
+
+// ---------- 主播 Paradox（Clawd Bot）：右上角，寫法照 films/elected-dictator ----------
+const svgText = await fetch('./mascot/clawd-bot.svg').then(r => { if (!r.ok) throw new Error('取不到 mascot/clawd-bot.svg'); return r.text(); });
+const host = document.getElementById('mascot'); host.innerHTML = svgText;
+const ROOT = host.querySelector('svg'); if (!ROOT) throw new Error('mascot svg 解析失敗');
+const TRACK = { fps: 30, states: [{ t: 0, state: 'idle' }], looks: CARDS.map((c, i) => ({ t: T0[i], x: -0.5, y: 0.5 })), pokes: [] };
+function poseHost(t) {
+  applyPose(ROOT, poseAt(t, TRACK));
+  if (!TL.lines.some(l => t >= l.t0 && t <= l.t1)) return;
+  const a = 0.25 + 0.75 * Math.abs(Math.sin(t * 13.5)) * (0.55 + 0.45 * Math.abs(Math.sin(t * 4.3 + 1)));
+  ROOT.querySelector('#mouth').setAttribute('d', `M-5,8 Q0,${(9 + a * 5).toFixed(2)} 5,8`);
+}
+// 畫框 x 875 起、y 260 起、邊長 224；IG 主頁格把 9:16 置中裁成 3:4，整隻要在 y 240 以下。
+const MASCOT = { x: 875, y: 260, s: 224 };
+let mascotTok = 0;
+function finish(t) {
+  caption(t);
+  poseHost(t);
+  const tok = ++mascotTok, img = new Image();
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(ROOT));
+  return img.decode().then(() => {
+    if (tok !== mascotTok) return;
+    g.drawImage(img, MASCOT.x, MASCOT.y, MASCOT.s, MASCOT.s);
+  });
+}
+
+// ---------- 主迴圈 ----------
+// 換卡＝原地交叉淡化 XF 秒：底色一樣，看起來是小人與道具在原地換狀態，不是切鏡頭。
+const XF = 0.5;
+const snap = Object.assign(document.createElement('canvas'), { width: W, height: H });
+function render(t) {
+  t = clamp(t, 0, DUR); TXT = [];
+  if (t >= END0) {
+    const k = E.io(inv(END0, END0 + XF, t));
+    if (k < 1) { drawCard(N - 1, t); snap.getContext('2d').drawImage(g.canvas, 0, 0); TXT = []; }
+    endCard(t);
+    if (k < 1) { g.globalAlpha = 1 - k; g.drawImage(snap, 0, 0); g.globalAlpha = 1; }
+    return finish(t);
+  }
+  const i = cardAt(t), lt = t - T0[i];
+  const k = i && lt < XF ? E.io(lt / XF) : 1;
+  if (k < 1) { drawCard(i - 1, t); snap.getContext('2d').drawImage(g.canvas, 0, 0); TXT = []; }
+  drawCard(i, t);
+  if (k < 1) { g.globalAlpha = 1 - k; g.drawImage(snap, 0, 0); g.globalAlpha = 1; }
+  return finish(t);
+}
+function drawCard(i, t) {
+  const cd = CARDS[i], lt = t - T0[i];
+  g.fillStyle = CREAM; g.fillRect(0, 0, W, H);
+  series();
+  if (i === 0) say(cd.head, 540, 370, 170, INK, 1, { id: 'head1', align: 'center' });  // 170px 不描邊
+  g.save(); cd.draw(lt); g.restore();
+  g.globalAlpha = 1;
+  plain(`來源｜${cd.hud}`, 540, 1530, 28, DIM, { align: 'center', w: 500 });
+}
+
+// ---------- 對外契約 ----------
+window.DUR = DUR;
+window.render = render;
+window.TEXTS = t => { render(t); return TXT.filter(b => b.screen); };
+window.CUES = PH.map(p => ({ t0: p.t0, t1: p.t1, text: p.text }));
+window.EV = [{ t: 0, type: 'bed', len: DUR }, { t: T0[7] + 0.9, type: 'stamp' }, { t: T0[12] + 0.9, type: 'stamp' }];   // 卡8 蓋詞、卡13 歸零
+window.SHAKES = window.EV.filter(e => e.type === 'stamp').map(e => e.t);   // seek_check 逐筆比對 EV，沒匯出＝沒查
+window.VOICE = TL.lines.map((l, j) => ({ t: l.t0, file: `out/voice/${String(j + 1).padStart(2, '0')}.wav` }));
+
+// 字型：這段程式碼本身就含畫面上所有字，整段拿去預載
+const allText = document.querySelector('script[type=module]').textContent + TL.lines.map(l => l.text).join('') + '0123456789,%';
+await Promise.all([700, 600].map(w => document.fonts.load(ZH(w, 58), allText)));
+await document.fonts.ready;
+for (let i = 0; i < N; i++) render(T0[i] + 0.6);
+render(0);
+window.READY = true;
+</script>
+</body>
+</html>

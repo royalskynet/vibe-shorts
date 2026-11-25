@@ -1,6 +1,6 @@
 # 北捷手扶梯站左邊可以嗎？（單人旁白科普）
 
-題目與核准：`/Users/you/OpenBot/Shared/approved/2026-11-06-mrt-escalator.md`（使用者 11-06 說「稿過，用 Opus 版建片」，寫稿擂台 `bakeoff/RESULT.md`；11-07 改第 12、13、15、16、17、19 句，使用者說「北捷改稿過，排今晚 02:00 建片」）。事實一律取自 `FACTS.md`。
+題目與核准：`/Users/51mini/OpenBot/Shared/approved/2026-11-06-mrt-escalator.md`（使用者 11-06 說「稿過，用 Opus 版建片」，寫稿擂台 `bakeoff/RESULT.md`；11-07 改第 12、13、15、16、17、19 句，使用者說「北捷改稿過，排今晚 02:00 建片」）。事實一律取自 `FACTS.md`。
 
 格式照 `docs/WRITING.md` §7：m3 單人旁白。一支只講一個機制：左行右立是為了載更多人才定的，但在長梯上大多數人不走，走路那側空著，反而少載人。爆點在落點：12,745 → 16,220。
 

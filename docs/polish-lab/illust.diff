@@ -1,0 +1,41 @@
+--- films/dune-messiah-trap/illust/illust.mjs	2026-11-20 00:57:57
++++ /tmp/vs-lab/illust/illust.mjs	2026-11-23 13:40:55
+@@ -53,7 +53,12 @@
+ function soft(g, k, fn, blur = 16, dy = 5, col = SHADOW) {
+   g.save(); g.shadowColor = col; g.shadowBlur = blur * k; g.shadowOffsetY = dy * k; fn(); g.restore();
+ }
+-function ground(g, rx, ry, a = 0.14) { g.fillStyle = `rgba(59,47,42,${a})`; g.beginPath(); g.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); g.fill(); }
++function ground(g, rx, ry, a = 0.14) {
++  g.save(); g.translate(2, 0); g.scale(1, ry / rx);
++  const gr = g.createRadialGradient(0, 0, 0, 0, 0, rx * 1.15);
++  gr.addColorStop(0, `rgba(59,40,30,${a * 2.6})`); gr.addColorStop(0.6, `rgba(59,40,30,${a * 1.2})`); gr.addColorStop(1, 'rgba(59,40,30,0)');
++  g.fillStyle = gr; g.beginPath(); g.arc(0, 0, rx * 1.15, 0, Math.PI * 2); g.fill(); g.restore();
++}
+ function label(g, s, x, y, px, col, w = 700, align = 'center') {
+   g.font = `${w} ${px}px ${FONT}`; g.textAlign = align; g.textBaseline = 'middle'; g.fillStyle = col; g.fillText(s, x, y);
+ }
+@@ -110,6 +115,14 @@
+   }
+   g.translate(0, f2(dy));
+   fill(g, BODY, body);
++  g.save(); g.clip(P(BODY));
++  const sg = g.createLinearGradient(-15, 0, 15, 0);
++  sg.addColorStop(0, 'rgba(255,244,222,0.30)'); sg.addColorStop(0.45, 'rgba(255,244,222,0)'); sg.addColorStop(1, 'rgba(40,24,16,0.34)');
++  g.fillStyle = sg; g.fillRect(-16, -74, 32, 42);
++  const hg = g.createLinearGradient(0, -73, 0, -33);
++  hg.addColorStop(0, 'rgba(255,244,222,0.16)'); hg.addColorStop(1, 'rgba(40,24,16,0.18)');
++  g.fillStyle = hg; g.fillRect(-16, -74, 32, 42);
++  g.restore();
+   // 手：袖子比身體深一點，手掌跟頭同色
+   const arm = shade(body, PALETTE.ink, 0.22);
+   for (const [side, [e, h]] of [[1, q.R], [-1, q.L]]) {
+@@ -117,6 +130,9 @@
+     fill(g, circlePath(h[0], h[1], 3.3), head);
+   }
+   fill(g, HEAD, head);
++  const hl = g.createRadialGradient(-4, -89, 1, -2, -86, 14);
++  hl.addColorStop(0, 'rgba(255,236,210,0.34)'); hl.addColorStop(1, 'rgba(255,236,210,0)');
++  g.fillStyle = hl; g.fill(P(HEAD));
+   if (face !== 'none') {
+     const c = o.faceColor || PALETTE.cream, fx = 1.6;
+     fill(g, circlePath(fx - 4.3, -85.5, 1.45), c); fill(g, circlePath(fx + 4.3, -85.5, 1.45), c);

@@ -1,6 +1,6 @@
 ## 任務
 
-工作目錄：`/Users/you/dev/vibe-shorts-pipeline`。做兩件事，不做其他事。
+工作目錄：`/Users/51mini/dev/vibe-shorts-pipeline`。做兩件事，不做其他事。
 
 ### 1. 改 `films/ai-oversold/index.html`
 - 第 29 行 `DIM = '#8C7B6B'` 改成 `DIM = '#6F5F50'`，同一行其他常數不動。
@@ -16,7 +16,7 @@
 ## 驗收
 
 ```bash
-cd /Users/you/dev/vibe-shorts-pipeline
+cd /Users/51mini/dev/vibe-shorts-pipeline
 f=films/ai-oversold/index.html
 cp "$f" /tmp/ai-oversold-index.new.html
 sed -i '' "s/DIM = '#6F5F50'/DIM = '#8C7B6B'/" "$f"

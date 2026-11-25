@@ -1,6 +1,6 @@
 # Devil's Advocate Evidence Pack
 
-Report: /Users/you/dev/vibe-shorts-pipeline/films/dating-bill/audit/claims.md
+Report: /Users/51mini/dev/vibe-shorts-pipeline/films/dating-bill/audit/claims.md
 Reviewed: 2026-10-14
 Core conclusion as read: 遇不到人排第一，錢也一直在名單上。
 

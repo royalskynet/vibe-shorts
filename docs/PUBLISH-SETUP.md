@@ -96,7 +96,7 @@
 8. **OAuth redirect URIs** 填這一行，儲存：
 
    ```
-   https://host.tailnet.ts.net/oauth
+   https://51minidemac-mini.tail5498f5.ts.net/oauth
    ```
 
    儲存後回頭看一眼。後台有時會自動在尾巴加 `/`，有加的話跟我說，我這邊要存成一模一樣的。
@@ -143,7 +143,7 @@
 
 3. 左側**使用案例** → 點 Threads 那個 → 權限清單裡 `threads_basic`、`threads_content_publish` 旁邊按**新增**。
 4. 左側**設定**（Threads 使用案例的設定頁）：
-   - **重新導向回呼網址**（Client OAuth Settings）填同一行 `https://host.tailnet.ts.net/oauth`。
+   - **重新導向回呼網址**（Client OAuth Settings）填同一行 `https://51minidemac-mini.tail5498f5.ts.net/oauth`。
    - **解除授權回呼網址**、**資料刪除要求網址**：沒填不給儲存的話，兩格都填同一行網址。
    - 按**儲存**。
 5. 同一頁有 **Threads app ID** 和 **Threads app secret**。

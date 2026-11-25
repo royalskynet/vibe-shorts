@@ -1,6 +1,6 @@
 # 台北公車（單人旁白科普）初稿，待使用者核
 
-核准：/Users/you/OpenBot/Shared/approved/2026-10-31-taipei-bus.md（docs/SERIES-taipei-issues.md 題 4）。格式照 docs/WRITING.md §7 與系列規則：單人旁白，一支只講一個機制「司機不夠 → 減班、趕班 → 抱怨變多 → 更少人想開」，國際解法用首爾 2004 年公車改革；台灣兩種主張排在首爾後面，各 5 句。範本稿 films/taipei-rent、films/taipei-childcare（bccd752）。
+核准：/Users/51mini/OpenBot/Shared/approved/2026-10-31-taipei-bus.md（docs/SERIES-taipei-issues.md 題 4）。格式照 docs/WRITING.md §7 與系列規則：單人旁白，一支只講一個機制「司機不夠 → 減班、趕班 → 抱怨變多 → 更少人想開」，國際解法用首爾 2004 年公車改革；台灣兩種主張排在首爾後面，各 5 句。範本稿 films/taipei-rent、films/taipei-childcare（bccd752）。
 
 爆款證據：YouTube｜281萬播放｜Tom Scott「The country where all public transit is free」（387 秒，盧森堡全國免費）｜https://youtu.be/feCQPD9DSOA；YouTube｜122萬播放｜DW Planet A「Why free public transport doesn't fix traffic (and what does)」（680 秒，票價免費不夠、要班次跟可靠；本片「等公車越等越久」的鉤子方向）｜https://youtu.be/K6md7gny4pY；YouTube｜14.9萬播放｜TVBS 十點不一樣「公車司機缺額達19.4%! 碩士生實測60天」（321 秒，同題台灣，缺工→減班→趕班→投訴的惡性循環＝本片機制）｜https://youtu.be/W14ajTmhIDc；YouTube｜14.8萬播放｜台視「月薪六萬以上 公車駕駛找嘸人」（436 秒）｜https://youtu.be/0iN9ssmrQxo；YouTube｜13.2萬播放｜公視獨立特派員「工時長、風險高，公車客運駕駛嚴重短缺」（964 秒）｜https://youtu.be/ZvJMikh-A2I
 

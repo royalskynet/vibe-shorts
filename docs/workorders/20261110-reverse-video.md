@@ -1,6 +1,6 @@
 ## 任務
 
-工作目錄 /Users/you/dev/vibe-shorts-pipeline。照計畫 /Users/you/dev/vibe-shorts-pipeline/docs/plans/2026-11-10-reverse-video.md 的「規格」段實作，先讀計畫、scripts/breakdown.py、tests/test_breakdown.py。
+工作目錄 /Users/51mini/dev/vibe-shorts-pipeline。照計畫 /Users/51mini/dev/vibe-shorts-pipeline/docs/plans/2026-11-10-reverse-video.md 的「規格」段實作，先讀計畫、scripts/breakdown.py、tests/test_breakdown.py。
 
 ### 1. 新增 scripts/reverse.py
 重用 breakdown.process 與 breakdown.hook，不改 breakdown.py。Python 用 .venv/bin/python（已裝 mlx-whisper、whisper 模型已快取）。
@@ -14,7 +14,7 @@ regress: for t in tests/test_breakdown.py tests/test_cover_text.py; do python3 "
 ## 驗收
 
 ```bash
-cd /Users/you/dev/vibe-shorts-pipeline
+cd /Users/51mini/dev/vibe-shorts-pipeline
 python3 tests/test_reverse.py
 python3 tests/test_breakdown.py
 rm -rf /tmp/rev-acc

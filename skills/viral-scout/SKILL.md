@@ -33,16 +33,20 @@ description: 營銷號（vibe-shorts）找爆款：選題、鉤子、節奏、�
 | Instagram | Exa 搜 `site:instagram.com/reel <q>` → `yt-dlp -J <reel URL>` 讀 like_count；無熱度排序，清單不代表頭部 | 讚數（播放 NA） | ✅ 10-14 |
 | Facebook | Exa 找網址 → `yt-dlp -J <影片頁 URL>`；只限 `/videos/` 頁 | 播放與互動 | ✅ 10-14 |
 | Threads | Exa 搜 `site:threads.com <q>` → `curl -s "https://r.jina.ai/<貼文 URL>"` 讀 `N views` | 瀏覽數 | ✅ 10-14 |
+| YouTube 留言（挖問題／罵點） | `yt-dlp --skip-download --write-comments --extractor-args "youtube:max_comments=N,all,0,0" -J <URL>` 讀 `.comments[]`（text、like_count）；分桶借鏡 ScrapeCreators `comment-mining`：問題／反對／痛點／困惑／請求／迷因 | 留言文字、讚數 | ✅ 11-24（30 筆） |
+| TikTok 帳號頁 | `yt-dlp --flat-playlist --playlist-items 1:20 -J "https://www.tiktok.com/@<handle>" 2>/dev/null` 讀 `.entries[]` 的 view_count、like_count、url；stderr 要丟掉否則 JSON 壞 | 播放、讚、連結 | ✅ 11-24（8 筆） |
+| 帳號內離群倍數 | `python3 scripts/outlier.py @<handle> [N]`（TikTok；YouTube 給 `/channel/<UC…>/shorts` URL）。倍數＝單支播放 ÷ 近 N 支中位數；≥5 離群、2–5 偏強。自檢 `tests/test_outlier.py`（借鏡 ScrapeCreators `outlier-post-finder`） | 離群榜 | ✅ 11-24（@khaby.lame 20 支最高 11.3×；四方異聞 30 支中位數 45.6 萬，對 BENCHMARKS 記的 44.5 萬） |
 | 拉片（切點／鏡長／拼圖） | `python3 scripts/ref_analyze.py <影片> --out <前綴>` | 切點、鏡長中位數、拼圖 | ✅ 10-18（對談片中位約 2.4–3.2s） |
 | 體檢 | `~/.local/bin/agent-reach doctor --json` | 各平台後端 | ✅ 10-14 |
 
 已驗證失敗，不再試：
 
 - Exa 工具不在時（`ToolSearch "exa"` 只回 WebSearch／WebFetch），IG／FB／Threads 第一步跑不動；`WebSearch "site:instagram.com/reel …"`／`"site:threads.com …"` 只回第三方網站 → 該題寫「無數字」。❌ 10-14
-- X：Exa `site:x.com` 0 筆；`twitter search` 缺 `TWITTER_AUTH_TOKEN`／`TWITTER_CT0`，cookie 檔被 canary 擋是正確行為，**不繞**。❌ 10-14
+- X：Exa `site:x.com` 0 筆。11-24 憑證已配好，`twitter status` 回 `authenticated: true`，但 `twitter search "<q>" --max 5` 回 `HTTP 404`（同時警告 `Failed to init ClientTransaction`，疑為 twitter-cli 上游問題，未深查）。cookie 檔被 canary 擋是正確行為，**不繞**。❌ 11-24
 - `opencli <平台> search`：`BROWSER_CONNECT: Browser Bridge extension not connected`。❌ 10-14
 - FB 貼文頁：`Unsupported URL`／`Cannot parse data`。❌ 10-14
-- `yt-dlp --flat-playlist -J "https://www.youtube.com/@<頻道>/shorts"` 回空。❌ 10-16
+- ~~`yt-dlp --flat-playlist -J "https://www.youtube.com/@<頻道>/shorts"` 回空~~（10-16 ❌）：yt-dlp 升到 2026.11.23 後可用，`@MrBeast/shorts` 回 10 支含 view_count，`outlier.py` 可直接吃 `/channel/<UC…>/shorts`。✅ 11-24
+- TikTok 關鍵字搜尋：`tiktoksearch5:<q>` 報 `Unsupported url scheme`；`tiktok:tag` 回 `playlist_count: 0`。免費路徑只能「已知帳號」，不能「依題目找」。❌ 11-24
 - `yt-dlp ytsearch` 只依相關度排序，拿來「找 100 萬級題目」命中率低（10-29：38 組查詢只 3 支 ≥100 萬）；找爆款題先翻 `refs/BENCHMARKS.md` 離群榜。IG 帳號頁（ladder cdp）未登入只有粉絲數、沒有各片播放數。⚠️ 10-29
 - ffmpeg scene 偵測在對談片抓 0 刀，拉片改用 `ref_analyze.py`。
 

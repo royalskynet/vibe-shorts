@@ -5,11 +5,11 @@
 
 ## 一、我這邊已經完成的（不用重做）
 
-- 新檔 `/Users/you/dev/vibe-shorts-pipeline/scripts/publish/social.py`
+- 新檔 `/Users/51mini/dev/vibe-shorts-pipeline/scripts/publish/social.py`
   三平台統一 CLI，複用既有 `tokens.py` 的憑證與續期，只用標準函式庫。
-- 改 `/Users/you/dev/vibe-shorts-pipeline/scripts/publish/tokens.py`
+- 改 `/Users/51mini/dev/vibe-shorts-pipeline/scripts/publish/tokens.py`
   `META["threads"]["scope"]` 加上 `threads_delete`（原本只有 `threads_basic,threads_content_publish`）。
-- 新檔 `/Users/you/dev/vibe-shorts-pipeline/tests/test_social.py`
+- 新檔 `/Users/51mini/dev/vibe-shorts-pipeline/tests/test_social.py`
   11 項全過，且做過變異測試（把轉貼篩選反掉、把 IG 改成可刪，兩次都如期 exit=1）。
 - 實測過 `list yt`（真的回一筆私人影片）、`list ig`（0 筆）、`delete ig`（如期被擋 exit=1）。
 
@@ -28,7 +28,7 @@
 ## 二、現況：本機沒有 Threads 權杖
 
 ```
-$ python3 /Users/you/dev/vibe-shorts-pipeline/scripts/publish/tokens.py status
+$ python3 /Users/51mini/dev/vibe-shorts-pipeline/scripts/publish/tokens.py status
   yt       已登入  refresh token 長期有效，上次換新 2026-10-13
   ig       已登入  還有 59 天（2026-12-12）
   threads  未登入  —
@@ -58,7 +58,7 @@ $ python3 /Users/you/dev/vibe-shorts-pipeline/scripts/publish/tokens.py status
 ### 第 2 步：授權
 
 ```bash
-python3 /Users/you/dev/vibe-shorts-pipeline/scripts/publish/tokens.py login threads
+python3 /Users/51mini/dev/vibe-shorts-pipeline/scripts/publish/tokens.py login threads
 ```
 
 它會印一個授權網址，開完同意後瀏覽器會跳到一個連不上的頁面（正常）。
@@ -75,7 +75,7 @@ python3 .../tokens.py whoami threads           # 確認是對的帳號，不是�
 ### 第 3 步：先刪一筆試，再批次
 
 ```bash
-cd /Users/you/dev/vibe-shorts-pipeline
+cd /Users/51mini/dev/vibe-shorts-pipeline
 # 先看有幾筆轉貼（唯讀，不會動任何東西）
 python3 scripts/publish/social.py list threads --type repost --limit 100
 # 挑清單裡第一筆的 ID，單筆試刪（這一步不可逆）

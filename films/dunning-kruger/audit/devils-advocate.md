@@ -1,6 +1,6 @@
 # Devil's Advocate Evidence Pack
 
-Report: /Users/you/dev/vibe-shorts-pipeline/films/dunning-kruger/audit/claims.md
+Report: /Users/51mini/dev/vibe-shorts-pipeline/films/dunning-kruger/audit/claims.md
 Reviewed: 2026-11-06
 Core conclusion as read: 所以看不出自己錯，常常只是還沒學到能看出錯的那一步。
 

@@ -2,7 +2,7 @@
 
 拆單豁免：旁白改字、humanize 的 sha 戳記、說明欄殘留清理互相綁定，分開派會讓 sha 對不上。
 
-工作目錄：`/Users/you/dev/vibe-shorts-pipeline`。使用者已核過 `/tmp/pk-narration-approved.md`（稿子基準），只做下面三項修正，其他句子一字不動。不改 `index.html`／`mix.py`／`build.sh`，不 render，不 git commit，不跑 `approve.py`／`voice.py`。
+工作目錄：`/Users/51mini/dev/vibe-shorts-pipeline`。使用者已核過 `/tmp/pk-narration-approved.md`（稿子基準），只做下面三項修正，其他句子一字不動。不改 `index.html`／`mix.py`／`build.sh`，不 render，不 git commit，不跑 `approve.py`／`voice.py`。
 
 ### 1. 修改 `films/pikmin-bloom/narration.md`
 只做這些取代（完全照字面）：
@@ -27,7 +27,7 @@
 ## 驗收
 
 ```bash
-cd /Users/you/dev/vibe-shorts-pipeline
+cd /Users/51mini/dev/vibe-shorts-pipeline
 f=films/pikmin-bloom/narration.md
 grep -q '你課的每一筆錢，都算進這款遊戲的收入裡' "$f"
 if grep -q '跟這個寫法有關' "$f"; then exit 1; fi

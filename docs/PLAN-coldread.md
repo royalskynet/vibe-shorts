@@ -11,7 +11,7 @@ Eian 流程多數不適用（我們全程式渲染，不用 AI 生圖／Seedance
 
 ## 任務
 
-工作目錄 `/Users/you/dev/vibe-shorts-pipeline`。先讀 `CLAUDE.md`、`scripts/devils.sh`、`scripts/precheck.py`（`check()`、`review_problems()`、`humanize_problems()` 的 sha 比對寫法）、`scripts/qa_sheet.sh`、`films/democracy-noise/qa/review_log.md`，照既有寫法。
+工作目錄 `/Users/51mini/dev/vibe-shorts-pipeline`。先讀 `CLAUDE.md`、`scripts/devils.sh`、`scripts/precheck.py`（`check()`、`review_problems()`、`humanize_problems()` 的 sha 比對寫法）、`scripts/qa_sheet.sh`、`films/democracy-noise/qa/review_log.md`，照既有寫法。
 
 ### 1. `scripts/coldread.sh films/<片> script|film`
 
@@ -63,16 +63,16 @@ Eian 流程多數不適用（我們全程式渲染，不用 AI 生圖／Seedance
 ## 驗收
 
 ```bash
-cd /Users/you/dev/vibe-shorts-pipeline && python3 tests/test_coldread.py
-cd /Users/you/dev/vibe-shorts-pipeline && for t in tests/test_*.py; do python3 "$t" >/dev/null || exit 1; done
-cd /Users/you/dev/vibe-shorts-pipeline && head -1 films/democracy-noise/audit/coldread-script.md | grep -q "^narration_sha: $(shasum -a 256 films/democracy-noise/narration.md | cut -d' ' -f1)$"
-cd /Users/you/dev/vibe-shorts-pipeline && grep -q '^VERDICT: ' films/democracy-noise/audit/coldread-script.md
-cd /Users/you/dev/vibe-shorts-pipeline && head -1 films/democracy-noise/qa/coldread-film.md | grep -q '^video_sha: '
-cd /Users/you/dev/vibe-shorts-pipeline && grep -q '^VERDICT: ' films/democracy-noise/qa/coldread-film.md
-cd /Users/you/dev/vibe-shorts-pipeline && python3 scripts/gray_contrast.py films/democracy-noise && test -s films/democracy-noise/qa/gray.json
-cd /Users/you/dev/vibe-shorts-pipeline && python3 scripts/precheck.py films/democracy-noise > /tmp/pc-cold.txt; grep -q '冷讀' /tmp/pc-cold.txt
-cd /Users/you/dev/vibe-shorts-pipeline && grep -q 'coldread.sh' skills/vibe-shorts/SKILL.md
-cd /Users/you/dev/vibe-shorts-pipeline && git diff --quiet ffe5f58 -- scripts/rhythm_check.py scripts/publish
+cd /Users/51mini/dev/vibe-shorts-pipeline && python3 tests/test_coldread.py
+cd /Users/51mini/dev/vibe-shorts-pipeline && for t in tests/test_*.py; do python3 "$t" >/dev/null || exit 1; done
+cd /Users/51mini/dev/vibe-shorts-pipeline && head -1 films/democracy-noise/audit/coldread-script.md | grep -q "^narration_sha: $(shasum -a 256 films/democracy-noise/narration.md | cut -d' ' -f1)$"
+cd /Users/51mini/dev/vibe-shorts-pipeline && grep -q '^VERDICT: ' films/democracy-noise/audit/coldread-script.md
+cd /Users/51mini/dev/vibe-shorts-pipeline && head -1 films/democracy-noise/qa/coldread-film.md | grep -q '^video_sha: '
+cd /Users/51mini/dev/vibe-shorts-pipeline && grep -q '^VERDICT: ' films/democracy-noise/qa/coldread-film.md
+cd /Users/51mini/dev/vibe-shorts-pipeline && python3 scripts/gray_contrast.py films/democracy-noise && test -s films/democracy-noise/qa/gray.json
+cd /Users/51mini/dev/vibe-shorts-pipeline && python3 scripts/precheck.py films/democracy-noise > /tmp/pc-cold.txt; grep -q '冷讀' /tmp/pc-cold.txt
+cd /Users/51mini/dev/vibe-shorts-pipeline && grep -q 'coldread.sh' skills/vibe-shorts/SKILL.md
+cd /Users/51mini/dev/vibe-shorts-pipeline && git diff --quiet ffe5f58 -- scripts/rhythm_check.py scripts/publish
 ```
 
 預期：每行 exit 0；precheck 通過數與改前相同（46/47 那一項仍只差公開路徑）。

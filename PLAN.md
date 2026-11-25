@@ -19,7 +19,7 @@
 | ⑧b 分發 | 一片多形態（輪播、Threads 文字貼、自引用）、手動回覆、系列化（HN 發布即時推播 11-06 刪，CHG-20261106-09） | `meta_publish.py --carousel`、`threads_post.py`（佇列）；規則 `docs/DISTRIBUTION.md` | 2026-10-20 上線，佇列 3 則待核 |
 | ⑨ 回饋 | 48 小時後抓三平台數據，決定主力平台與下一個對標 | `scripts/publish/stats.py`（一支一行：上架小時、播放、讚、留言、分享） | ✅ 10-17；節奏先 1–2 天一支，不追日更 |
 
-趨勢掃描 `trend_scan.py`（launchd `com.host.vibe-trends`）降為備用題庫，不再當主要選題來源。
+趨勢掃描 `trend_scan.py`（launchd `com.51mini.vibe-trends`）降為備用題庫，不再當主要選題來源。
 
 ②（拆別人的片）的分工是刻意的：切點與秒數由 ffmpeg 量，景別、運鏡這類判斷才交給模型，最後 15 道程式化關卡逐條對帳。
 
@@ -204,3 +204,4 @@ const FACTS = {
 - 2026-11-06 dunning-kruger（單人旁白 m3、18 句、84.5s，夜間批次建片）：precheck 47/47、exit 0，dist 三平台＋封面就緒，未上傳未發布。`rhythm-profile` 由舊範本殘留的 card 改 calm（既有基準、數字沒動；card 三項全不過：0.14／100%／85s）。approve 戳記依核准檔 status=script_ok 補寫，非使用者原話。反方兩爭點 SPLIT、稿冷讀第 9 句硬傷（WARN）：鉤子、第 9 句、落點「常常只是」比證據寬，稿已核准未動，待使用者看片時裁決；片冷讀通過。
 - 2026-11-13 12:10 nvidia-short（Culper 放空輝達、黃仁勳辭職，20 句單人旁白，78s，系列「新聞背後的帳」第 1 集）：v6 稿核准（結尾「司法部對這些公司的調查也還沒結束」），precheck 47/48（只缺發布前的 public_path），私人上傳 https://youtube.com/shorts/Vn-zyhOBy0M 待使用者審片點頭再發三平台。坑：藏字檢查只算亮度跟中位數差 >40 的像素，米色底上白紙／淺紙色（亮度 >200）整張不算，文件改牛皮紙 #E3BE78。片冷讀每輪都挑新項目、不收斂（WARN），修硬傷到 3 項後停。
 - 2026-11-17 12:25 nvidia-founder-return（投資人為何要黃仁勳回來，18 句單人旁白，79s，系列「新聞背後的帳」第 2 集）：v7 稿 11-17 核准，build 通過，precheck 47/48（只缺發布前的 public_path），dist/ 三檔已產，11-17 13:31 已發三平台（YT https://youtube.com/shorts/zBwx41X4MsY、IG https://www.instagram.com/reel/Df1LudhjUeW/、Threads https://www.threads.com/@paradoxbar.tw/post/Df1LuNZhCvD）；發前重查新聞，路透引 3 名知情人士同 ABC（董事會沒在考慮），連署已 >18 萬 200；第 5 卡靶心改立在報導旁。舊私人片 HouZv2KEuoo 仍在（舊靶心版），待使用者決定刪不刪。角度「投資人為何要創辦人回來」同題 Shorts 0 筆 ≥10 萬，TREATMENT 如實標「角度未驗證」，爆款證據只驗到事件本身。事實是 11-17 快照，發布前要重查（董事會回應、連署人數、輝達財報台灣時間 11-18 上午）。坑：新機 playwright-core 要 chromium_headless_shell-1243，用 `node ~/dev/lemo-opuscar/node_modules/playwright-core/cli.js install chromium-headless-shell` 裝（`npx playwright` 抓到別版 1255）；SOURCES.md 改一個字就讓反方稽核的 sources_sha 對不上，補充說明寫進 meta/facts.md；nvidia-short 的 `framed` 不在範本，新片要自己帶。
+- 2026-11-25 16:55 nvidia-trump-call（川普為何親自把黃仁勳談回來，16 句單人旁白 m3、79s、calm，系列「新聞背後的帳」第 4 集）：v4 稿 11-25 核准（approve sha 5974b778…），反方稽核三輪（CON_WINS×1、SPLIT×5，前瞻宣稱全標成川普的推演），冷讀稿三輪／片兩輪「不通過」但硬傷多與同系列去重規則衝突，裁決不採（verdicts.md）。build 全綠；藏字檢查首輪 12 卡 FAIL 逐卡加密後 45 幀全過。坑：skyline 新函式原本往下長壓住字幕與來源列，改往上長、底緣錨定；卡 9 名牌原卡進兩行字幕中間、卡 11 地面線穿字幕，皆抬高或挪位。目視自評 7 項 ≥8（qa/review_log.md sha a87a352e）。precheck 47/48（只缺發布前的 public_path），dist/ 三檔已產，11-25 17:15 已發三平台（YT https://youtube.com/shorts/_Hz8cOtE5eE、IG https://www.instagram.com/reel/DgKLZXgy9EM/、Threads https://www.threads.com/@paradoxbar.tw/post/DgKLT1zxapP）。

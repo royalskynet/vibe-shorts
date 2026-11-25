@@ -557,3 +557,115 @@ yt-dlp ytsearch，關鍵字：perception gap polarization／why is democracy so 
 
 第 1 輪已找到同大題符合條件結果，未執行第 2、3 輪放寬。
 判定：同題（皮克敏）0 筆 ≥10 萬；同大題（台灣標示／稱呼爭議引發道歉或抵制）有爆款（John Cena 向中國道歉事件，≤180 秒短片多支 ≥20 萬）。
+
+## 汪達幻視入坑前需要補的漫威背景（2026-11-23 查）
+- YT｜290萬/171s｜MCU Movies in Chronological Story Time Order｜https://youtu.be/PKVyyYoEmPw
+- YT｜77萬/29s｜Wanda Maximoff & Vision | Marvel Studios: Legends | Disney+｜https://youtu.be/vCk9kUNxuzk
+- YT｜68萬/31s｜Marvel Television《幻視征途》(Vision Quest) 10.14 獨家上線（中文預告）｜https://youtu.be/yqryFpLeMnQ
+- YT｜256萬/7587s｜一口氣看完《汪達幻視》（超粒方，中文長片回顧）｜https://youtu.be/VzpeRnzDr54
+- YT｜582/158s｜WandaVision - what YOU NEED to know BEFORE watching!｜https://youtu.be/TFO39qwEy2I（直接同型對標，極弱）
+判定：有爆款（時序解說短片 290 萬＋幻視任務正熱播；直接同型缺位＝空檔機會）
+
+## 幣想案 司法判決爭議（2026-11-23 查）
+查法：`yt-dlp --flat-playlist -J "ytsearch30:<q>"`，篩 `duration ≤ 180` 且 `view_count ≥ 100000`。
+同題查詢（幣想、幣想科技 判決）：0 筆 ≥10 萬。
+同大題查詢（判決 爭議 法官 離譜／詐騙 判刑 法官 台灣／冤案 平反 台灣 判決／法院 判決 荒謬／檢察官 起訴 爭議 台灣／詐騙集團 主謀 判刑／恐龍法官 判決／比特幣 詐騙 交易所 案／法律白話文 判決／冤獄 台灣／crypto exchange founder sentenced／無罪 坐牢 賠償／判錯 法官 坐牢／徐自強 冤案／SBF FTX sentenced prison／檢察官 誤判 起訴）：
+- YouTube｜588802｜冤獄16年獲賠2812萬 徐自強：跟我道歉吧（125 秒）｜https://www.youtube.com/watch?v=aI1tdMxZoQs
+- YouTube｜8025107｜超霸氣！酒駕犯媽媽法庭嬉鬧 法官直接判坐牢（93 秒）｜https://www.youtube.com/watch?v=e4hQe05oElk
+- YouTube｜318728｜Hot Influencer "Goes Dark" to Become Fraud Ring Leader! Judge Slams Her "Lack of Remorse"（144 秒）｜https://www.youtube.com/watch?v=yR_qSWBeQVo
+判定：同題（幣想）0 筆 ≥10 萬；同大題（司法錯判／法庭判決戲劇性）有爆款（弱～強，31 萬–800 萬）。可用角度：「判決書裡數字對不上」單一機制。
+
+## GTA 6 發售首週爆款（2026-11-24 查，venture clipping 產線用）
+查法：yt-dlp flat-playlist 搜尋 URL + `sp=CAI%3D`（上傳日期排序；ytsearchdate 此版不支援），再逐片 `-J` 查 view_count/upload_date。
+- YT｜2,341,282｜TOP 250 WTF & Funny Moments In GTA 6（Red Arcade，11-21）｜https://youtu.be/dMfN68hBoc8
+- YT｜1,423,323｜Kai Cenat Got Humbled On GTA VI（Kai Cenat Live，11-21，Short）｜https://youtu.be/oOzXeZItxBw
+- YT｜309,111｜Kai Cenat Plays GTA 6 In Real Life!（11-22）｜https://youtu.be/ETWvry6twFA
+- YT｜262,708｜xQc CAN'T STOP LAUGHING at GTA 6's UNHINGED Radio Stations（ImStillxQc，11-20）｜https://youtu.be/EcctOiuI6aQ
+- YT｜218,794｜JYNXZI Best MOMENTS In GTA VI（Vyper，11-20）｜https://youtu.be/d7lQUgARJQA
+- YT｜170,945｜GTA 6 WTF and Funny Moments! #6（Zynxize，11-23）｜https://youtu.be/3YETsdE8p1M
+- YT｜86,978｜Getting 6 STARS in GTA 6（xQc，11-23）｜https://youtu.be/XA0QuNTKm1g
+- YT｜71,299｜Top 10 FUNNIEST IShowSpeed GTA 6 Moments（BeastmodeFishing，11-23）｜https://youtu.be/WRmFAdM9Y7o
+- YT｜61,544｜xQc runs into a FAMILIAR FACE in GTA 6（xQc Clips，11-23）｜https://youtu.be/DhHkOPaS8fk
+判定：有爆款（發售首週搞笑時刻/實況主反應類多支 ≥10 萬，最高 234 萬；clipper 二剪市場正熱）。
+
+## 對標頻道離群榜（2026-11-24 查，`scripts/outlier.py` 近 30 支 Shorts，免 key）
+- 四方異聞｜中位數 45.6 萬｜最高 350 萬（7.7×）〈台灣富人集中在哪些縣市〉、320 萬（7.0×）〈台灣哪些縣市最沒錢〉、230 萬（5.0×）〈日本海岸線不連成一條線〉｜https://www.youtube.com/channel/UCYA6MeGKKNF9rZVSr3T1_bQ/shorts
+- KT story｜中位數 17.2 萬｜最高 260 萬（15.2×）〈韓國大哥來台灣熱炒〉、250 萬（14.6×）、230 萬（13.4×）：外國人看台灣題材｜https://www.youtube.com/channel/UCMM_seJ0wZxLofqzYdpUF4Q/shorts
+- 蹦闆｜中位數 32.0 萬｜最高 170 萬（5.3×）；其餘 ≤2.4×｜https://www.youtube.com/channel/UCnVC7sBtDqZTYqycUaPXGJQ/shorts
+- 四處觀察 中位數 88.1 萬（最高 3.6×）、夢夢教父 49.0 萬（3.1×）、毕导THU 25.0 萬（2.8×）：無離群（<5×）。cheap 只取到 5 支、黃大謙 11 支，基線不可信。
+判定：有爆款（四方異聞、KT story 各有 ≥230 萬離群）。台灣縣市比較與「外國人看台灣」兩型離群倍數最高。
+
+## 幣想案系列：司法疑點寫法對標（2026-11-24 查）
+查法：ytsearch30 flat-playlist 依 view_count 排，篩 duration ≤180；頭部帳號用 /shorts 頁拉中位數＋離群倍數。
+錨點（按寫法分）：
+- 冤案平反型｜YT｜8,572,602｜Man wrongfully accused of rape exonerated after 5 years in jail（116s）｜https://youtu.be/ZP2syWS-2M0
+- 冤案平反型（台灣）｜YT｜588,803｜冤獄16年獲賠2812萬 徐自強：跟我道歉吧（125s）｜https://youtu.be/aI1tdMxZoQs
+- 法庭戲劇型｜YT｜8,025,107｜酒駕犯媽媽法庭嬉鬧 法官直接判坐牢（93s）｜https://youtu.be/e4hQe05oElk
+- 法律概念解說型｜YT｜774,345｜What is hearsay?（169s）｜https://youtu.be/oc4sIdpAOwg
+- 重判數字型｜YT｜307,755｜Man sentenced to more than 200 years to life（30s）｜https://youtu.be/gM0OBlBBqPY
+- 台灣政治案件爭議｜YT｜38,848｜鄭文燦案 污點證人改口「500萬是政治獻金」（132s）｜https://youtu.be/lbCN-r9dONc
+- 台灣疑點盤點｜YT｜13,434｜五億高中生案疑點眾多 法醫質疑（113s）｜https://youtu.be/kIBMNtPSWuY
+- 頭部法律帳號｜Law By Mike 中位數 12,000,000（×2.2–4.9 離群榜全是「如何識破/怎麼判」實用向）；LegalEagle shorts 頭部 1,600,000
+判定：司法疑點題在 Shorts 有量，但分三層——冤案平反（800萬級、要真人故事線）＞法庭戲劇時刻（百萬級、要畫面衝突）＞概念解說（70萬級，我們的格式落在這層）。台灣本地「疑點盤點」新聞剪輯只有 1–4 萬，**冷靜疑點型不是靠本土前例，是靠全球冤案/證據爭議的寫法借過來**：開場用案件內部的矛盾數字或荒謬機制當鉤，不用「冤不冤」當結論，結尾留疑問給觀眾（同 A 片尼莫拉收尾）。
+
+## 每日熱度掃描（2026-11-24，`trend_scan.py`＋`trend_zh.py`）
+英文主榜 0 條（9 個 subreddit 全部 404，疑 Reddit 介面變動；HN＋維基榜待驗 12 條全是「物理反直覺／量子」桶，未驗）。中文 YT 竄升 101 支，重點：
+- 「為什麼X」單一機制科普仍是小帳爆題型：高鐵只剩左營鋪碎石 73k（8.5k 訂閱，5,835/h）、南方澳大橋不再做拱 200k（5,465/h）、木板立起來女員工升遷 212k（8,620/h）、經濟學考99分不念了 149k、老虎難養熟 116k、金槍魚上船塞管子 48k、貼磚不用水泥 46k。多數來自 <5 萬訂閱帳號＝爆的是選題不是頻道。
+- 台灣發燒榜被 GTA6＋復聯5 預告洗版：小Lin说〈GTA背後的千億豪賭〉160 萬、Joeman GTA6 107 萬、DE JuN 73 萬；復聯5 終極預告 66 萬＋解析 10.7 萬＋彩蛋 3.8 萬。
+- 黃仁勳／NVIDIA 兩支竄升：黄教主 449k（12,272/h）、黃仁勳離職傳聞 31k。
+判定：「為什麼X」冷知識題型持續有爆款（小帳 ×10 以上離群）；GTA6／復聯5 是時事紅利窗口（1–2 週）。
+
+## AI 圈時事窗口：老黃回歸＋AI 泡沫多空（2026-11-24 查）
+查法：ytsearch20–30 flat-playlist 依 view_count 排；flat 缺 duration 的高播放片單獨 `-J` 補查；長短片分列。
+背景事件：黃仁勳離任 11 天閃電回鍋，輝達盤前漲逾 30%／急升 33%（TVBS／星島／CNBC 一致報導）。
+- 老黃回歸｜YT Shorts｜627,701｜Jensen Huang returns to Nvidia（39s，CNBC）｜https://youtu.be/unawbXKdSZI
+- 老黃回歸｜YT Shorts｜189,855｜Mamdani Reacts To Jensen Huang's Reinstatement（133s，Forbes）｜https://youtu.be/BnrW4CYf2LI
+- 老黃回歸｜YT Shorts｜92,422＋65,351｜輝達恢復黃仁勳職務 盤前漲逾30%（116s，TVBS 兩支）｜https://youtu.be/zGM_gAE3x5E
+- 老黃回歸｜YT Shorts｜19,582｜黃仁勳回歸 Nvidia股價急升33%（42s，星島）｜https://youtu.be/uVe6Ffb7Xx0
+- 中文竄升｜12,272/h｜448,970｜黄教主：你来的正是时候！（档案探长）｜https://www.youtube.com/shorts/0pf0HBGULfA
+- AI 泡沫｜YT Shorts｜863,061｜China's AI Bubble Is Bursting（137s）｜https://youtu.be/kBQ9KA4x6uo
+- AI 泡沫｜YT Shorts｜134,220｜Michael Burry Says the Media Gets His Trades All Wrong（127s）｜https://youtu.be/OiZtR76idR8
+- AI 泡沫｜YT 長片｜4,863,793｜The AI bubble is about to pop（Infographics Show）｜https://youtu.be/MgngwkPAuqQ
+- AI 泡沫｜YT 長片｜2,719,897｜Did the AI bubble just pop?（Fireship）｜https://youtu.be/nEaJMdM1djM
+- AI 泡沫｜YT 長片｜2,698,136｜Why Hasn't The AI Bubble Popped (Yet)?（MonkeyExplains）｜https://youtu.be/7rtn4doHIuY
+- AI 泡沫｜YT 長片｜5,012,334｜'Big Short' Investor Explains How the AI Bubble Will Burst｜https://youtu.be/Zw0I7kb6zg4
+- AI 泡沫（中文長片）｜790,803｜A Global Stock Market Crash? The AI Bubble Didn't Burst（點線面）｜https://youtu.be/COkupu7ULkE
+- AI 泡沫（中文長片）｜260,466｜45天蒸發10兆美元：AI泡沫終於要破了嗎？（Terry Chen）｜https://youtu.be/6lCcid1ZArg
+判定：有爆款，且是「長片大題×短影音空檔」——「AI bubble」英文長片 270–490 萬多支但 ≤180s 幾乎搜不到（30 筆僅 1–2 支破 10 萬），中文泡沫題長片 79 萬但 Shorts 全是新聞剪輯 ≤9 萬。老黃回歸已被新聞剪輯型佔位（窗口短），但「為什麼輝達不能沒有他」「循環融資（NVIDIA 投 OpenAI 買自家晶片）」「Burry 放空劇本」三個機制切角 Shorts 無同型對標＝空檔。
+
+## Avengers Doomsday 最終預告 reaction＋GTA6 發售次週（2026-11-25 查，venture clipping 產線用）
+查法：YouTube 搜尋 URL + `sp=CAI%3D`（上傳日期排序）flat-playlist，再逐片 `-J` 查 view_count/upload_date。
+- YT｜3,247,774｜Avengers Doomsday Official Final Trailer（IGN，11-23，196s）｜https://youtu.be/_-WPounzLgQ
+- YT｜752,133｜AVENGERS DOOMSDAY FINAL TRAILER REACTION!（The Media Knights，11-23）｜https://youtu.be/LfIXOqxQCsg
+- YT｜478,192｜That Epic Team Up Is NOT The Final Battle! DOOMSDAY（Reel Rejects，11-23）｜https://youtu.be/NTRd-Jv5EYw
+- YT｜378,679｜ImDontai Reacts To Avengers: Doomsday Final Trailer（11-23）｜https://youtu.be/6QEhGwdkD1A
+- YT｜361,441｜Doomsday Final Trailer Mega Reaction Mashup（BATsy Reacts，11-23）｜https://youtu.be/y1RtBdmIkrc
+- YT｜335,169｜CHURCH OF MARVEL STAND UP! Doomsday Reaction（#StruggleNation，11-24）｜https://youtu.be/KObcZDqBoSs
+- YT｜559,188｜GTA 6 FAILS - #7（Red Arcade，11-23）｜https://youtu.be/mewsIHj4xmw
+- YT｜919,566｜FIRST TO MAKE $1 MILLION IN GTA 6 VS SPEED（Kai Cenat Live，11-23，仍直播中）｜https://youtu.be/kEgS7FQqfRM
+- YT｜58,496｜GTA 6 WTF and Funny Moments! #7（Zynxize，11-24）｜https://youtu.be/oamlnQrfoKs
+- YT｜46,234｜xQc's FINAL GTA 6 Review After Finishing The Game（Dragonaire，11-23）｜https://youtu.be/Q5aXFUP76M4
+判定：有爆款（Doomsday reaction 題 24h 內多支 ≥30 萬；GTA6 合集與大實況主持續 ≥5 萬）。reaction 片剪「揭露瞬間的臉」最有效；進行中直播無法剪 VOD，等剪輯號二手素材。
+
+## 川普 CNBC 專訪：為什麼親自把黃仁勳談回來（2026-11-25 查）
+查法：`yt-dlp --flat-playlist -J "ytsearch30:<q>"` 依 view_count 排，3 組關鍵字（Trump Jensen Huang CNBC／川普 黃仁勳／Jensen Huang Huawei China threat）。同系列去重：11 天空窗、蒸發 5,700 億、回任漲近一兆、政府傳話不構成國安風險，已用於 nvidia-huang-returns／nvidia-loop-pause，本題不重複。
+- YouTube｜909,344｜言選解讀「黃仁勳回任內幕：川普親口說『交易是我談成的』」（1094 秒，長片）｜https://youtu.be/Mz_5SizTDzk
+- YouTube｜263,488｜CNBC「Watch CNBC's full interview with President Trump」（3027 秒，原始來源）｜https://youtu.be/-KzsKuC1AUs
+- YouTube｜200,391｜「Trump Rallies for Jensen Huang Again! Urges Nvidia Board to Rehire Him」（834 秒）｜https://youtu.be/Cyn0eC6hv-U
+- YouTube｜70,004｜「Jensen Huang Too Big to Fail! Did Trump Fear He'd Run Huawei?!」（878 秒，同切角）｜https://youtu.be/nIy2ZXkGZJM
+- YouTube｜175,088｜新聞大白話「川普替黃仁勳開綠燈！黃仁勳復職美股井噴！」（14285 秒）｜https://youtu.be/9vVuMWFAq-M
+- YouTube｜98,178｜股市現場「川普:是我談成的!」（992 秒，2026-11-24）｜https://youtu.be/NMq1eco_13M
+- 同題既有｜715,331｜CNBC「Jensen Huang returns to Nvidia」（39 秒 Shorts，11-24 查 62.8 萬，今天 71.5 萬）｜https://youtu.be/unawbXKdSZI
+判定：有爆款。「川普親口說交易是我談成的」中文長片 91 萬正在竄升；「川普怕他去執掌華為」切角 7 萬且 ≤180 秒 Shorts 同型 0 筆＝空檔。寫法觀察：標題爆款用「當事人親口＋內幕」（親口說／交易是我談成的）而非中立敘述。
+
+## 2D 動漫角色當主持人講解（VTuber 主播 PRD P0，2026-11-25 查）
+查法：`yt-dlp --flat-playlist -J "ytsearch30:<q>"` 依 view_count 排，4 組關鍵字（vtuber science explains／vtuber explains shorts／虛擬主播 解說／虛擬YouTuber 科普／ずんだもん 解説）。
+- YT｜336,253｜「歳を取ってもアニメを楽しめる人ほぼ全員〇〇です【ずんだもん&ゆっくり解説】」（908s，角色＋合成語音主持）｜https://youtu.be/PY8SDj2KSyA
+- YT｜325,329｜「動画を流しながら寝る人はほぼ全員〇〇です【ずんだもん&ゆっくり解説】」（923s）｜https://youtu.be/Mqw-Bga-3aA
+- YT｜305,664｜「中国大誤算 日本の高市内閣に反撃され大慌て【ずんだもん＆ゆっくり解説】」（1097s，時事題）｜https://youtu.be/BGDUGNwrKY0
+- YT｜211,864｜「人の役に立つ実業より虚業の方が稼げる理由【ずんだもん解説】」（899s）｜https://youtu.be/JX6n64MnjhU
+- YT｜47,027｜「UNEDUCATED VTUBER reacts to ANCIENT SCIENCE」（2524s，英文 VTuber 科普最高）｜https://youtu.be/7a0YjMXDEC4
+- YT｜24,787｜「VTUBER Teaches You SCIENCE」（31s Shorts）｜https://youtu.be/Xop_IGNkp_s
+- YT｜26,398｜「Holo科普 486房間被木棒插的兔子」（970s，中文角色主持最高）｜https://youtu.be/X_7weHV1x7Q
+- 反證｜608,192｜「迷因調查局 百鬼綾目」（縮圖目視＝真人主持評論 VTuber 題材，不是 2D 主持人）｜https://youtu.be/qVYwlSZ9XBQ
+判定：弱（接近有）。2D 角色＋合成語音主持講解在日本有成熟格式（ずんだもん＆ゆっくり解説系，穩定 18–34 萬、時事題也有）；中文與英文同型最高只到 2–5 萬，悖論小酒館題材帶沒有直接爆款證據。照 PRD 當實驗線做一支用數據比。

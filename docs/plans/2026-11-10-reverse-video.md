@@ -33,4 +33,4 @@ ponytail：零 token，不接視覺模型；之後要升級就在 `evidence/fram
 
 ## 工單
 
-`/Users/you/dev/vibe-shorts-pipeline/docs/workorders/20261110-reverse-video.md`
+`/Users/51mini/dev/vibe-shorts-pipeline/docs/workorders/20261110-reverse-video.md`

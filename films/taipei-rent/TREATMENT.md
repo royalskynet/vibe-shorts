@@ -1,6 +1,6 @@
 # 台北房租（單人旁白科普）
 
-核准：/Users/you/OpenBot/Shared/approved/2026-10-29-taipei-rent.md（docs/SERIES-taipei-issues.md 題 2）。格式照 docs/WRITING.md §7 與系列規則：m3 男聲單人旁白，一支只講一個機制「能壓住房租的房子太少，房租就看房東開」，拆成買房、社宅兩步；國際解法用維也納；台灣兩派照「有人說／也有人說」排在維也納後面，各 6 句。範本稿 films/pedestrian-hell/narration.md（34ae24b）。
+核准：/Users/51mini/OpenBot/Shared/approved/2026-10-29-taipei-rent.md（docs/SERIES-taipei-issues.md 題 2）。格式照 docs/WRITING.md §7 與系列規則：m3 男聲單人旁白，一支只講一個機制「能壓住房租的房子太少，房租就看房東開」，拆成買房、社宅兩步；國際解法用維也納；台灣兩派照「有人說／也有人說」排在維也納後面，各 6 句。範本稿 films/pedestrian-hell/narration.md（34ae24b）。
 
 11-02：分鏡照核准後的現稿（27 句，沒有懶人包與收尾段，聲音照 pedestrian-hell 第三版 m4 溫和聲）重做；下方「寫法決定」的句數、m3、懶人包是 10-30 初稿紀錄。
 

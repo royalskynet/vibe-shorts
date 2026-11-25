@@ -1,0 +1,8 @@
+{
+ "_doc": "單人旁白 m4。11-03 無邊探索節奏：pace.json tempo 1.3（約 5 字／秒）、gap_line 0.3、gap_section 0.6；字幕一卡一個逗號短語（timeline.js 的 phrases）。",
+ "host": {
+  "ref": "assets/voice/m4-24k.wav",
+  "text": "assets/voice/m4-script.txt"
+ },
+ "clawd": []
+}
