@@ -1,3 +1,0 @@
-# 新增的第三方依賴。既有 .venv 已預裝的（mlx-whisper 等）與 brew 的 opencc 不在這裡，沿用原環境。
-# 單句核稿比拼音用（scripts/voice.py syllables）：Whisper 吐簡體與同音字時，字面比對會冤枉念對的句子。
-pypinyin>=0.55

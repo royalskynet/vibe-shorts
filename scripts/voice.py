@@ -180,10 +180,9 @@ def duration(p):
 
 def trim(src, dst):
     """去掉頭尾靜音，轉 48k 立體聲（mix.py 的取樣率）。"""
-    head = "silenceremove=start_periods=1:start_threshold=-32dB:start_silence=0.05"
-    tail = "silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.03"
+    cut = "silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.03"
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-af",
-                    f"{head},areverse,{tail},areverse", "-ar", "48000", "-ac", "2", str(dst)], check=True)
+                    f"{cut},areverse,{cut},areverse", "-ar", "48000", "-ac", "2", str(dst)], check=True)
 
 
 def main():
